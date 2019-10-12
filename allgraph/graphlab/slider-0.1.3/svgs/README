@@ -1,0 +1,19 @@
+This directory contains the Inkscape SVG image sources that was used
+to create any related pixmaps that this program uses.
+
+The Windows icon is generated with the help of icotool, which is part
+of icoutils <http://www.nongnu.org/icoutils>.  To generate the Windows
+icon, first use Inkscape (or another suitable program) to export the
+PNG images from app.svg (if you modified the file) in sizes 16x16,
+32x32, 48x48, and 256x256, then use icotool to combine them into the
+icon file.  Make sure you explicity instruct icotool to embed all the
+16x16 and 32x32 icons of the same color depth (any maybe the other two
+also), otherwise you might run into problems.  If you are going to add
+the 256x256 image, you probably want to embed the PNG image raw.
+
+If you are using an old version of the Windows Platform SDK resource
+compiler, you will not be able to compile an icon containing a raw PNG
+image into your binary.  For such resource compilers, an icon named
+"app_legacy.ico" is provided that does not have a 256x256 image in the
+icon.  This does not concern those who use "windres" from MinGW to
+compile the resources into their binary.

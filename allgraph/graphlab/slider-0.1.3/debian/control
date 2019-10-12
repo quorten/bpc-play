@@ -1,0 +1,16 @@
+Source: slider
+Section: sound
+Priority: extra
+Maintainer: Andrew <andrew@liberty-dell>
+Build-Depends: debhelper (>= 7), autotools-dev,
+ libgtk2.0-dev, gettext, portaudio19-dev, libjack-dev
+Standards-Version: 3.8.3
+Homepage: <insert the upstream URL, if relevant>
+
+Package: slider
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Build sound waves from component parts
+ Slider is an interactive program designed to help you synthesize sound
+ effects by building them from harmonics and by combining multiple
+ non-harmonic sine waves.

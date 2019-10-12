@@ -1,0 +1,64 @@
+When I was first learning C++, I of course first learned about the
+fundamental types, and immediately, I wanted to know how to create my
+own types, since these fundamental types obviously were not at the
+most fundamental level.  Later, when I learned about C++ classes (and
+told that the subject was about defining new types), I thought that I
+could use C++ classes just as I would think about real world objects.
+
+However, as experienced C++ programmers know, this "object-oriented"
+programming methodology is not meant to be taken literally as if C++
+objects were meant to be perfectly suitable representations of real
+objects.  In the real world, matter and energy cannot be created and
+destroyed.  In object-oriented programming, objects can be created and
+destroyed.  Also in the real world, objects do not quite deliberately
+act on their own, but are actually acted upon by the laws of the
+universe, and it is because of an object's form that it can seem to do
+useful things from a human's perspective.  Object-oriented programming
+is entirely oriented from the human's perspective, and therefore
+objects have methods that can be used to perform their own actions.
+
+From an experienced programmer's point of view, the object-oriented
+facilities of C++ are clearly meant to be an improved design
+methodology from past experiences of programming repetitive constructs
+in C.  For example, C++ allows you to program a sequence of commands
+that always get executed when an object gets destroyed at the end of
+its variable scope, such as deallocating dynamically allocated memory
+that the object allocated.  Experienced C++ programmers will use
+object-oriented programming as necessary to facilitate such common
+actions.
+
+However, beginning programmers who think that C++ objects should be
+drop-in representations for real world objects suffer from
+"over-object-orientation": trying to create and aggregate C++ objects
+exactly as they think about how the real world objects are.
+Over-object-orientation leads to code that is messier and harder to
+understand, because of repetitive "this.that[i].that[j].that"
+constructs resulting from over-aggregated class definitions.
+
+Instead of attempting to follow the path of over-object-orientation,
+use C++ object-oriented programming as necessary to make your code
+cleaner, but do not take object-oriented programming as a literal
+representation of objects in the computer.  That kind of mental model
+is targeted more closely by compilers, operating systems, device
+drivers, and hardware than by programming languages.  Write code so
+that reads well, is easy to understand, and easy to maintain.  That is
+the only argument for how you should write code.  If it isn't fast
+enough, either fork an optimized version or create more tools to
+assist in optimizing automatically.
+
+By far, the most important tool in any programming language is a list
+structure.  This is more important than anything else, even more
+important than object-oriented programming.  You can program just fine
+without object-oriented programming, but you will get nowhere if you
+don't have a list structure.
+
+In contrast to C++, C programmers tend to under object-orient their
+programs.  Although this usually makes the code harder to write, it
+often doesn't make the code harder to read.  It does, however, make
+the code harder to maintain, because some parts of the code can get
+too chummy about the internals about other parts of the code.
+However, C is machine oriented, and whenever you increase the
+complexity of a program at any component, that increases the amount of
+work the computer must do.  Besides, whenever you expand a program,
+you will necessarily have to do restructuring throughout the program,
+and the same goes when shrinking a program.

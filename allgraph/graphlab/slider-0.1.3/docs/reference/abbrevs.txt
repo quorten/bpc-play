@@ -1,0 +1,94 @@
+List of Abbreviations
+*********************
+
+Copyright (C) 2011, 2012, 2013 Andrew Makousky
+All rights reserved.
+See the end of this file for license conditions.
+
+These are some abbreviations located from within the source code.
+Some common abbreviations are included in a second table in this file.
+If the abbreviation you are looking for is not listed, then search its
+usage in the source code to find its definition, or use common sense
+if possible.
+
+Abbreviation	Expansion
+|---------------|-----------------------------------------------------
+adj		adjustment
+amp		amplitude
+amps		amplitudes
+cb		combo_box
+cntr		container
+cur		current
+div		divider
+dlg		dialog
+ed		editor
+exp		exponent
+fnd		fundamental
+fndfrq		fundamental_frequency
+fndamp		fundamental_amplitude
+freq		frequency
+freqs		frequencies
+frq		frequency
+fund		fundamental
+fundset		fundamental_set
+harmc		harmonic
+harmcs		harmonics
+idx		index
+iter		iterator
+mntisa		mantissa
+mult		mulitply
+prec		precision
+precslid	precision_slider
+sel		selection
+sci		scientific
+sliw		Slider Wave Editor
+wv		wave
+wvedit		wave_editor
+ypt		y_point
+ypts		y_points
+----------------------------------------------------------------------
+
+Common Abbreviations
+====================
+
+Abbreviation	Expansion
+|---------------|-----------------------------------------------------
+AGC             Automatic Gain Control
+btn		button
+init		initialize
+max		maximum
+msg		message
+num		number
+Ptr		Pointer
+rm		remove
+str		string
+TLA		Three Letter Acronym
+win		window
+----------------------------------------------------------------------
+
+License Conditions
+******************
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+  * Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+
+  * Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in
+    the documentation and/or other materials provided with the
+    distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

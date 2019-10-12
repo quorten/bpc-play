@@ -1,0 +1,8 @@
+#! /bin/sh
+# Usage: nfop CMD N
+# Output shell commands to perform a specified shell command on the
+# first N files from standard input.
+
+head -n ${2} | ./dq-escape | \
+  awk 'BEGIN { OFS = ""; print "#! /bin/sh"; print "NL=\"\n\"" }
+{ print "'${1}' \"", $0, "\"" }'

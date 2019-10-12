@@ -1,0 +1,76 @@
+Logical Data Structures
+***********************
+
+Boolean: Simple, constant size of one bit, either a one or a zero
+Structure: Simple, constant bit size, can pack multiple members
+Fixed size array: Another name for a structure.
+Fixed size integer: A special structure interpreted as an integer.
+
+Linked list: a series of structures that indicate continuation from one to
+the next until the last one is reached.
+
+Isn't data structure interpretation simply a special kind of parsing?
+
+Well, yes.  You define the grammar, then interpret it.
+
+So all this memory allocation stuff is just a special application of
+parsing?  Yes.
+
+And a linked list is just a special case of a continuation mechanism.
+
+Allocation Mechanisms
+*********************
+
+Fixed partition allocator
+
+Data structures are designated fixed size partitions.
+Disadvantages: very wasteful.  Some allocations run out quickly and others
+lavish with excess unused space.
+
+Basic dynamic allocator
+
+Packed blocks with size and status headers, simple malloc
+Disadvantages: fragmentation, resized blocks need to be copied to larger space
+
+Solution to fragmentation: provide relocatable block allocator
+Solution for resizing: Provide segmented continuation allocation
+
+Relocatable block allocator
+
+Uses a table of memory handles that point to the actual block addresses.
+The memory system can rearrange the actual memory addresses of the blocks
+to eliminate fragmentation.  If a lot of time is spent compacting, then
+applications are notified so as to free unnecessary memory.  Also,
+applications may request that a memory block's address be locked so as to
+optimize certian portions of code by eliminating the need for pointer
+indirection.
+
+Disadvantages: copying blocks is slow, limited number of memory handles
+
+Solution to handle limit: Use extents to allocate another block of memory
+handles.
+Solution to handle limit: Define the memory handles to be within a special
+initial block, and when more handles are needed, the closest adjacent block
+can be relocated to gain the additional space.
+
+With either solution, copying is still slow.
+
+Memory Management Unit (MMU)
+
+Provides a hardware and OS-based solution to both of the above problems.
+
+Disadvantage: only works efficiently for large blocks
+
+RAM pinned large block allocator (ralab)
+
+An allocator designed for embedded systems without an MMU, or programs running
+on large computer systems with an MMU but for small allocations that cannot be
+managed efficiently by the MMU.
+
+How it works: This allocator is very similar to the relocatable block allocator.
+Memory is referenced via handles, and the memory manager may relocate blocks
+to reduce fragmentation.  There is a special initial block that holds the array
+of handles.  This block can either expand and require relocation of adjacent
+blocks or it can be continued via extents.  However, unlike the relocatable
+block allocator, this allocator allows any block, even data blocks, to be
+extended via extents.

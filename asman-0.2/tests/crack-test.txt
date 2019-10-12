@@ -1,0 +1,3 @@
+# Here is a good example of a malicious cracker intent, for testing
+# the Sed scripts that generate Sed scripts:
+/^If you \(think\|know\) you are such a \(so \)\{0,3\}[133t] hax[^O]r, then why are you trying \(really \)*hard to break \1 into \\my\\system\?$/p

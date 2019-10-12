@@ -1,0 +1,30 @@
+This is the design of a highly modular standard C library where you
+can very stringently configure it to only compile the features and
+functions that you really need.
+
+The traditional standard C library is divided up by the following
+hierarchy.
+
+* Syscalls -- Platform-dependent code
+    1. Operating system
+    2. Processor architecture, calling convention
+    3. Core category
+    4. Level of sophistication, later levels cumulatively include
+       features of earlier levels
+* Library functions -- Platform-independent code, mainly computes
+  things based off of platform dependent primitives
+
+Suppose you have a random program that you want to cross compile with
+a statically linked standard C library, but you don't know in advance
+which parts of the standard C library are required.  How do you figure
+this out so you can do a lazy compile?  It's kind of like magic, this
+trick I have.  You can compile and link against a dummy library where
+each function that gets called includes a string variable with a
+function signature.  Then you search the resulting binary for the
+symbols that are used, and you can process that down into the subset
+of the standard C library that must be compiled for that particular
+program.
+
+Now, if you're compiling more than one such program, thanks to the
+designated leveling technique, you can cache and reuse your previous
+results and keep going with only including what is needed.

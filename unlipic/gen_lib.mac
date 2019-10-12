@@ -1,0 +1,266 @@
+; Library of basic circuits for generalized logic.
+
+  Gate: COPY
+  Inputs: A
+  Outputs: B
+  Truth table:
+  A  B
+  0  0
+  1  1
+
+  Gate: NOT
+  Inputs: A
+  Outputs: B
+  Truth table:
+  A  B
+  0  1
+  1  0
+
+  Gate: OR
+  Inputs: A B
+  Outputs: C
+  Truth table:
+  A B  C
+  0 0  0
+  0 1  1
+  1 0  1
+  1 1  1
+
+  Gate: AND
+  Inputs: A B
+  Outputs: C
+  Truth table:
+  A B  C
+  0 0  0
+  0 1  0
+  1 0  0
+  1 1  1
+
+  Gate: NOR
+  Inputs: A B
+  Outputs: C
+  Truth table:
+  A B  C
+  0 0  1
+  0 1  0
+  1 0  0
+  1 1  0
+
+  Gate: NAND
+  Inputs: A B
+  Outputs: C
+  Truth table:
+  A B  C
+  0 0  1
+  0 1  1
+  1 0  1
+  1 1  0
+
+; --------------------------------------------------------------------
+
+  Macro: ZERO
+  Inputs: A
+  Outputs: C
+  Intermediates: B
+  Truth table:
+  A  D
+  0  0
+  1  0
+NOT A B
+AND A B C
+
+  Macro: ONE
+  Inputs: A
+  Outputs: C
+  Intermediates: B
+  Truth table:
+  A  D
+  0  1
+  1  1
+NOT A B
+OR A B C
+
+  Macro: XOR
+  Inputs: A B
+  Outputs: E
+  Intermediates: C D
+  Truth table:
+  A B  E
+  0 0  0
+  0 1  1
+  1 0  1
+  1 1  0
+OR A B C
+NAND A B D
+AND C D E
+
+  Macro: XNOR
+  Inputs: A B
+  Outputs: E
+  Intermediates: C D
+  Truth table:
+  A B  E
+  0 0  1
+  0 1  0
+  1 0  0
+  1 1  1
+NOR A B C
+AND A B D
+OR C D E
+
+  Macro: MUX
+  Inputs: A B C
+  Outputs: G
+  Intermediates: D E F
+  Truth table:
+  A B C  G
+  0 0 0  0
+  0 0 1  0
+  0 1 0  0
+  0 1 1  1
+  1 0 0  1
+  1 0 1  0
+  1 1 0  1
+  1 1 1  1
+NOT C D
+AND A D E
+AND B C F
+OR E F G
+
+  Macro: DEMUX
+  Inputs: A B
+  Outputs: C D E
+  Intermediates:
+  Truth table:
+  A B  C D E
+  0 0  1 0 0
+  0 1  0 0 0
+  1 0  1 1 0
+  1 1  0 0 1
+NOT B C
+AND A C D
+AND A B E
+
+; Half adder
+  Macro: ADD
+  Inputs: A B
+  Outputs: C D
+  Intermediates:
+  Truth table:
+  A B  C D
+  0 0  0 0
+  0 1  1 0
+  1 0  1 0
+  1 1  0 1
+XOR A B C
+AND A B D
+
+; Full adder
+  Macro: FADD
+  Inputs: A B C
+  Outputs: F H
+  Intermediates: D E G
+  Truth table:
+  A B C  F H
+  0 0 0  0 0
+  0 0 1  1 0
+  0 1 0  1 0
+  0 1 1  0 1
+  1 0 0  1 0
+  1 0 1  0 1
+  1 1 0  0 1
+  1 1 1  1 1
+ADD A B D E
+ADD D C F G
+OR E G H
+
+; Generically optimized half adder
+  Macro: X_ADD
+  Inputs: A B
+  Outputs: F D
+  Intermediates: C E
+  Truth table:
+  A B  F D
+  0 0  0 0
+  0 1  1 0
+  1 0  1 0
+  1 1  0 1
+OR A B C
+AND A B D
+NOT D E
+AND C E F
+
+; Generically optimized full adder
+  Macro: X_FADD
+  Inputs: A B C
+  Outputs: F H
+  Intermediates: D E G
+  Truth table:
+  A B C  F H
+  0 0 0  0 0
+  0 0 1  1 0
+  0 1 0  1 0
+  0 1 1  0 1
+  1 0 0  1 0
+  1 0 1  0 1
+  1 1 0  0 1
+  1 1 1  1 1
+X_ADD A B D E
+X_ADD D C F G
+OR E G H
+
+; --------------------------------------------------------------------
+; Sequential logic
+
+; SR flip-flop
+; D flip-flop
+; JK flip-flop
+; Ring oscillator
+
+; --------------------------------------------------------------------
+; Registers and memory
+
+; Register
+; Shift register
+; SRAM
+
+; 4-bit
+; 6-bit
+; 8-bit
+; 16-bit
+; 32-bit
+; 64-bit
+; 128-bit
+
+; Asynchronous counter
+; Synchronous counter
+
+; Zero tester
+
+; --------------------------------------------------------------------
+
+; TODO: Add symbolic defines for numeric wire constants to macro
+; language.  It is really nice to be able to move hardware ports
+; around during development.
+
+; TODO: Here is the special thing about generalized logic.  Simulation
+; via a conventional CPU is faster.  The more primitives, the higher
+; level the primitives, the faster.  So, what else should we look at
+; supporting as gates?
+
+; * XOR
+; * XNOR
+; * MUX
+; * DEMUX
+; * ADD
+; * FADD
+; * Counter circuits
+; * Zero tester
+; * Register-width operands, aligned and unaligned.
+; * Registers
+; * Memory (RAM)
+
+; Not too bad... we'll end up adding this as a bunch of separate
+; masks, but the speed-up should be worth it.  Given the large total
+; number of masks, we might even conditionally define which masks are
+; to be included for a particular simulation.

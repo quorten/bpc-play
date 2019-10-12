@@ -1,0 +1,50 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+# Sample debian/rules that uses debhelper.
+# This file was originally written by Joey Hess and Craig Small.
+# As a special exception, when this file is copied by dh-make into a
+# dh-make output file, you may use that output file without restriction.
+# This special exception was added by Craig Small in version 0.37 of dh-make.
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+APPNAME = slider
+
+CONFFLAGS = --disable-binreloc --prefix=/usr
+# FOR AUTOCONF 2.52 AND NEWER ONLY
+ifeq ($(DEB_BUILD_GNU_TYPE), $(DEB_HOST_GNU_TYPE))
+  CONFFLAGS += --build $(DEB_HOST_GNU_TYPE)
+else
+  CONFFLAGS += --build $(DEB_BUILD_GNU_TYPE) --host $(DEB_HOST_GNU_TYPE)
+endif
+
+%:
+	dh  $@
+
+override_dh_auto_configure:
+	./configure --with-jack $(CONFFLAGS)
+
+override_dh_auto_install:
+	dh_auto_install
+	mkdir -p debian/$(APPNAME)/usr/share/icons/hicolor/16x16/apps
+	mkdir -p debian/$(APPNAME)/usr/share/icons/hicolor/24x24/apps
+	mkdir -p debian/$(APPNAME)/usr/share/icons/hicolor/32x32/apps
+	mkdir -p debian/$(APPNAME)/usr/share/icons/hicolor/48x48/apps
+	mkdir -p debian/$(APPNAME)/usr/share/icons/hicolor/64x64/apps
+	mkdir -p debian/$(APPNAME)/usr/share/icons/hicolor/128x128/apps
+	mkdir -p debian/$(APPNAME)/usr/share/icons/hicolor/256x256/apps
+	ln -s /usr/share/$(APPNAME)/pixmaps/icon16.png \
+	  debian/$(APPNAME)/usr/share/icons/hicolor/16x16/apps/$(APPNAME).png
+	ln -s /usr/share/$(APPNAME)/pixmaps/icon24.png \
+	  debian/$(APPNAME)/usr/share/icons/hicolor/24x24/apps/$(APPNAME).png
+	ln -s /usr/share/$(APPNAME)/pixmaps/icon32.png \
+	  debian/$(APPNAME)/usr/share/icons/hicolor/32x32/apps/$(APPNAME).png
+	ln -s /usr/share/$(APPNAME)/pixmaps/icon48.png \
+	  debian/$(APPNAME)/usr/share/icons/hicolor/48x48/apps/$(APPNAME).png
+	ln -s /usr/share/$(APPNAME)/pixmaps/icon64.png \
+	  debian/$(APPNAME)/usr/share/icons/hicolor/64x64/apps/$(APPNAME).png
+	ln -s /usr/share/$(APPNAME)/pixmaps/icon128.png \
+	  debian/$(APPNAME)/usr/share/icons/hicolor/128x128/apps/$(APPNAME).png
+	ln -s /usr/share/$(APPNAME)/pixmaps/icon256.png \
+	  debian/$(APPNAME)/usr/share/icons/hicolor/256x256/apps/$(APPNAME).png

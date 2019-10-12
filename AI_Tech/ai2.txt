@@ -1,0 +1,68 @@
+(A + B)'
+
+A'B'
+
+A B R
+0 0 1
+0 1 0
+1 0 0
+1 1 0
+
+A'B
+
+A B R
+0 0 1
+0 1 0
+1 0 1
+1 1 0
+
+Table of results (based off of input combinations listed above)
+
+0 0 0 0 -> 0    + 0   + 0   + 0  ZERO
+0 0 0 1 -> 0    + 0   + 0   + AB TWO
+0 0 1 0 -> 0    + 0   + AB' + 0  TWO
+0 0 1 1 -> 0    + 0   + AB' + AB ONE
+0 1 0 0 -> 0    + A'B + 0   + 0  TWO
+0 1 0 1 -> 0    + A'B + 0   + AB ONE
+0 1 1 0 -> 0    + A'B + AB' + 0  TWO
+0 1 1 1 -> 0    + A'B + AB' + AB TWO
+1 0 0 0 -> A'B' + 0   + 0   + 0  TWO
+1 0 0 1 -> A'B' + 0   + 0   + AB TWO
+1 0 1 0 -> A'B' + 0   + AB' + 0  ONE
+1 0 1 1 -> A'B' + 0   + AB' + AB TWO
+1 1 0 0 -> A'B' + A'B + 0   + 0  ONE
+1 1 0 1 -> A'B' + A'B + 0   + AB TWO
+1 1 1 0 -> A'B' + A'B + AB' + 0  TWO
+1 1 1 1 -> A'B' + A'B + AB' + AB ZERO
+
+So what does this mean?  There will always be two dead functions that
+only return zero or one, and in the case of only two variables, there
+will be 4 unnecessary functions that deal with only a single variable,
+despite being given more than one.  Are there another two useless
+functions?  If there were, then I could discount two more functions
+and make the equations simpler.
+
+2 dead
+4 single variable
+2 inhibition
+equivalence, not-equal
+logical and, logical nand
+logical or, logical nor
+2 implication
+
+So how do you weed out the unnecessary functions at any level?  You
+find all functions whose output is independent of at least one input
+variable.
+
+2^2^0 = 2 (0 inputs)
+2^2^1 = 4 (1 input, but doesn't always require it)
+2^2^1 - 2 = 2 (1 input required)
+2^2^2 = 16 (2 inputs, but doesn't always require either)
+2^2^2 - 2 * 2 - 2 = 10 (2 inputs required)
+2^2^3 = 256 (three inputs, but doesn't always require them)
+2^2^3 - 10 * 2 - 2 * 3 - 2 = 228 (3 inputs required)
+2^2^4 = 65536 (4 inputs, but doesn't always require them)
+2^2^4 - 228 * 2 - 10 * 3 - 2 * 4 - 2 = 65040 (4 inputs required)
+2^2^5 = 4294967296 (5 inputs, but doesn't always require them)
+2^2^5 - 65040 * 2 - 228 * 3 - 10 * 4 - 2 * 5 - 2 =
+  4294836480 (5 inputs required?  Not tested.)

@@ -1,0 +1,79 @@
+Application Support Patches README
+**********************************
+
+Here are some important release notes on various patches that you can
+apply to some common open-source applications to enable file logging.
+
+Emacs Dired and File Log Notes
+******************************
+
+The Emacs Dired file logging patches is the oldest and most
+well-tested file logging patch.  It has been heavily used and known to
+work well under normal conditions and act gracefully on error
+conditions.  The most significant limitation in the file logging
+mechanism is that the author was too lazy to add file logging support
+for making links under Dired.  All file edits under Emacs can be
+tracked by adding the function `file-log-write' to `before-save-hook'.
+
+PCManFM File Log Notes
+**********************
+
+The file log code was added in really quickly and is somewhat of a
+hack.  Not every possibility has been tested, but then again, not much
+code has been added either.  The most likely problem that might happen
+is spurious log entries when file management operations fail.
+
+A different problem, which I know for sure is a problem, is that moves
+to different partitions will get logged as a copy and a delete.  At
+least the log entries are written though, or at least they should, as
+this code path has not been tested yet.
+
+Currently, file logging fore moves across partitions is broken.
+
+Nautilus File Log Notes
+***********************
+
+There isn't yet file logging code for Nautilus.  A particular problem
+with maintaining a separate patch for Nautilus is that Nautilus
+changes so quickly.  But here is my progress on writing a patch for
+Nautilus.
+
+The first time I looked at the Nautilus code base... just lost.  It
+was too much for me to take.  The second time, that is, the time I
+came back now, I started grepping for POSIX file management functions.
+
+check libnautilus-private/nautilus-file.c/nautilus_file_rename
+
+Got it!  I can log renames for Nautilus.
+
+Next I used the localization strings technique to try to pry my way
+into the code base.  No luck; there were strings pointing to
+non-existent references.  Next I looked at the README file, then the
+HACKING file.  Alas!
+
+https://live.gnome.org/Nautilus/Development/Nautilus
+-> docs/nautilus-internals.pdf
+
+Documentation, right in the source tarball, but I had to make a
+rendezvous to the World Wide Web first to find that out.
+
+Next up, discover how to create directories...
+
+Nautilus no longer uses GnomeVFS, it has been deprecated in favor of
+GIO.
+
+Another hit!  libnautilus-private/nautilus-file-operations.c/create_dest_dir
+
+Alright, I understand as much as I'll need to know to add in basic
+file logging.  Sure using the file log for undo would be nice, but
+that will have to wait until later.
+
+Here's how Nautilus generally works around file management.  
+
+For file management, Nautilus uses GIO to perform the actual
+operations.  Nautilus will schedule jobs and send completion signals
+for file management operations so that asynchronous file operations
+can be performed.
+
+But I think you will find the PCManFM patch to be just find.  PCManFM
+is small and fast compared to Nautilus.

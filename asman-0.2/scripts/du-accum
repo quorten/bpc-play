@@ -1,0 +1,12 @@
+#! /bin/sh
+# Print an progressive total size accumulation from an ordered file
+# listing.
+
+BLOCK_SIZE=4096
+awk '{ print "du -s -B '$BLOCK_SIZE'", $0 }' | sh | \
+awk 'BEGIN { accum = 0; OFS = ""; ORS = "" }
+{
+  accum += $1 * '$BLOCK_SIZE'
+  print accum, "\t"
+  print $0, "\n"
+}'

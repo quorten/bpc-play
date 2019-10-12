@@ -1,0 +1,4 @@
+These are (1) a GCC specs files generator and (2) a GCC compiler
+wrapper so that you can easily run a modified GCC command that
+automatically uses the minimalistic libc library and compiles it for
+the proper architecture.

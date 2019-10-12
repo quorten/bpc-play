@@ -1,0 +1,6 @@
+#!/bin/sh
+PREFIX="$PWD"
+SPECS="$PREFIX/lib/libc-gcc.specs"
+ARCH='-march=i686 -mtune=generic -m32'
+ADD_CFLAGS='-fno-stack-protector -fno-asynchronous-unwind-tables'
+exec "gcc" "$@" -specs "$SPECS"   $ARCH $ADD_CFLAGS

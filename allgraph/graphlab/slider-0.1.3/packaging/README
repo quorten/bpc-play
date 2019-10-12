@@ -1,0 +1,207 @@
+How to build a Windows Installer for Slider Wave Editor
+*******************************************************
+
+Copyright (C) 2013 Andrew Makousky
+All rights reserved.
+See the end of this file for license conditions.
+
+Slider supports building a Windows Installer through two different
+mechanisms.  You can either build a Windows installer using Nullsoft
+Scriptable Install System or by using Windows Installer.  This file
+mainly documents the prerequisites that you must satisfy to build a
+Windows installer.  The Nullsoft Installer build process is fully
+automatic once you satisfy the prerequisites; on the other hand, the
+Windows Installer build process is only mostly automatic.
+
+General Prerequisites
+*********************
+
+Slider depends on the GTK+ runtime binaries for Windows.  If you have
+not done so already, you should download the GTK+ 2.12.10 bundle for
+Windows that was recommended in the INSTALL file.  If you want to
+build an installer using Nullsoft Scriptable Install System, then you
+will need to download the corresponding development tools
+<http://nsis.sourceforge.net>.  If you want to build a Windows MSI
+Installer package, you will need the Windows Platform SDK.  Once you
+have one or both of those, you will need to select a subset of the
+files from the bundle for distribution.  There is a a file named
+`2.12.10-dist.txt' that lists the recommended files for distributing
+with Slider.  You should use this file to build a directory named
+`2.12.10-dist' within the `packaging' directory.  For example:
+
+  cd ${top_srcdir}/packaging
+  ln -s /.../gtk+-bundle-2.12.10.zip .
+  make 2.12.10-dist
+
+If you have PortAudio enabled, you should copy the PortAudio DLL
+(`libportaudio-2.dll' for MinGW, `portaudio_x86.dll' for MSVC 32-bit)
+into the `packaging' directory.  The build rules for `2.12.10-dist'
+will handle copying it into the runtime bundle directory.  Compiling
+with JACK on Windows has not been tested yet, but if you do compile
+with JACK, you will need to copy all of its binary dependencies into
+the proper places within `2.12.10-dist'.
+
+Make sure you have your build configuration set up to compile release
+binaries.  In particular, if you are using MinGW/MSYS, you should pass
+the switch
+
+  LDFLAGS='-Wl,-subsystem=windows,-s'
+
+to the `configure' script, just as was recommended in the file
+`INSTALL'.
+
+Building a Nullsoft Installer
+*****************************
+
+Building a Nullsoft Installer is easy.  Just make sure you have
+enabled maintainer mode like this:
+
+  ./configure --enable-maintainer-mode
+
+and the installer will be built fully automatically, provided that you
+have set up the GTK+ dependencies directory.  If you are not in
+maintainer mode, you can make the Nullsoft Installer with the
+following command:
+
+  make nsis
+
+Building a Windows MSI Installer Package
+****************************************
+
+Building a Windows MSI installer seems non-trivial for most
+programmers because the mainstream Windows installer tools that
+operate in a compiler mode like Inno Setup or Nullsoft Install System
+do not produce MSI files.  To mitigate this issue and still be able to
+build Windows installers, Slider uses a special tool called `msi-tool'
+to facilitate the automation process.
+
+`msi-tool' was not originally intended to be an automated installer
+build system.  Rather, it was intended to only automate the most
+difficult tasks for creating a Windows Installer.  Thus, some manual
+setup is needed before you can use it.  Once you have the manual setup
+done, you will be able to use the integrated rules for `msi-tool' that
+are within Slider's build system.
+
+Prerequisites
+=============
+
+First of all, you have to have prerequisites satisfied:
+
+1. Install the Windows Platform SDK
+
+2. Install the installer tools from the Windows Platform SDK (yeah,
+like installing the SDK didn't really complete the installation).
+Find the installation directory for the Windows Platform SDK (such as
+"C:\Program Files\Microsoft Platform SDK for Windows Server 2003 R2").
+There will be two Windows Installer packages within the `Bin'
+subdirectory: `Orca.Msi' and `MsiVal2.Msi'.  Install both of them.
+
+3. To be able to use the automated build rules, you need to make sure
+your PATH environment variable is set up to be able to use both the
+Windows Platform SDK tools and POSIX utilities.  If you are using MSYS
+or Cygwin for your POSIX utilities, then you will have to make sure
+that you are not building Slider's Windows Installer package in any
+subdirectory within the root directories that MSYS and Cygwin use.
+Otherwise, there will be problems passing the current working
+directory to the Windows developer tools that the build automation
+rules invoke.
+
+4. Install `msi-tool' so that the program is on your PATH.
+
+Preparing the installer source files
+====================================
+
+Next you will do the manual setup for Slider.  Start by copying the UI
+sample MSI from the Windows Platform SDK installation, located at the
+subdirectory `Samples\SysMgmt\Msi\database\UISample.Msi'.  Put the
+copy in Slider's `packaging/' directory and rename it to `Schema.msi'.
+Next, open `Schema.msi' with Orca and make the following changes:
+
+  * In the "Control" table, select the table row that contains
+    "VerifyRemoveDlg" in the "Dialog" column and "Title" in the
+    "Control" column.  Scroll right until you see the "Text" column
+    within that row.  Now change its value to
+    "{\DlgFontBold8}Remove [ProductName]".
+
+  * In the "Control" table, find the table row that contains
+    "LicenseAgreementDlg" in the "Dialog" column and "AgreementText"
+    in the "Control" column.  Scroll right until you see the "Text"
+    column within that row.  Now copy the contents of `license.rtf'
+    into that row.
+
+  * In the "Binary" table, locate the row with "bannerbmp" under the
+    "Name" column and change its value to the data of `bannerbmp.bmp'.
+
+Now you should be all ready to run the automated build rules.  Just
+type:
+
+  make msi
+
+and a Windows Installer package will be automatically built and
+validated.  Note that the Windows Installer automatic build system
+within Slider is slightly less stable than the build system for
+Nullsoft Installer.  The build rules are largely based off of the
+documentation for `msi-tool', so if anything fails, read that
+documentation carefully for more information.  Note that the automated
+build process isn't perfect.  You will probably want to add some long
+descriptions to the features in the "Feature" table, but strictly
+speaking, you don't have to, and if you don't, you will still get a
+working installer.
+
+Microsoft Visual Studio
+=======================
+
+If you compile with MSVC, you will have to manually put the
+MSVC-compiled binary within the installer preparation directory named
+`instdir'.  When you compile with MSVC, make sure you compile a
+Release binary.  The release configuration is set up so that Slider
+will be static-linked to the Microsoft C Runtime libraries by default.
+Here are a few reasons why.  If you choose the shared C Runtime, you
+will need to make sure the target computer has the runtime libraries.
+There are two ways to satisfy this need.  You can either install the
+runtime libraries system-wide or you can include them with your
+application's installation to form an isolated assembly.  However,
+including the dynamic-linked Microsoft C Runtime libraries with your
+application's installer has drawbacks you you are licensing your
+application under the GNU General Public License.  Specifically, you
+must package and distribute your application such that the
+dynamic-linked Microsoft C Runtime libraries are System Libraries, and
+thus you do not need to include the source code for them.  They can
+only be considered system libraries if you do not distribute them with
+your application.  Under my interpretation, if you instead static link
+the runtime libraries, then they are still considered System
+Libraries.  In this case, the System Libraries were linked as part of
+using the Windows development tools to create your application, and
+thus the source code need not be distributed since the "Corresponding
+Source" does not include the source code for generally available
+tools, such as the Windows development tools.  See
+<http://www.gnu.org/licenses/gpl-faq#WindowsRuntimeAndGPL> for some
+explanation on the subject, and see the GNU General Public License for
+the official terms and conditions.
+
+License Condtions
+*****************
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+  * Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+
+  * Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in
+    the documentation and/or other materials provided with the
+    distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

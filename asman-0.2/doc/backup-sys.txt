@@ -1,0 +1,46 @@
+So what is everything that I need to do?
+
+Here's how the system works:
+
+You have a series of archive roots that files are backed-up under.
+Files can be moved in or out of those archive roots, and files can be
+moved around within the archive root.  All file moves should be
+logged.  Files may also get modified without notice within a root.
+Checksums will be used to check the integrity.
+
+Now, a root may be mirrored across multiple devices or routed through
+a device.  A root may also be routed through a root.  Roots may be
+merged or split.  Roots can also be removed altogether.
+
+You may also backup only a subset of one root to another.
+
+Additional metadata may also be kept about the files.  That is beyond
+the archive system.
+
+There are two ways of tracking file changes within a root: modifying
+an application or your operating system kernel so that file
+modifications are tracked automatically, or searching for files
+modified past a certain date.
+
+Integrity checks may also be performed.
+
+A journaling file manager is also needed.
+
+Additionally, the checksums may also be used to guess moves/deletes.
+
+Copychains are also supported for systems where hardlinks are not
+supported.
+
+Backup performed: 2012-08-26 6:10 PM CDT
+
+Checksums alone may be stored on small or secure devices.  Do not use
+md5; use sha256.
+
+Create a backup chain optimizer.
+
+Clear all the cross-fm-logs when the logs are cleared.
+
+What if you skip standard routing?  Can you route in any order?
+
+I also need a more robust way to separate site-local configuration
+from the rest of the asman package.

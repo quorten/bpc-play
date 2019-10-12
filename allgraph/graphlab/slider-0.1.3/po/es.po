@@ -1,0 +1,192 @@
+# Spanish translations for Slider Wave Editor.
+# Copyright (C) 2011 Andrew Makousky
+# This file is distributed under the same license as Slider.
+# Andrew Makousky <andrew@example.com>, 2011.
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Slider 1.0\n"
+"Report-Msgid-Bugs-To: andrew@home-dell-2300\n"
+"POT-Creation-Date: 2018-11-03 15:13-0500\n"
+"PO-Revision-Date: 2013-06-13 23:46-0500\n"
+"Last-Translator: <andrew@example.com>\n"
+"Language-Team: Spanish\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. gtk_container_set_border_width (GTK_CONTAINER (main_window), 8);
+#: src/interface.c:77
+msgid "Graphics Lab"
+msgstr ""
+
+#: src/support.c:132 src/support.c:159
+#, c-format
+msgid "Couldn't find pixmap file: %s"
+msgstr "No encontré archivo de pixmap: %s"
+
+#~ msgid "_File"
+#~ msgstr "_Archivo"
+
+#~ msgid "_Transport"
+#~ msgstr "_Transportar"
+
+#~ msgid "_Help"
+#~ msgstr "A_yuda"
+
+#~ msgid "_New"
+#~ msgstr "_Nuevo"
+
+#~ msgid "Create a new file"
+#~ msgstr "Crear un archivo nuevo"
+
+#~ msgid "_Open..."
+#~ msgstr "_Abrir..."
+
+#~ msgid "Open an existing file"
+#~ msgstr "Abrir un archivo existente"
+
+#~ msgid "_Save"
+#~ msgstr "_Guardar"
+
+#~ msgid "Save the current file"
+#~ msgstr "Guardar el archivo corriente"
+
+#~ msgid "Save _As..."
+#~ msgstr "Guardar _como..."
+
+#~ msgid "_Export..."
+#~ msgstr "_Exportar..."
+
+#~ msgid "_Quit"
+#~ msgstr "_Salir"
+
+#~ msgid "_Play"
+#~ msgstr "_Jugar"
+
+#~ msgid "_Stop"
+#~ msgstr "_Acabar"
+
+#~ msgid "_About"
+#~ msgstr "_Acerca"
+
+#~ msgid "Save As"
+#~ msgstr "Guardar como"
+
+#~ msgid "Play"
+#~ msgstr "Jugar"
+
+#~ msgid "Fundamental Set: "
+#~ msgstr "Grupo Fundamento: "
+
+#~ msgid "1st Harmonic Drop"
+#~ msgstr "Poner El 1o Armónica"
+
+# Pensé usar «ampliarses» por la palabra amplitudes en Español, pero no
+# soy seguro que es una idea buena.
+#~ msgid "Multiply Amplitudes"
+#~ msgstr "Multiplicar Los Amplitudes"
+
+#~ msgid "Add"
+#~ msgstr "Añadir"
+
+#~ msgid "Remove"
+#~ msgstr "Remover"
+
+#~ msgid "Fundamental Frequency: "
+#~ msgstr "Frequencia Fundamenta: "
+
+#~ msgid "Precision Slider: "
+#~ msgstr "Deslizador Precisión: "
+
+#~ msgid "Harmonic "
+#~ msgstr "Armónica "
+
+#~ msgid "Harmonic Window: "
+#~ msgstr "Ventana Armónica: "
+
+#~ msgid "Harmonic: "
+#~ msgstr "Armónica: "
+
+#~ msgid "Amplitude: "
+#~ msgstr "Amplitud: "
+
+#~ msgid "Maximum amplitude: "
+#~ msgstr "Amplitud máximo: "
+
+#~ msgid ""
+#~ "<b><big>Save changes to the current file before closing?</big></b>\n"
+#~ "\n"
+#~ "If you close without saving, your changes will be discarded."
+#~ msgstr ""
+#~ "<b><big>¿Desea guardar los cambios antes de cerrar?</big></b>\n"
+#~ "\n"
+#~ "Si cierra sin guardar se perderán los cambios realizados."
+
+#~ msgid "Close _without saving"
+#~ msgstr "Cerrar _sin guardar"
+
+#~ msgid ""
+#~ "<b><big>Save changes to the current file before continuing?</big></b>\n"
+#~ "\n"
+#~ "If you continue without saving, your changes will be discarded."
+#~ msgstr ""
+#~ "<b><big>¿Desea guardar los cambios antes de continuar?</big></b>\n"
+#~ "\n"
+#~ "Si continua sin guardar se perderán los cambios realizados."
+
+#~ msgid "Continue _without saving"
+#~ msgstr "Continuar _sin guardar"
+
+#~ msgid "Save File"
+#~ msgstr "Guardar Archivo"
+
+#~ msgid "Open File"
+#~ msgstr "Guardar Archivo"
+
+#~ msgid "Export Nyquist File"
+#~ msgstr "Exportar Archivo de Nyquist"
+
+#~ msgid "_Export"
+#~ msgstr "_Exportar"
+
+#~ msgid "Stop"
+#~ msgstr "Acabar"
+
+#~ msgid ""
+#~ "; This is a Nyquist Lisp file.\n"
+#~ "; You can use this with Audacity to generate a waveform.\n"
+#~ "; To do this, select a portion of time on a track, then go to \"Effect\n"
+#~ "; > Nyquist Prompt...\" and paste the contents of this file in.\n"
+#~ msgstr ""
+#~ "; Es un archivo de Nyquist Lisp.  Puedes usar este archivo con\n"
+#~ "; Audacity producir una onda sonora.\n"
+#~ "; Para hacer esto, escueges una porción de tiempo en una pista,\n"
+#~ "; entonces vas a \"Effect > Nyquist Prompt...\" y pegas los contenidos\n"
+#~ "; de este archivo.\n"
+
+#~ msgid "Sorry, but playback is not supported in this version."
+#~ msgstr "Lo siento, para jugar el sonido no es suporte en este versión."
+
+#~ msgid "Not implemented"
+#~ msgstr "No lleva a cabo"
+
+#~ msgid "Sound Studio"
+#~ msgstr "Estudio del Sonido"
+
+#~ msgid ""
+#~ "You must not have any fundamental frequencies that are harmonics of each "
+#~ "other."
+#~ msgstr ""
+#~ "No debes tener nadas frequencias fundamentas que son armónicas de la una "
+#~ "de otro."
+
+#~ msgid "User error"
+#~ msgstr "Error de usuario"
+
+#~ msgid "Are you sure you want to sample %u points?"
+#~ msgstr "¿Eres seguro que tú desees probar %u puntos?"
+
+#~ msgid "Confirm"
+#~ msgstr "Confirmar"

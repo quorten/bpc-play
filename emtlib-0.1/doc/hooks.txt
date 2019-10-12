@@ -1,0 +1,11 @@
+Hooks are a very important programming concept to be aware of.  Even
+though they are so simple that they don't need to be formally taught,
+the vocabulary is important.
+
+Basically, a hook is an anchor point in a procedural program where the
+program will check an array (or singly linked list) of function
+pointers and call each function in the array, provided that the array
+is not empty.  The systematic and well understood application of hooks
+in C can not only allow many programming benefits that seem only
+available in C++ to be useful in pure C, but also allow you to write
+superior C code that seemingly is not possible under C++.

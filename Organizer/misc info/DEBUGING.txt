@@ -1,0 +1,88 @@
+What to debug in what order:
+1. Plain, word wrapped short text with no tabs
+2. Longer text, selecting, cut, copy, paste
+3. Scrolling, scroll bars, mouse wheel, cursor changing
+4. Keyboard caret movement
+5. Truncated line display
+6. Tabbed line display
+7. Undo queue
+
+What to add upon success:
+1. Support for truncated lines
+2. Support for tabs
+3. Undo queue offloaded to a temporary file
+
+Incomplete functions:
+TextEditProc
+ScrollRenderInfo
+InsertText
+DeleteText
+ProcessMiscKey
+RewrapWords
+RetruncateLines
+CalcCaretPos
+TextPosFromPoint
+BadFunc
+
+Pending architecture changes:
+Investigate render info memory
+Change numVisLines to only indicate truly existent lines
+Copy buffer text into display buffer? (How do you not render tabs?)
+
+What can cause the number of visible lines to change?
+Change of buffer
+Change of font
+Change of window size
+Change of scroll position
+Change of text information
+
+Whenever the number of visible lines changes, the previous render info
+must be discarded and the number of visible lines recalculated.
+
+{
+	FreeRenderInfo();
+	WrapWords();
+	CalcNumVisLines();
+	UpdateRenderInfo();
+}
+
+CalcNumVisLines() changes critical render info structure information
+that causes render info freeing to function improperly.  Certain
+functions may change the number of visible lines of screen.  For each
+of these functions, the render info needs to be updated.  Should
+CalcNumVisLines() only be called from UpdateRenderInfo()?
+
+WrapWords() also calls CalcNumVisLines, but it does not need to
+directly update render info.
+
+Note: line rewrapping is broken.  However, it seems intitial wrapping
+works fine.  This is how rewrapping should be done:
+
+If the caret is in the first word of the line, try wrapping at the
+line before
+
+Continue wrapping forward as normal, setting line starts until either
+the calculated value is equal to the original value or the end of data
+is reached
+
+If a newline is reached that is not already marked, a line start
+should be inserted
+
+If the end of data is reached, change the number of newlines as
+necessary
+
+When finished, check the line starts for consistency.  This is
+necessary because of the shortcut taken for finding newlines in
+between the data.  Inconsistent entries should be deleted.
+
+NOTE: Check conistency checking when deleteing multiple lines.
+
+More Fixes:
+Scrolling
+Truncated lines
+Scroll to caret on insert/delete (OK)
+Line index correction on delete (OK)
+Region render info update conflicts
+Handle deletes in word wrapped regions (OK)
+End of line typing doesn't always get wrapped (FIXED)
+Sometimes text deleted at the end of stream doesn't get erased (FIXED)

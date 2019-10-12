@@ -1,0 +1,92 @@
+Archive System Management Tools Architecture
+
+There are two main ideas within the implementation of the archive
+system management tools: simplicity and transparency.  One reason why
+these tools are implemented as a series of plain text files,
+makefiles, and sed scripts is because that makes it easy to examine
+the internals of data flowing through the processing tools.  Another
+reason is because makefiles only have to specify dependencies and make
+will solve for the necessary builds and build orders.  Still yet
+another reason is because writing regular expression patterns with sed
+scripts is a more reliable way to process patterns than would be to
+write complicated C functions (or, for non-POSIX operating systems,
+include a regular expression library in a C program).  And of course,
+writing these tools like this reuses already existing software.
+(Because I first learned programming on Microsoft Windows, I
+previously wrote specialized C programs to do exactly was could be
+done more efficiently using Sed.)
+
+Here is the basic problem: you want to maintain a remote copy of a
+file directory, but you don't want to use complicated tools with very
+large code bases to do the job.  You want a simpler, more versatile,
+and more robust backup system than other ones that already exist.
+Think of RCS versus CVS: with CVS, a file move is implemented as a
+copy followed by a delete, but with RCS, a file move is just a file
+move (note that you can implement a separate directory tracking system
+independent of RCS).
+
+The naive way to achieve the task is just copy an entire directory
+structure from source to destination, overwriting files that have not
+even changed.  Another naive way to achieve the task is to copy only
+files that you know have changed, but this way increases the
+complexity of the problem you have to deal with.
+
+The simplest way to solve this problem is to first create a log of all
+files modified since a certain synchronization date.  Then you can
+look at the list to copy files one at a time.  However, you probably
+don't just modify and create files under the directory, but you
+probably also copy, move, and delete files under the directory too.
+How do you solve this problem?  You probably remember that whenever
+you enter commands at a Bash shell prompt, Bash logs all of your
+commands to a file named ".bash_history" within your home directory.
+So what you can do is simply copy out all file management commands
+within the history file to a separate shell script, then run those
+commands on the machine with the remote directory.  Note, however,
+that graphical file managers typically do not create such a log file,
+so you will have to first fix your graphical file manager before you
+try to use it for this task.
+
+Here is a rough overview of the system:
+
+1. Fetch new and modified files from the new and modified files list.
+These files were explicity modified or created within the archive
+system directory.
+
+2. Fetch directory management operations from the log.
+
+3. Add new files within the archive system (either because they were
+copied in or moved in) to the modified file list.
+
+4. Clean up redundant files names listed within the current new and
+modified files list.
+
+5. Apply rename operations to the list of files within the new and
+modified files list.  (Also clean up redundant file names afterward.)
+
+6. Delete non-existent file names from the new and modified files
+list.
+
+7. Filter out files with unwanted pathname prefixes from the new and
+modified files list.
+
+8. Generate an update script from the file management commands and the
+new and modified files list.
+
+One intentional deficiency in this system is that file copy operations
+internal to the archive root are not optimized to avoid unnecessary
+network utilization.  That feature was mostly left out due to lack of
+personal necessity and laziness.  Another thing to watch out for in my
+code is occurances of "dtou" (called dos2unix on other systems).
+Because of my unusual hybrid system, I have to sometimes sprinkle
+these commands into my files for things to work properly.
+
+That is the basic operation.  Because makefiles and plain text files
+are used extensively, it is easy to add in processing operations
+unanticipated by the original design.  One example is maintaining a
+copy chain into a sub-portion of the archive system.  To do this, I
+just added another makefile rule to turn an update script into a list
+of file management commands on the archive system, then changed the
+rule that generates "dired-cmd.txt" to append commands from that list.
+Because my system basically composites command line tools, adding a
+versatile file integrity checker wasn't that hard.  Moving on from
+here, you should find it easy to customize and extend too.

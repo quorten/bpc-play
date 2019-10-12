@@ -1,0 +1,12 @@
+This directory is a placeholder for user configured archive roots.
+
+The main idea: First you install the archive system by unpacking the
+tarball and compiling the binaries in a chosen location on your host
+machine, typically within some sort of user's home directory.  Next,
+you copy the "template" directory to a different name within this
+directory, and edit the files for your particular configuration.  If
+you have multiple archive roots, you can go ahead and create multiple
+such instances.
+
+Now with your archive roots configured in this directory, it is simply
+a matter of running make commands, etc.

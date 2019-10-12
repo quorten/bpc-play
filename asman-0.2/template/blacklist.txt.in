@@ -1,0 +1,3 @@
+# Blacklist input script.  The final blacklist script will be
+# generated from this one by basically just appending a prefix
+# statement for the archive root.

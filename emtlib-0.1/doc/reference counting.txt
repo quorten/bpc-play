@@ -1,0 +1,16 @@
+Dynamic memory handling can get very complex in certain programs.
+Then it becomes necessary to use an automatic tracking system to deal
+with the dynamically allocated memory.  Most such systems employ
+reference counting and scope analysis.
+
+Without using a reference counting system, the easiest way to keep
+track of dynamic memory is to use an owner system.  Out of all
+potential pointers pointing to dynamic memory, there is only one owner
+pointer.  The memory is only freed when the owner pointer gets deleted
+or goes out of scope.  However, this system only works assuming that
+the other pointers will either get deleted or go out of scope at the
+same time that happens to the owner pointer.  Otherwise, normal
+reference counting should be used.
+
+The implementation of reference counting should be fairly
+straighforward.

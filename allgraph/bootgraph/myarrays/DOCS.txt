@@ -1,0 +1,164 @@
+
+/* How to use exparray:
+
+* This expandable array implementation is divided into two sections:
+  core primitives and convenience functions.
+
+* Whenever you want to use a specific type in an expandable array,
+  first call `EA_TYPE(typename)' with your type.  This macro defines a
+  structure customized to be an array of that specific type.  The
+  first field of the structure, `d', is a pointer of the given type,
+  which points to the dynamically allocated array contents.
+
+* When you want to declare an expandable array, simply use
+  `typename_array' as the type name (with your type as `typename', of
+  course).
+
+* Initialize the array before use by calling `EA_INIT()'.  `array' is
+  the value of your array (use the syntax `*array' if it is a
+  pointer), and `reserve' is the number of elements to allocate space
+  for in advance (usually you should pick 16).  If linear reallocation
+  is being used, then the array will be reallocated with that many
+  more elements when the array becomes full.
+
+* All of these macros accept values rather than pointers, so use
+  syntax as described above if you have a pointer that will be used as
+  an argument.
+
+* NOTE: Because of the fact that this expandable array implementation
+  uses macros extensively, there are some programming situations where
+  macro inputs get clobbered or evaluated twice during intermediate
+  execution of the macros.  So far, this code was only modified in two
+  places to compensate for these issues.  But then again, using macros
+  can put you as a programmer at an advantage by very tricking writing
+  of expressions such as `EA_INSERT(array, 0, array.d[array.len])'...
+  but maybe you don't want to be that tricky.  Plus, the provided
+  example doesn't actually work.
+
+* When you are done using an expandable array, make sure you call
+  `EA_DESTROY()'.
+
+* To reserve space for extra elements that will be written in-place at
+  a later time, set `typename_array::len' to the desired size and then
+  call `EA_NORMALIZE()'.  `EA_NORMALIZE()' can also be used to free up
+  unused space in an array.
+
+* The normal behavior of an exparray is to allocate a reserve in
+  advance, and allocate more space once all of the previously
+  pre-allocated space is filled up.  Thus, one way to append a single
+  element to the array is to write to the position at
+  `typename_array::d[typename_array::len]', then call `EA_ADD()'.
+
+* You can change which functions are used for allocation by defining
+  `ea_malloc', `ea_realloc', and `ea_free' to the functions to use for
+  allocation.
+
+* You can also modify allocation behavior by providing different
+  macros for `EA_GROW()' and `EA_NORMALIZE()'.  Normally, allocation
+  behavior is done in an exponential manner without clearing newly
+  allocated memory.  You can change this by defining
+  `EA_LINEAR_REALLOC' or `EA_GARRAY_REALLOC'.
+
+** Why is the exponential allocator the default?  First of all, it's
+   what everyone else likes to use and recommends.  Second, I
+   benchmarked the two and the exponential allocator results in
+   generally faster programs.  Of course, it will also result in more
+   wasted memory on average: up to 50% of the allocated memory may be
+   unused.
+
+* The rest of the functions are convenience functions that use the
+  previously mentioned primitives.  See their individual documentation
+  for more details.
+
+* There is a wrapper header available for you to use this
+  implementation as a backend in place of the real GLib GArray
+  implementation.
+
+Overflow Safety
+***************
+
+This implementation does NOT check for integer overflows.  However,
+integer overflows are guaranteed to never happen in programming
+environments where the following constraints are guaranteed:
+
+* The largest allowable allocated memory chunk may never meet or
+  exceed 1/2 of the maximum memory address.
+
+* The allocated memory chunk (type_size * reserve) may never meet or
+  exceed 1/2 of the maximum memory address.  This is contingent upon
+  the caller using proper bounds checks when calling the following
+  routines:
+
+** `EA_INIT()'
+** `EA_NORMALIZE()'
+** `EA_SET_SIZE()'
+** `EA_APPEND_MULT()'
+** `EA_INSERT_MULT()'
+** `EA_PREPEND_MULT()'
+
+* All expandable array routines are never called with an out-of-bounds
+  index.  No length is specified such that an out-of-bounds index
+  would be calculated and referenced.  This is contingent upon the
+  caller using proper bounds checks when calling the following
+  routines:
+
+** `EA_INS()'
+** `EA_INSERT()'
+** `EA_INSERT_MULT()'
+** `EA_REMOVE()'
+** `EA_REMOVE_FAST()'
+** `EA_REMOVE_MULT()'
+** `EA_POP_BACK()'
+** `EA_POP_FRONT()'
+** `EA_ERASE_RANGE()'
+** `EA_ERASE_AFTER()'
+
+As a matter of observational fact, all of the allocation constraints
+are guaranteed in most small programs:
+
+  (MAX_TYPE_SIZE * MAX_ARRAY_LENGTH < HALF_MAX_ADDRESS)
+
+Likewise, all indices are guaranteed to be in bounds when operated on
+using typical looping constructs in small programs.
+
+Therefore, the additional checks for integer overflow are omitted from
+this implementation.
+
+TODO FIXME: It turns out that adding allocation bounds checks within
+the limited scope defined above has negligible performance impact.  As
+a matter of fact, it has virtually zero impact on the common case, at
+least on modern CPUs.  Therefore, bounds checks, maximum type size,
+and maximum array size should be defined.  Index bounds check should
+be left out, unless the user explicitly switches it on.
+
+* Use power-of-two bitmasking for performance and portability.
+
+* Using sizeof(), macro expansion, and token pasting, we can easily
+  extend `EA_TYPE()' to define different limits based off of the type
+  size.
+
+* Explicitly define separate macros that do index bounds checks.
+
+*/
+
+
+/* Reallocators:
+
+   EA_GROW(array)
+     Reallocation function for single step growth.  The `len' member
+     of the array should have already been incremented.
+
+   EA_NORMALIZE(array)
+     Ensure that the allocated space is consistent with the current
+     allocation algorithm.
+
+   Since these reallocators are inlined directly into the functions
+   that call them, it is important that they are kept lightweight.
+   `EA_GROW()' is lightweight in both instructions and runtime, but
+   `EA_NORMALIZE()' for exponential reallocation varies considerably
+   depending on the implementation.  The default C implementation
+   consumes 2-3 times more instructions than an optimized assembly
+   implementation on architectures that support a "bit scan reverse"
+   (bsr) instruction, like in the x86 instruction set architecture.
+   The runtime, compared with optimized assembly, can be 2-5 times
+   slower.  */

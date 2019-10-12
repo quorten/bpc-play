@@ -1,0 +1,31 @@
+%% This file is in Public Domain.
+\documentclass[11pt]{article}
+\usepackage[left=1.5in, right=1.5in, top=1in, bottom=1in]{geometry}
+\usepackage{amsmath}
+\begin{document}
+
+\title{Harmonic Waves}
+\author{Andrew Makousky}
+\date{\today}
+
+\maketitle
+
+A harmonic wave takes this form:
+$$\sin{x} + \sin{2x} + \sin{3x} + \sin{4x} + \cdots$$
+More specifically, the amplitude of each harmonic can be adjusted:
+$$f(x) = a\sin{x} + b\sin{2x} + c\sin{3x} + d\sin{4x} + \cdots$$
+Given a wave of this form, how do you find the maximum displacement of
+the composite wave?  First you would try to take the derivative.
+$$f'(x) = a\cos{x} + 2b\cos{2x} + 3c\cos{3x} + 4d\cos{4x} + \cdots$$
+The derivative of the harmonic wave function is easily predictable.
+Once the derivative is found, the zeroes of the derivative must be
+found.  By definition, the zeroes of the cosine function are any
+multiples of $\pi$.  However, it may be the case that some terms of
+the derivative are positive and negative in such a way that the result
+of the whole function is zero.  Is there a method to determine the
+exact zeroes of the derivative?
+
+Possible methods to the solution: Fourier Analysis, Fourier Transform,
+Laplace Transform.
+
+\end{document}

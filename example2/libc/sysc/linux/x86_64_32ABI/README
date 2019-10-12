@@ -1,0 +1,3 @@
+This architecture is for compiling x86-64 architecture binaries that
+use the i386 Linux ABI for system calls, but a 64-bit-style entry
+point for unpacking `argc', `argv', and `envp'.

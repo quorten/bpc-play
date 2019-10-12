@@ -1,0 +1,113 @@
+In order to keep in line with the fundamental concept of modular
+feature selection and simplicity, we define `malloc()' in terms of a
+series of "levels" or "steppings."
+
+At the grand level, we have some high-level allocation schemes.
+
+1. Static memory allocation.  A compile-time global variable is sized
+   to contain the whole heap.
+
+2. Contiguous dynamic memory allocation.  `sbrk()' can be used at
+   runtime to initialize and expand the heap, but the entire heap must
+   be contiguous.  This means that `sbrk()' cannot be used by multiple
+   users.
+
+3. Segmented dynamic memory allocation.  `sbrk()' can be used at
+   runtime to expand the heap.  If there are multiple users and the
+   heap cannot be expanded as a contiguous block, segmented heap
+   expansion is handled gracefully.  The most basic way of
+   implementing this is via a linked list, with head and tail
+   pointers.  Want an index?  My recommendation is to provide this as
+   a dynamically allocated separate data structure... with special
+   handling, of course.  If segmented expansion is exponential, then
+   you need only 32 entries to cover 4 GB and you could just as well
+   statically allocate it.
+
+   What's an example of a typical linear segment allocation case?
+   Well, suppose you allocate in segments of 1 MB.  If you reach the 4
+   GB limit by linear segment allocation, you would have allocated
+   4096 segments.  Not bad for storing as a single contiguous index
+   variable.
+
+Important!  We must also implement circular buffers.  Power-of-two
+and non-power-of-two.
+
+So you ask, what is the difference between using pointers versus
+sizes?  In general, only the base address pointer is portable, and add
+an index offset variable on top of that, the integer type may not be
+as wide as the pointer type.  On machines where machine arithmetic is
+supported for the full width of the pointer type, pointer-heavy code
+is faster.
+
+8-bit and 16-bit computers are the main case.  An 8-bit computer may
+have a 16-bit address bus, and a 16-bit computer may have a 24-bit
+address bus.  Everything 32-bit and wider supports machine arithmetic
+up to the full width of a pointer.
+
+Now, let's look at the next lower, but much more important, level.
+
+1. Stack allocator only.  Almost a drop-in replacement for `malloc()'
+   but the main problem here is that because we do not store the size
+   of the memory block that we allocate, the user must provide it to
+   us before we can determine if it can be freed.
+
+    * Data structures:
+        * Base pointer
+        * Top of stack pointer
+        * Limit pointer
+            * Maximum size, _heaplen, similar to Borland C.
+
+    * Functions:
+        * int sal_init(unsigned long size)
+        * void *sal_push(unsigned long size)
+        * void sal_pop(unsigned long size)
+        * int sal_free(void *block, unsigned long size)
+
+2. Stack allocator that stores the size of memory blocks in a header.
+   At the API-level, it's almost a drop-in replacement for `malloc()',
+   except that `free()' can fail, especially if done out-of-order.
+
+    * Functions:
+        * int salh_init(unsigned long size)
+        * void *salh_push(unsigned long size)
+        * int salh_free(void *block)
+
+3. Stack allocator that stores the size and allocation status of
+   memory blocks in both a header and a trailer.  Essentially, this is
+   exactly the same data structure as a traditional Unix `malloc()'
+   heap, but the algorithms are unnecessarily primitive.
+
+    * Functions:
+        * int salm_init(unsigned long size)
+        * void *salm_push(unsigned long size)
+        * int salm_free(void *block)
+
+4. Traditional Unix `malloc()', linear search for free blocks, best
+   fit.  Additional heuristic to only search for free blocks forward
+   from the current position, or skip the free block search entirely
+   and push onto the end of the allocation stack.  Can check both the
+   total free memory and the contiguous free memory at the top of the
+   stack.
+
+5. Early Macintosh and Windows style locking heap.  Blocks are
+   accessed via handles that are locked for use by user-mode software,
+   and unlocked to indicate that the System Software can move the
+   block around to defragment memory.  This is the old way of managing
+   memory fragmentation, but unfortunately as we know from experience,
+   it really doesn't work all that well.
+
+   As a really special case of this, big blocks can be subdivided into
+   smaller blocks to do partial defragmentation at a time, with
+   realtime deadlines enforced on defragmentation overhead, and
+   locking may return only a little bit of memory at a time that can
+   be operated on.  Big blocks may be "scrolled" by copying their
+   start contents onto their end and efficiently accessing via
+   modulo-address computation.
+
+6. Automatic slice allocation heap.  This is the modern way of
+   minimizing fragmentation, and completely forgoes with the concept
+   of locking and unlocking heap blocks.  Buckets of same-size or
+   similar-size blocks are automatically created at runtime.  This
+   definitely improves computational performance for searching for a
+   free block of the proper size, but it can result in wasted memory
+   if there are more buckets than are needed.

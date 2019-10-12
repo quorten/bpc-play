@@ -1,0 +1,11 @@
+Slider Wave Editor is a program specialized for dealing with
+properties of sound waves from a scientific perspective.  When certain
+words appear in the PO files, they are assumed to refer a meaning in
+regard to sound waves.
+
+Unfortunately, the original design of this application was not
+designed with internationalization in mind.  Specifically, the parts
+of the user interface which have the "add" and "remove" buttons with a
+label preceding them might be hard to translate.  However, this will
+not be changed unless I decide to redesign the user interface by more
+conventional standards.  Sorry.

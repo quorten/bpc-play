@@ -1,0 +1,449 @@
+; Library of basic circuits optimized for NAND-based logic.
+; Native OR gate is also included for the sake of correct timing.
+
+  Gate: NAND
+  Inputs: A B
+  Outputs: C
+  Truth table:
+  A B  C
+  0 0  1
+  0 1  1
+  1 0  1
+  1 1  0
+
+  Gate: OR
+  Inputs: A B
+  Outputs: C
+  Truth table:
+  A B  C
+  0 0  0
+  0 1  1
+  1 0  1
+  1 1  1
+
+; --------------------------------------------------------------------
+
+  Macro: NOT
+  Inputs: A
+  Outputs: B
+  Intermediates:
+  Truth table:
+  A  B
+  0  1
+  1  0
+NAND A A B
+
+  Macro: COPY
+  Inputs: A
+  Outputs: B
+  Intermediates:
+  Truth table:
+  A  B
+  0  0
+  1  1
+OR A A B
+
+;   Macro: COPY
+;   Inputs: A
+;   Outputs: C
+;   Intermediates: B
+;   Truth table:
+;   A  B
+;   0  0
+;   1  1
+; NOT A B
+; NOT B C
+
+;   Macro: OR
+;   Inputs: A C
+;   Outputs: E
+;   Intermediates: B D
+;   Truth table:
+;   A B  C
+;   0 0  0
+;   0 1  1
+;   1 0  1
+;   1 1  1
+; NOT A B
+; NOT C D
+; NAND B D E
+
+  Macro: AND
+  Inputs: A B
+  Outputs: D
+  Intermediates: C
+  Truth table:
+  A B  C
+  0 0  0
+  0 1  0
+  1 0  0
+  1 1  1
+NAND A B C
+NOT C D
+
+  Macro: NOR
+  Inputs: A B
+  Outputs: D
+  Intermediates: C
+  Truth table:
+  A B  C
+  0 0  1
+  0 1  0
+  1 0  0
+  1 1  0
+OR A B C
+NOT C D
+
+  Macro: ZERO
+  Inputs: A
+  Outputs: C
+  Intermediates: B
+  Truth table:
+  A  D
+  0  0
+  1  0
+NOT A B
+AND A B C
+
+  Macro: ONE
+  Inputs: A
+  Outputs: C
+  Intermediates: B
+  Truth table:
+  A  D
+  0  1
+  1  1
+NOT A B
+NAND A B C
+
+  Macro: XOR
+  Inputs: A B
+  Outputs: F
+  Intermediates: C D E
+  Truth table:
+  A B  E
+  0 0  0
+  0 1  1
+  1 0  1
+  1 1  0
+NAND A B C
+NAND A C D
+NAND B C E
+NAND D E F
+
+  Macro: XNOR
+  Inputs: A B
+  Outputs: D
+  Intermediates: C
+  Truth table:
+  A B  E
+  0 0  1
+  0 1  0
+  1 0  0
+  1 1  1
+XOR A B C
+NOT C D
+
+  Macro: MUX
+  Inputs: A B C
+  Outputs: G
+  Intermediates: D E F
+  Truth table:
+  A B C  G
+  0 0 0  0
+  0 0 1  0
+  0 1 0  0
+  0 1 1  1
+  1 0 0  1
+  1 0 1  0
+  1 1 0  1
+  1 1 1  1
+NOT C D
+NAND A D E
+NAND B C F
+NAND E F G
+
+  Macro: DEMUX
+  Inputs: A B
+  Outputs: C D E
+  Intermediates:
+  Truth table:
+  A B  C D E
+  0 0  1 0 0
+  0 1  0 0 0
+  1 0  1 1 0
+  1 1  0 0 1
+NOT B C
+AND A C D
+AND A B E
+
+; Half adder
+  Macro: ADD
+  Inputs: A B
+  Outputs: G D
+  Intermediates: C E F
+  Truth table:
+  A B  G D
+  0 0  0 0
+  0 1  1 0
+  1 0  1 0
+  1 1  0 1
+NAND A B C
+NOT C D
+NAND A C E
+NAND B C F
+NAND E F G
+
+; Full adder
+  Macro: FADD
+  Inputs: A B C
+  Outputs: F H
+  Intermediates: D E G
+  Truth table:
+  A B C  F H
+  0 0 0  0 0
+  0 0 1  1 0
+  0 1 0  1 0
+  0 1 1  0 1
+  1 0 0  1 0
+  1 0 1  0 1
+  1 1 0  0 1
+  1 1 1  1 1
+ADD A B D E
+ADD D C F G
+OR E G H
+
+; --------------------------------------------------------------------
+; Sequential logic
+
+; 4-gate signal delay circuit.
+  Macro: DELAY4
+  Inputs: A
+  Outputs: E
+  Intermediates: B C D
+  Sequential: Yes
+COPY A B
+COPY B C
+COPY C D
+COPY D E
+
+; 8-gate signal delay circuit.
+  Macro: DELAY8
+  Inputs: A
+  Outputs: C
+  Intermediates: B
+  Sequential: Yes
+DELAY4 A B
+DELAY4 B C
+
+; 16-gate signal delay circuit.
+  Macro: DELAY16
+  Inputs: A
+  Outputs: C
+  Intermediates: B
+  Sequential: Yes
+DELAY8 A B
+DELAY8 B C
+
+; 1-gate delay edge trigger circuit.
+  Macro: EDGEZ1
+  Inputs: A
+  Outputs: C
+  Intermediates: B
+  Sequential: Yes
+NOT A B
+AND A B C
+
+; 5-gate delay edge trigger circuit.
+  Macro: EDGEZ5
+  Inputs: A
+  Outputs: G
+  Intermediates: B C D E F
+  Sequential: Yes
+NOT A B
+NOT B C
+NOT C D
+NOT D E
+NOT E F
+AND A F G
+
+; SR flip-flop.
+; S and R inputs are normally one.  To trigger the "set" or "reset"
+; behavior, temporarily bring the corresponding input to zero.
+; Label-variable correspondence:
+; S R Q Q'
+; A B C D
+  Macro: SRFF
+  Inputs: A B
+  Outputs: C D
+  Intermediates:
+  Sequential: Yes
+NAND A D C
+NAND B C D
+
+; D flip-flop
+; Label-variable correspondence:
+; D CK Q Q'
+; A B  F G
+  Macro: DFF
+  Inputs: A B
+  Outputs: F G
+  Intermediates: C D E
+  Sequential: Yes
+NOT A C
+NAND A B D
+NAND B C E
+SRFF D E F G
+
+; TODO: JK flip-flop
+
+; 1-gate ring oscillator
+  Macro: ROSC
+  Inputs:
+  Outputs: A
+  Intermediates:
+  Sequential: Yes
+NOT A A
+
+; 16-gate delay ring oscillator
+  Macro: ROSC16
+  Inputs:
+  Outputs: B
+  Intermediates: A
+  Sequential: Yes
+DELAY16 A B
+NOT B A
+
+; --------------------------------------------------------------------
+; Registers and memory
+
+; 4-bit Register
+  Macro: R4
+  Inputs: A B C D E
+  Outputs: F G H I J K L M
+  Intermediates:
+  Sequential: Yes
+DFF A E F G
+DFF B E H I
+DFF C E J K
+DFF D E L M
+
+; 6-bit Register
+  Macro: R6
+  Inputs: A B C D E F G
+  Outputs: H I J K L M N O P Q R S
+  Intermediates:
+  Sequential: Yes
+DFF A G H I
+DFF B G J K
+DFF C G L M
+DFF D G N O
+DFF E G P Q
+DFF F G R S
+
+; 8-bit Register
+  Macro: R8
+  Inputs: A B C D E F G H I
+  Outputs: J K L M N O P Q R S T U V W X Y
+  Intermediates:
+  Sequential: Yes
+R4 A B C D I J K L M N O P Q
+R4 E F G H I R S T U V W X Y
+
+; TODO: 16-bit Register
+; TODO: 32-bit Register
+; TODO: 64-bit Register
+; TODO: 128-bit Register
+
+; 8-bit Shift Register
+  Macro: SHR8
+  Inputs: A B
+  Outputs: C D E F G H I J K L M N O P Q R
+  Intermediates:
+  Sequential: Yes
+DFF A B C D
+DFF C B E F
+DFF E B G H
+DFF G B I J
+DFF I B K L
+DFF K B M N
+DFF M B O P
+DFF O B Q R
+
+; 4-bit Asynchronous Counter
+  Macro: ACTR4
+  Inputs: A
+  Outputs: B D F H
+  Intermediates: C E G I
+  Sequential: Yes
+DFF C A B C
+DFF E C D E
+DFF G E F G
+DFF I G H I
+
+; 8-bit Asynchronous Counter
+  Macro: ACTR8
+  Inputs: A
+  Outputs: B D F H J L N P
+  Intermediates: C E G I K M O Q
+  Sequential: Yes
+DFF C A B C
+DFF E C D E
+DFF G E F G
+DFF I G H I
+DFF K I J K
+DFF M K L M
+DFF O M N O
+DFF Q O P Q
+
+; TODO: Synchronous counter
+
+; TODO: SRAM
+
+; TODO: Zero tester
+
+; --------------------------------------------------------------------
+
+; TODO: Add symbolic defines for numeric wire constants to macro
+; language.  It is really nice to be able to move hardware ports
+; around during development.
+
+; --------------------------------------------------------------------
+
+; Design notes.
+
+; Simulation example of setting a SR flip-flip.
+;    old           new
+; T0 NAND 1 1 0    NAND 1 1 0
+;    NAND 1 0 1    NAND 1 0 1
+; T1 NAND 1 1 0    NAND 0 1 0
+;    NAND 1 0 1    NAND 1 0 1
+; T2 NAND 0 1 0    NAND 0 1 1
+;    NAND 1 0 1    NAND 1 0 1
+; T3 NAND 0 1 1    NAND 0 1 1
+;    NAND 1 1 1    NAND 1 1 0
+; T4 NAND 0 0 1    NAND 0 0 1
+;    NAND 1 1 0    NAND 1 1 0
+; T5 NAND 0 0 1    NAND 1 0 1
+;    NAND 1 1 0    NAND 1 1 0
+; T6 NAND 1 0 1    NAND 1 0 1
+;    NAND 1 1 0    NAND 1 1 0
+
+; In our simulator, it takes 3 simulation cycles after a change to a
+; NAND SR flip-flop before the SR flip-flop state is stabilized.  Note
+; that this timing will be different if the SR flip-flop is not
+; constructed out of native NAND gates.
+
+; Thus, a 5-cycle delay from our edge trigger is a good wait to make
+; sure the changes are propagated and stabilized.  Unfortunately, this
+; also means that in our simplistic counter circuit design, we need to
+; add a corresponding signal delay to the input too to stabilize the
+; desired function.
+
+; Yes, this is also the reason why the Wikipedia latch circuit design
+; is more complicated with its two levels of memory, so that it can be
+; easily dropped into computer microprocessor designs.
+
+; Suffice it to say, at least you know where in your hardware design
+; there are critical timing considerations that need to be addressed
+; before building the real hardware.

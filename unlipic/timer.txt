@@ -1,0 +1,71 @@
+* Simple timer circuit, used to demonstrate that the gate array
+* simulator is working.
+
+* Remember, the instruction syntax "NOR A B C" means C = A NOR B.
+
+* Just as a note, this is how you form basic logic gates out of NOR
+* gates.  Of course, a compiler can dramatically help simplify the
+* programming process.
+
+** B = NOT A = A NOR A
+* NOR A A B
+
+** D = A OR B = NOT (A NOR B) = (A NOR B) NOR (A NOR B)
+* NOR A B C
+* NOR C C D
+
+** E = A AND B = NOT NOT (A AND B) = NOT ((NOT A) OR (NOT B)) =
+** (A NOR A) NOR (B NOR B)
+* NOR A A C
+* NOR A A D
+* NOR C D E
+
+** And, also as a useful reference, this is the half-adder circuit:
+* 
+
+** This is the full-adder circuit:
+
+** Multiplication can be implemented as shifts and adds.
+
+** Division is much more challenging.  It requires a binary search
+** tree to find the division result, along with subtraction multiple
+** times.  Lookup tables?
+
+**********************************************************************
+
+* Standard I/O conventions for a logic design running under the
+* simulator:
+* Pin 0 = Reset
+* Pin 1 = Serial in
+* Pin 2 = Serial out
+
+* First, some basic setup that we always do.  Establish invariant wire
+* references for the constants one and zero.  We need to do this using
+* logic identities rather than just using constants since the
+* simulator operates exclusively via gates.
+
+* Although... in a real circuit design, you would be able to easily
+* wire up the logic directly to a one or zero, simply by either wiring
+* directly to a voltage source or by leaving a wire floating.
+
+*** 0 = A AND (NOT A)
+** NOT A B
+* NOR 0 0 1
+** AND A B C
+* NOR 1 1 2
+* NOR 1 2 3
+* Optimizing to remove redundant gates, we get the following:
+NOR 0 0 1
+NOR 0 1 2
+
+* To get 1, we simply negate our zero identity.
+NOR 2 2 3
+
+* Thus, constant zero = wire 2, constant one = wire 3.
+
+* Internal timer circuit.  We use this to drive the clock.
+
+* Counter circuit, its outputs can be wired up to generate square
+* waves at various frequencies.
+
+* Latch circuit, for memory.

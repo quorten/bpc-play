@@ -1,0 +1,1 @@
+ -nH -E 'for \(|//|[0-9A-Za-z]+ [0-9A-Za-z]+( [=+-*/]|;)' TextEdit.cpp

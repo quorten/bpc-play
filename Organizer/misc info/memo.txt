@@ -1,0 +1,76 @@
+Well, well well. It seems that our little text editor module has advanced very much. I am proud to say that today is a day which we can show how much our code works. Although it is not quite ready for typical usage, it has a practical advantage in terms of freedom.
+
+											This is amazing! Amazing! Wow, am I surprised that I got this far! Okay, I guess I still have more to go. 
+
+Now you should make sure new line handling is O.K. And you should not buy a Macintosh computer instead of a PC! There is only one letter that has the farest negative leftbound extent:
+f
+
+This is so amazing!
+
+This plan2.txt file contains pseudocode for the basic text editor module:
+
+First of all, everything is inscribed in the basic image plane. That basic image plane may be larger than the viewing window, and therefore may require scrolling. Scrolling can happen in a few different ways:
+	Horizontal
+	Vertical
+Also there is an inline combinatorial set for more advanced features (ones that should be avoided during primary development):
+	Per-element scrolling (because the numerics don't allow for per-pixel scrolling)
+
+Only visible elements are drawn.
+
+The scrolling user interface can be controlled by these ways:
+	Visual scroll bars
+	Caret motion
+	Mouse wheel
+
+The mouse wheel can scroll by two mechanisms:
+	Rolling the mouse wheel
+	Pressing the middle mouse button
+
+Pressing the middle mouse button can result in two-way scrolling or four-way scrolling.
+
+The visual display objects are inscribed inside the basic image plane. There are two types of objects that must be displayed for now:
+	Text
+	Multiple text selections
+
+Text can be either wrapped or unwrapped. Text is edited by the following mechanisms:
+	Insertion
+	Deletion
+	Moving the caret
+	Undo
+	Redo
+
+Insertion can happen by the following mechanisms:
+	Single character insertions
+	Pasting
+
+Deletion can happen by the following ways:
+	Backspace
+	Delete
+	Ctrl+Backspace
+	Ctrl+Delete
+	Delete the region
+	Cut the region
+
+Moving the caret can happen by the following ways:
+	Arrow keys
+	Page Up
+	Page Down
+	Clicking
+	Home
+	End
+
+All of these can be modified by the Ctrl key.
+
+Setting the region happens by the following ways:
+	Clicking and dragging
+	Shift+Moving the caret
+
+Undo and redo undoes or redoes editing operations. Editing operations are delimited by a change from one repeated text editing mechanism to another.
+
+Tab characters move to the next tab stop. Newline characters move to the next newline.
+
+If word wrapping is enabled, whenever text is inserted, the wrapping information is repeatedly recalculated from the modified line onward until it is unnecessary. Whenever text is deleted, enough words or characters are brought over to the current line to make it too long and then wrapping is recalculated in the same was as previously was.
+
+Text is displayed by storing pre-wrapped line information and precomputed character placement information and those are used in a single call to PolyTextOut for all of the text that is visible in the viewing window. The same is done for the region, and the region is drawn on top of the text. Custom regions can be drawn behind the text.
+
+When the window is resized or the font is changed, all of this precomputed information is invalidated and recalculated.

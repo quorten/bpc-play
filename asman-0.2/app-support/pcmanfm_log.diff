@@ -1,0 +1,239 @@
+diff -Nrp -U5 pcmanfm-0.5.2+svn20091029.orig/src/ptk/ptk-file-misc.c pcmanfm-0.5.2+svn20091029/src/ptk/ptk-file-misc.c
+--- pcmanfm-0.5.2+svn20091029.orig/src/ptk/ptk-file-misc.c	2009-06-06 02:18:05.000000000 -0500
++++ pcmanfm-0.5.2+svn20091029/src/ptk/ptk-file-misc.c	2013-03-19 17:29:48.267038213 -0500
+@@ -153,10 +153,11 @@ gboolean  ptk_rename_file( GtkWindow* pa
+             }
+             else
+             {
+                 if ( 0 == rename( from_path, to_path ) )
+                 {
++                    write_log_entry( "mv \"%s\" \"%s\"\n", from_path, to_path );
+                     ret = TRUE;
+                     break;
+                 }
+                 else
+                 {
+@@ -228,20 +229,19 @@ gboolean  ptk_create_new_file( GtkWindow
+             continue;
+         }
+         if ( create_folder )
+         {
+             result = mkdir( full_path, 0755 );
++            if ( result == 0 )
++                write_log_entry( "mkdir \"%s\"\n", full_path, NULL );
+             ret = (result==0);
+         }
+         else
+         {
+             result = open( full_path, O_CREAT, 0644 );
+             if ( result != -1 )
+-            {
+-                close( result );
+-                ret = TRUE;
+-            }
++                write_log_entry( "touch \"%s\"\n", full_path, NULL );
+         }
+ 
+         if( ret && file )
+         {
+             *file = vfs_file_info_new();
+diff -Nrp -U5 pcmanfm-0.5.2+svn20091029.orig/src/vfs/vfs-file-task.c pcmanfm-0.5.2+svn20091029/src/vfs/vfs-file-task.c
+--- pcmanfm-0.5.2+svn20091029.orig/src/vfs/vfs-file-task.c	2008-09-06 01:44:59.000000000 -0500
++++ pcmanfm-0.5.2+svn20091029/src/vfs/vfs-file-task.c	2013-03-19 17:29:25.492031513 -0500
+@@ -215,24 +215,28 @@ vfs_file_task_do_copy( VFSFileTask* task
+             result = mkdir( dest_file, file_stat.st_mode | 0700 );
+ 
+         if ( result == 0 )
+         {
+             struct utimbuf times;
++            gboolean last_write_log;
+             task->progress += file_stat.st_size;
+             call_progress_callback( task );
+ 
+             dir = g_dir_open( src_file, 0, NULL );
++            last_write_log = task->write_log;
++            task->write_log = FALSE; /* Don't double count recursive copies */
+             while ( (file_name = g_dir_read_name( dir )) )
+             {
+                 if ( should_abort( task ) )
+                     break;
+                 sub_src_file = g_build_filename( src_file, file_name, NULL );
+                 sub_dest_file = g_build_filename( dest_file, file_name, NULL );
+                 vfs_file_task_do_copy( task, sub_src_file, sub_dest_file );
+                 g_free( sub_dest_file );
+                 g_free( sub_src_file );
+             }
++            task->write_log = last_write_log;
+             g_dir_close( dir );
+             chmod( dest_file, file_stat.st_mode );
+             times.actime = file_stat.st_atime;
+             times.modtime = file_stat.st_mtime;
+             utime( dest_file, &times );
+@@ -246,11 +250,15 @@ vfs_file_task_do_copy( VFSFileTask* task
+                     task->error = errno;
+                     call_state_callback( task, VFS_FILE_TASK_ERROR );
+                     if ( should_abort( task ) )
+                         goto _return_;
+                 }
++                else if ( task->write_log )
++                    write_log_entry( "rmdir \"%s\"\n", src_file, NULL );
+             }
++            if ( task->write_log )
++                write_log_entry( "cp -pR \"%s\" \"%s\"\n", src_file, dest_file );
+         }
+         else
+         {  /* result != 0, error occurred */
+             task->error = errno;
+             call_state_callback( task, VFS_FILE_TASK_ERROR );
+@@ -340,10 +348,12 @@ vfs_file_task_do_copy( VFSFileTask* task
+                     {
+                         task->error = errno;
+                         call_state_callback( task, VFS_FILE_TASK_ERROR );
+                     }
+                 }
++                if ( task->write_log )
++                    write_log_entry( "cp -p \"%s\" \"%s\"\n", src_file, dest_file );
+             }
+             else
+             {
+                 task->error = errno;
+                 call_state_callback( task, VFS_FILE_TASK_ERROR );
+@@ -423,10 +433,13 @@ vfs_file_task_do_move ( VFSFileTask* tas
+         }
+     }
+     else
+         chmod( dest_file, file_stat.st_mode );
+ 
++    if ( task->write_log )
++        write_log_entry( "mv \"%s\" \"%s\"\n", src_file, dest_file );
++
+     task->progress += file_stat.st_size;
+     call_progress_callback( task );
+ 
+     g_free( new_dest_file );
+ }
+@@ -516,19 +529,23 @@ vfs_file_task_delete( char* src_file, VF
+     task->current_file = src_file;
+     call_progress_callback( task );
+ 
+     if ( S_ISDIR( file_stat.st_mode ) )
+     {
++        gboolean last_write_log;
+         dir = g_dir_open( src_file, 0, NULL );
++        last_write_log = task->write_log;
++        task->write_log = FALSE; /* Don't double count recursive copies */
+         while ( (file_name = g_dir_read_name( dir )) )
+         {
+             if ( should_abort( task ) )
+                 break;
+             sub_src_file = g_build_filename( src_file, file_name, NULL );
+             vfs_file_task_delete( sub_src_file, task );
+             g_free( sub_src_file );
+         }
++        task->write_log = last_write_log;
+         g_dir_close( dir );
+         if ( should_abort( task ) )
+             return ;
+         result = rmdir( src_file );
+         if ( result != 0 )
+@@ -536,10 +553,13 @@ vfs_file_task_delete( char* src_file, VF
+             task->error = errno;
+             call_state_callback( task, VFS_FILE_TASK_ERROR );
+             return ;
+         }
+ 
++        if ( task->write_log )
++            write_log_entry( "rm -r \"%s\"\n", src_file, NULL );
++
+         task->progress += file_stat.st_size;
+         call_progress_callback( task );
+     }
+     else
+     {
+@@ -549,10 +569,13 @@ vfs_file_task_delete( char* src_file, VF
+             task->error = errno;
+             call_state_callback( task, VFS_FILE_TASK_ERROR );
+             return ;
+         }
+ 
++        if ( task->write_log )
++            write_log_entry( "rm \"%s\"\n", src_file, NULL );
++
+         task->progress += file_stat.st_size;
+         call_progress_callback( task );
+     }
+ }
+ 
+@@ -586,10 +609,14 @@ vfs_file_task_link( char* src_file, VFSF
+         task->error = errno;
+         call_state_callback( task, VFS_FILE_TASK_ERROR );
+         if ( should_abort( task ) )
+             return ;
+     }
++
++    if ( task->write_log )
++        write_log_entry( "ln -s \"%s\" \"%s\"\n", src_file, dest_file );
++
+     task->progress += src_stat.st_size;
+     call_progress_callback( task );
+ }
+ 
+ static void
+@@ -821,10 +848,11 @@ VFSFileTask* vfs_task_new ( VFSFileTaskT
+     task->src_paths = src_files;
+     if ( dest_dir )
+         task->dest_dir = g_strdup( dest_dir );
+     if ( task->type == VFS_FILE_TASK_COPY || task->type == VFS_FILE_TASK_DELETE )
+         task->recursive = TRUE;
++    task->write_log = TRUE;
+ 
+     return task;
+ }
+ 
+ /* Set some actions for chmod, this array will be copied
+@@ -958,5 +986,20 @@ void vfs_file_task_set_state_callback( V
+ {
+     task->state_cb = cb;
+     task->state_cb_data = user_data;
+ }
+ 
++/* Write an entry to the file log.  */
++void write_log_entry( char *fmt, char *file1, char *file2 )
++{
++    gchar* log_name;
++    FILE* flog;
++    log_name = g_build_filename( g_get_user_config_dir(), "pcmanfm/history", NULL );
++    flog = fopen(log_name, "a");
++    if ( flog != NULL )
++    {
++        /* FIXME: Should use `write_cmdline()' from asman instead.  */
++        fprintf(flog, fmt, file1, file2);
++        fclose(flog);
++    }
++    g_free( log_name );
++}
+diff -Nrp -U5 pcmanfm-0.5.2+svn20091029.orig/src/vfs/vfs-file-task.h pcmanfm-0.5.2+svn20091029/src/vfs/vfs-file-task.h
+--- pcmanfm-0.5.2+svn20091029.orig/src/vfs/vfs-file-task.h	2008-09-06 01:44:59.000000000 -0500
++++ pcmanfm-0.5.2+svn20091029/src/vfs/vfs-file-task.h	2013-03-19 17:29:13.340019259 -0500
+@@ -113,10 +113,12 @@ struct _VFSFileTask
+     VFSFileTaskProgressCallback progress_cb;
+     gpointer progress_cb_data;
+ 
+     VFSFileTaskStateCallback state_cb;
+     gpointer state_cb_data;
++
++    gboolean write_log; /* File management logging */
+ };
+ 
+ /*
+ * source_files sould be a newly allocated list, and it will be
+ * freed after file operation has been completed
+@@ -153,6 +155,8 @@ void vfs_file_task_try_abort ( VFSFileTa
+ 
+ void vfs_file_task_abort ( VFSFileTask* task );
+ 
+ void vfs_file_task_free ( VFSFileTask* task );
+ 
++void write_log_entry( char *fmt, char *file1, char *file2 );
++
+ #endif

@@ -1,0 +1,15 @@
+Bugs in Slider Wave Editor
+**************************
+
+* Some of the Spanish translations are atrocious and should be removed
+  or replaced.
+
+* GTK+ on Microsoft Windows is slower than WxWidgets on computers that
+  don't have high-end graphics.
+
+* PortAudio sound doesn't work with MSVC binaries when the locale is
+  anything other than C.
+
+* The user interface uses scrollbars as a replacement for sliders in
+  certain contexts, directly violating the GNOME Human Interface
+  Guidelines.

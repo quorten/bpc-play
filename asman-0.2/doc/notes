@@ -1,0 +1,159 @@
+For any one moment in time, there are so many things that I must do:
+
+Finish the documentation
+Write the directory tree walker module
+Fix my file logging patches to use -T
+Fix my programs to compensate for for lack of -T
+Write the multi-source-dest simplifier
+
+Okay, so now I think it's clear that I will have to make use of a
+modified command syntax form for data flowing through my utilities.
+Then at the back end, I can de-Tise (which should be easy), and at the
+front end, I can T-ize and de-multiize.  That will keep my tools
+reasonably simple.  Should I also de-symify at the front end too?
+Yes, I think I should.  I have to keep my tools reasonably simple to
+conform to expectations.
+
+If you write a program to generate random move commands, you will
+eventually delete every single file in your filesystem.  Great, but
+that is the default behavior of the Unix rename system call.
+
+-- Check strcmp's
+
+replace as many char* with const char* as possible
+Look for (char) casts and remove them.  Sign extension will not be a problem.
+
+TODO: Test all my programs for support for links
+
+Warnings when using the archive system management tools:
+
+Please make sure you only send VALID file management commands down the
+archive system management tools pipeline.  Also beware of copies and
+moves into existent directories as the destination.
+
+To sum things up, the archive system management tools have all out
+been very hard to write, mostly because of the combinatorial explosion
+of edge cases in both the basic simplification algorithms and the
+behavior of Unix command line tools.
+
+Wait, but a touch and a copy on a directory is not the same thing, is
+it?  If the directory already exists and you are copying more contents
+into it, it's different.
+
+TODO fmsimp check for the -T option for copies, it is almost deadly.
+It basically means that copies don't stomp out touches.  It will only
+exist when it is needed, that is, when two directory arguments are
+involved and the destination is an existing directory of the same
+name.
+
+Add line number tracking consistently throughout the archive system
+management tools when errors are found.
+
+Note, it is always safe to take touch commands from a simplified
+listing and move them to the top, but this is not the case for
+unsimplified listings.
+
+Finally... make sure you type in simple enough commands into your
+shell for them to be worked with with the archive system management
+tools.  If you use way too many wildcards, special options, and other
+things when typing in your commands, the archive system management
+tools will not be able to process your commands.  There are some
+common idioms that you should stick to to avoid troubles, most
+noteably, never write commands that involve overwriting, deleting, or
+merging with an existing destination, especially if it is a directory.
+Rather, break such commands up into their constituent parts.
+
+Wildcard rename and deletes cannot be simplified if it is a straight
+command from your shell history file.
+
+Tips on understanding the source code.  There are some important core
+libraries used throughout.  Obviously you should be familiar with Unix
+commands to work on asman.
+
+But FreeBSD's core utilities don't support `cp -s'... but with the
+archive system management tools, that is not a problem.  Just use
+
+  find . -not -type d -print0 | xargs -r0 | sumxfr -fl /dev/null | \
+    fmsimp | sh
+
+And you've got the equivalent of `cp -s'!  Wonderful, isn't it?  Yes,
+but make sure you have ${NL} set and exported before you pipe to `sh'!
+
+# Simplified command language.
+# This is a comment.
+
+delsuffix "delete-this-suffix.db" # So comments actually are fully supported.
+delprefix "/delete/this/prefix"
+delpart "/restricted/"
+prefix "/this/is/a/prefix/to/keep"
+
+Okay, so I formulated a simplified command language, but how will I use it?
+
+Can I compile this into a series of instructions?  No, I will have to
+process each rule in order, when I get to the printing rule and the
+end, that's when it stops.
+
+* Take a path.
+* Take a rule file.
+* Read the rule file one line at a time.
+* Check if the path passes to the next stage.
+* If it does, great.
+* If not, then terminate processing.
+
+if strstr != NULL
+break
+
+if strstr == string
+break
+
+if strstr == string + strlen - plen
+break
+
+Okay, so now we need to change the string heap into a string
+tree.  How will this work?
+
+Next we will need to finish fmprim, but before that we should
+manually verify the file management simplifier, do an update, and
+write the documentation.  Maybe I can delay writing the string
+heap too.  After all, I am pretty short on time.
+
+So, on I go, manual verification...
+
+This is too complicated.  I really don't want to do this, but at
+least I learned some things:
+
+There might be one erroneous simplification.
+
+Move chains weren't simplified tight enough.
+
+Renames that differ only in case will not be portable to Windows
+unless the remove commands are pushed in front of the relevant
+move.  Wait, I guess this is true in general.
+
+Move commands need to simplify for prefixes too, just like remove
+commands.  Otherwise, they will be less than optimal.
+
+I really don't like reading the computer logs.  Maybe the idea of
+logging wasn't so good after all.
+
+But, had I not done manual verification on a production dataset,
+I would not have caught these problems early.
+
+Can't you simplify mkdir and rmdir chains.  Okay, this needs a special
+simplifier that only checks adjacent commands.  Wait, or maybe the
+simplifier only works for chains starting with mkdir.  If there are no
+other file management commands under that directory hierarchy, then
+the directory is ... wait, file management commands are always assumed
+to be valid when passed into this program.  Thus, yes, only if mkdir
+is at the top, then an rmdir will remove an mkdir.  mkdir will be
+deduplicated.  rmdir will be deduplicated after no mkdirs to remove
+are found.
+
+
+Can't you simplify a touch and a move into a touch and a delete?  Yes.
+That would make processing simpler.
+
+Copies refer to the most original file name.  Good?  Yes.
+
+The most error-prone part of this software is the simplifiers.  No
+wonder why you don't see common software that does this!

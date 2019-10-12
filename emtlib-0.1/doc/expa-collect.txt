@@ -1,0 +1,16 @@
+Here is a list of all the projects I have made that make use of
+exparray.h:
+
+emtlib
+msi-tool
+Mad Libs
+delempty
+dlgedit
+
+Here's an idea to solve my problem of duplicated and slightly
+modified, incompatible code: (1) use one, big code collection and (2)
+use a version control system.  By using a version control system, I
+will be able to submit all of my different modifications to a common
+code base.  Not only do I need to be able to build up programs, but I
+also need to be able to break them down.  That's where my own tools
+come into play.

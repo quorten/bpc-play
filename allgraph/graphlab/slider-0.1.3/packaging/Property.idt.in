@@ -1,0 +1,53 @@
+Property	Value
+s72	l0
+Property	Property
+ARPHELPLINK	http://www.microsoft.com/management
+BannerBitmap	bannrbmp
+ButtonText_Back	< &Back
+ButtonText_Browse	Br&owse
+ButtonText_Cancel	Cancel
+ButtonText_Exit	&Exit
+ButtonText_Finish	&Finish
+ButtonText_Ignore	&Ignore
+ButtonText_Install	&Install
+ButtonText_Next	&Next >
+ButtonText_No	&No
+ButtonText_OK	OK
+ButtonText_Remove	&Remove
+ButtonText_Repair	&Repair
+ButtonText_Reset	&Reset
+ButtonText_Resume	&Resume
+ButtonText_Retry	&Retry
+ButtonText_Return	&Return
+ButtonText_Yes	&Yes
+CompleteSetupIcon	completi
+ComponentDownload	ftp://anonymous@microsoft.com/components/
+CustomSetupIcon	custicon
+DefaultUIFont	DlgFont8
+DialogBitmap	dlgbmp
+DlgTitleFont	{\DlgFontBold8}
+ErrorDialog	ErrorDlg
+ExclamationIcon	exclamic
+False	0
+IAgree	No
+InfoIcon	info
+InstallerIcon	insticon
+INSTALLLEVEL	3
+InstallMode	Typical
+Manufacturer	Andrew Makousky
+PIDTemplate	12345<###-%%%%%%%>@@@@@
+ProductCode	{E3DC73CF-2AE4-46A6-84DF-F9D41813F5A1}
+ProductID	none
+ProductLanguage	1033
+ProductName	Slider Wave Editor
+ProductVersion	@VERSION@
+Progress1	Installing
+Progress2	installs
+PROMPTROLLBACKCOST	P
+RemoveIcon	removico
+RepairIcon	repairic
+Setup	Setup
+ShowUserRegistrationDlg	0
+True	1
+UpgradeCode	{C88B4CCB-C846-4F34-A0BE-611F37637554}
+Wizard	Setup Wizard

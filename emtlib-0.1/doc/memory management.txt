@@ -1,0 +1,121 @@
+Summary of Standardized Memory Management Techniques
+
+Introduction
+----------------------------------------------------------------------
+
+If memory does not respond in a short enough amount of time, the
+microprocessor which requested the memory access will have to insert
+wait states in the current computer program until it responds.
+
+In order to solve this problem, higher speed memory must be used,
+which of course cost more money.  So instead, only a little high speed
+memory is used and the rest is lower speed memory.
+
+The reason why it is acceptable to use only a little high speed memory
+and a lot of lower speed memory is because the amount it speeds up
+computer programs is much greater than the rise in cost from using all
+high speed memory.
+
+Upon the analysis of several computer programs, two common memory
+access patterns are found which can be exploited to improve program
+performance: sequential memory access and local memory access.
+Sequential memory access can easily be optimized by preloading the
+next elements of the pattern into high speed memory, and local memory
+access can be optimized by keeping a local reigon around which memory
+was accessed in high speed memory.  However, it is of very important
+note that the size of the local region copied may not be as big as the
+program needs it to be, so in this case, this type of optimization
+will not be as effective as it could be.
+
+Therefore, because computer hardware is designed to optimize such
+programs, programs tend to be optimized to run on such hardware.
+
+Memory Management Techniques begin here
+----------------------------------------------------------------------
+
+Memory storage model:
+	Memory is typically divided into two parts: the head and the
+	data.  The head has a finite size, and the data may have a
+	variable size.  In this case, the head just stores pointers.
+	At the beginning of the data, the size of the data block is
+	stored.  At the end of the data, there may either be terminal
+	information or continue information if the memory was
+	allocated in segments.
+
+	One way to store constant data is to store the pointer and the
+	data size in the head and have no terminal marker, or have a
+	terminal marker and the data size determined from such.
+
+	Whenever memory is added or removed, trouble arises in the
+	optimization of the memory infrastructure.  Often times,
+	instead of reorganization activities being performed
+	immediately, they are delayed until request.  However, if the
+	time the reorganization activity takes is sufficiently small
+	enough, it may be automatically performed after the initial
+	memory request.  The memory manager must first be set up to do
+	this before it will do such automatically.
+
+Allocating memory:
+	Memory should be added at the next free location.  If there is
+	unsureness in the size of needed memory, there is one of three
+	choices which may be performed:
+		1. Allocate minimum memory
+		2. Allocate weighted average memory required
+		3. Allocate maximum memory
+
+	Another thing that may be done is reservation priorities.
+	When memory is allocated in an unsure condition or if
+	seemingly unneeded memory is deallocated, it may end up later
+	not needing to be used or later needing to be used.  To cope
+	with this, allocation priorities can be assigned to such
+	memory locations to prove how important things will be in the
+	case of memory conservation versus speed efficiency.
+
+Reallocating memory:
+	If memory was allocated in an unsure condition, memory may
+	need to added to an existing variable.  There are two ways to
+	do this:
+		1. Allocate segmented memory
+		2. Reallocate continuous memory
+	Memory may also need to be subtracted from an existing
+	variable.  However, this process is quite simple.
+
+Deallocating memory:
+	Deallocating continous memory is quite simple, but for
+	segmented memory, the process is a little more computationally
+	expensive.  The memory manager must go to the end of each
+	allocated segment to find the next so as to mark what memory
+	is free.
+
+Optimizing memory arrangement:
+	Usually rearranging memory is cached until request, unless set
+	up otherwise.  Automatic memory rearranging works based off a
+	percent time consumption compared to default slowdown of
+	unorganized memory.  If rearranging would have the same amount
+	of time spend as would using unorganized memory multiple
+	times, it will be done anyways in case the memory is
+	referenced more times than expected.
+
+	Short term percent time limits are also set up to determine
+	the maximum in between time spent on rearrangements.  The
+	rearrangment module of the memory manager is a cooperative
+	multitasking module, since the memory must be in a usable
+	state when any non-memory manager thread executes.
+
+	Otherwise, if automatic memory rearranging is not chosen, then
+	the controlling program can determine how the progressive
+	memory rearrangement is done.
+
+	When only random access memory operations are being used,
+	memory does not have to be completely arranged in order for
+	optimal performance, but it must be arranged so that memory
+	that is commonly accessed as a whole group is in optimal cache
+	line divisions.  Cache colorization (random distribution of
+	memory addresses) can help with this problem.
+
+Olde Skool reMembering Model
+----------------------------------------------------------------------
+
+Have only pointers and sometimes sizes on the stack for your memory on
+the heap, and when exanding allocated memory, always reallocate
+continous memory if there is not enough room.

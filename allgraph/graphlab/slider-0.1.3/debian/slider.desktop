@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Slider
+GenericName=Wave Editor
+Comment=Build sound waves from component parts
+Exec=slider
+Icon=slider
+Terminal=false
+Type=Application
+Categories=GNOME;AudioVideo;Audio;
+X-GNOME-FullName=Slider Wave Editor

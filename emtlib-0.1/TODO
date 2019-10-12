@@ -1,0 +1,91 @@
+What must I do to finish emtlib?
+
+* Add a build system.
+
+* Add documentation.
+
+* Add a test suite.
+
+* Finish memmgmt.
+
+* Finish hooks.
+
+* Test hooks for finalization.
+
+* Document good coding guidelines.
+
+* Literally give a skeleton structure for new programmers to start out
+  with.
+
+* Give some memory efficient and thread-safe string functions, if
+  necessary.
+
+* Create a string splicing and memory sharing class.
+
+* Also write my POSIX adaptation library for small systems.
+
+* Use Texinfo for documentation, along with comments.
+
+* Make sure that your documentation follows the regular Doxygen-style
+  form.
+
+* Look at libjpeg to see how to do without function prototypes.
+
+ansi2knr does not transform method declarations (function pointers in
+structs).  We handle these with a macro JMETHOD, defined as
+	#ifdef HAVE_PROTOTYPES
+	#define JMETHOD(type,methodname,arglist)  type (*methodname) arglist
+	#else
+	#define JMETHOD(type,methodname,arglist)  type (*methodname) ()
+	#endif
+which is used like this:
+	struct function_pointers {
+	  JMETHOD(void, init_entropy_encoder, (int somearg, jparms *jp));
+	  JMETHOD(void, term_entropy_encoder, (void));
+	};
+
+* Use ansi2knr.
+
+* Document how to write toplevels for supported operating systems.
+
+* Document how Unix programming can make your software more efficient.
+
+* Note EXIT_SUCCESS and EXIT_FAILURE.
+
+* Document how to write programs that can compile under compilers that
+  don't have prototypes.
+
+* About doubling realloc().
+
+   The terminology 'compilation environment' will be used throughout
+   this program.  'Compilation environment' refers to the master API
+   used to develop a specific program.
+
+   The following compilation environments are supported:
+   * ANSI C
+   * POSIX
+   * MS-DOS
+   * Windows
+   * TIGCC
+   * GTK+
+
+Central program startup.  Look, my mind has changed about this matter.
+I now know that there is one, and only one, standard for C, and that
+is Unix.  After all, the C programming language was invented on Unix,
+so any and all adaptation code will be directed to make non-Unix
+systems compatible with Unix.  I've also recently changed my mind
+about the high level type system.  I will now strive to make all such
+code compatible with GLib.  So what's the point of all this code I'm
+writing then?  It serves two purposes:
+
+1. To help port code to small embedded systems.
+2. To help port code to obsolete systems.
+
+Those are the two main goals of my system in contemporary times.  Note
+that if the GLib wrappers aren't well for you, you can dive down to
+the lower levels.
+
+Additionally, this code also contains provisions to help new
+programmers adopt a clean programming style.  Okay, so if this is the
+purpose of my code, then the decision is clear: use autoconf and
+automake.

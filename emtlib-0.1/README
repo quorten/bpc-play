@@ -1,0 +1,8 @@
+emtlib README
+************
+
+emtlib is a library of POSIX and GLib routines designed to help you
+port code to small embedded systems and obsolete computers.  emtlib is
+primarily designed to help speed up the porting process.  Currently,
+emtlib is not intended to make platform-specific optimizations
+unnecessary.

@@ -1,0 +1,48 @@
+Slider NEWS -- history of user visible changes
+
+Copyright (C) 2011, 2012, 2013 Andrew Makousky
+All rights reserved.
+See the end of this file for license conditions.
+
+* Slider 0.1.3
+  Audio playback added.  Binary relocation support added, for both
+  Linux-based systems and FreeBSD.  Name changed.  User interface
+  improved.  Tested on a Debian system.  Added specific support for
+  JACK.  Basically, improvements were added all around, though there's
+  still more to be wished for.
+
+* Sound Studio 0.1.2
+  Initial version released.  Notable missing features are direct
+  in-application support for playback and "1st Harmonic Drop" is not
+  implemented.  However, an additional Easter Egg feature for
+  exporting waveforms is implemented as a workaround for the playback
+  deficiency.
+
+* Sound Studio 0.1
+  Initial version created.
+
+----------------------------------------------------------------------
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+  * Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+
+  * Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in
+    the documentation and/or other materials provided with the
+    distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

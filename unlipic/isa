@@ -1,0 +1,112 @@
+The ISA of this unlimited computer
+
+This unlimited computer has only two instructions: logical NOR and
+jump if zero.  This computer also does not have registers: all
+operands to instructions are memory addresses.  Also, this computer
+addresses one bit at a time, not one byte at a time.  And just to be
+clear, NOR only operates on one bit at at time, same with the
+condition passed to conditional jump.
+
+The following notation is used for assembler listings:
+
+NOR A, B, C
+
+All operands are addresses.  This instruction computes A NOR B and
+stores the result in C.
+
+JZ C, ADDR
+
+This instruction checks the value of the bit specified located within
+address C.  If it is zero, then this instruction changes the address
+of the next instruction to ADDR.  Otherwise, it continues to the
+next adjacent instruction as normal.
+
+In assembler listings, semicolons are used for line comments.  Macros
+are defined as follows.  Note that address arithmetic may be specified
+on the operands, in which case the assembler will automatically
+generate the direct address during code generation.
+
+; T variables are for temporaries, used during intermediate
+; computations.
+
+.MACRO NOT A, C
+  NOR A, A, C
+.END
+
+.MACRO COPY A, C
+  NOT A, C
+  NOT C, C
+.END
+
+.MACRO OR A, B, C
+  NOR A, B, C
+  NOT C, C
+.END
+
+.MACRO AND A, B, C, T1, T2
+  NOT A, T1
+  NOT B, T2
+  OR T1, T2, C
+  NOT C, C
+.END
+
+.MACRO XOR A, B, C, T1, T2, T3
+  OR A, B, C
+  AND A, B, T1, T2, T3
+  NOT T1, T1
+  AND T1, C, C, T2, T3
+.END
+
+.MACRO XNOR A, B, C, T1, T2, T3
+  XOR A, B, C, T1, T2, T3
+  NOT C, C
+.END
+
+; Add two digits binary digits, storing the result in C and the carry
+; just before C.  The B on the end is for BAD, since this doesn't work
+; with machine-style arbitrary length addresses.  This macro cannot
+; add a number to itself.  Note that this is actually a half-adder of
+; a sort, but not really.  It is designed to operate correctly if the
+; carry bit from a previous operation is stored in C.
+
+.MACRO ADDB A, B, C, T1, T2, T3
+  XOR A, C, C, T1, T2, T3
+  XOR B, C, C, T1, T2, T3
+  AND A, B, C-1
+.END
+
+; Partial 8-bit adder, for internal use in complete adders only.
+
+.MACRO ADDPF8 A, B, C, T1, T2, T3
+  ADDB A+7, B+7, C+7, T1, T2, T3
+  ADDB A+6, B+6, C+6, T1, T2, T3
+  ADDB A+5, B+5, C+5, T1, T2, T3
+  ADDB A+4, B+4, C+4, T1, T2, T3
+  ADDB A+3, B+3, C+3, T1, T2, T3
+  ADDB A+2, B+2, C+2, T1, T2, T3
+  ADDB A+1, B+1, C+1, T1, T2, T3
+  ADDB A,   B,   C,   T1, T2, T3
+.END
+
+; Add two fixed-width 8-bit numbers stored in little endian.  The
+; carry is stored just before C.  Addresses point to the beginning of
+; the numbers.  This macro cannot add a number to itself.
+
+.MACRO ADDF8 A, B, C, T1, T2, T3
+  COPY 0, C+7
+  ADDPF8 A, B, C, T1, T2, T3
+.END
+
+; Add two fixed-width 16-bit numbers stored in little endian.  The
+; carry is stored just before C.  Addresses point to the beginning of
+; the numbers.  This macro cannot add a number to itself.
+
+.MACRO ADDF16 A, B, C, T1, T2, T3
+  COPY 0, C+15
+  ADDPF8 A+8, B+8, C+8, T1, T2, T3
+  ADDPF8 A,   B,   C,   T1, T2, T3
+.END
+
+; Now with my 16-bit constant width adder, I can address 8 kilobytes
+; of address space.  Not quite yet, though, since I haven't found a
+; way to convert the resulting number to the format of the machine.

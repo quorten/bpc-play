@@ -1,0 +1,230 @@
+Slider Wave Editor User's Guide
+*******************************
+
+Copyright (C) 2011, 2012, 2013 Andrew Makousky
+All rights reserved.
+See the end of this file for license conditions.
+
+Slider is an interactive program designed to help you synthesize sound
+effects by building them from harmonics and by combining multiple
+non-harmonic sine waves.
+
+The primary motivation of this program was to be able to pair
+graphical representations of sound waves with the audible
+representation, and in the process, learn various mathematical
+properties of sounds.
+
+Background Information
+**********************
+
+Slider's user interface and workflow are designed around the harmonic
+waves model of sound.  In this model, sound is a series of increases
+and decreases in air pressure, and when those pressure changes are
+graphed, they resemble a series of sine waves which are added
+together.  When an object by itself vibrates, it can vibrate with more
+than one frequency simultaneously.  However, an object will not
+vibrate well to just any frequency because not all waveforms can fit
+evenly in the size of an object.  Therefore, vibrating objects tend to
+vibrate only in frequencies that are a multiple of a fundamental
+frequency, so that such higher frequencies can fit evenly in the size
+of the object.
+
+Multiple frequencies which an object is vibrating by are called
+harmonics, and the fundamental frequency is also called the first
+harmonic.  Therefore, the number by which a harmonic is called is
+equal to its multiple of the fundamental frequency.
+
+How To Use
+**********
+
+Slider's user interface is mainly divided into two parts: a display
+which shows the resulting waveform and a control area.  There is also
+an upper toolbar that supplements the control area.
+
+The Display
+===========
+
+The display has a time scale set to be small enough just to display
+the necessary unique parts of the resulting waveform.  Wait!  How does
+the display set the time scale?  Make sure you read this carefully, so
+that you do not get fooled when using this audio application.  This is
+the algorithm that Slider uses to automatically set the time scale:
+
+* If there is only one unique fundamental frequency (i.e. multiple
+  fundamental sets within Slider but all of the same fundamental
+  frequency), the time scale will be set to one complete period of the
+  fundamental frequency.
+
+* If there is more than one unique fundamental frequency, the time
+  scale will be set to show the complete interference pattern between
+  the waves.  When more than two unique fundamental frequencies are
+  involved, the complete interference pattern is contained within the
+  interference pattern length of the two highest fundamental
+  frequencies, which is the inverse of the difference of the two
+  frequencies.
+
+** However, if the two highest fundamental frequencies differ by more
+   than 100% (i.e. one fundamental frequency is at least twice as high
+   as the other), then the time scale is set to display the longest
+   wavelength of a fundamental frequency, i.e. one period of the
+   lowest fundamental frequency.  Although there is theoretically an
+   interference pattern among the waves, for all practical reasons, it
+   is not perceptually discernible and the high frequency wave can
+   just be considered to augment the low frequency wave.
+
+Currently, it is not possible to manually set the time scale, and no
+information is displayed about the automatically set time scale.
+
+Once the time scale is set, the height of the waveform will be scaled
+so that the sample of the waveform with the largest displacement will
+just touch the top or the bottom of the display.  In technical terms,
+this is automatic gain control.  In fact, for audio playback, the
+amplitude scaling uses the same scaling factor that is used in the
+display, which means if you have a really complex sound that cannot be
+graphed accurately in the display, you will not be able to listen to
+it either due to "clipping" of the audio output, which is when very
+large amplitudes are cut off to the digital audio limits.
+
+The Upper Toolbar
+=================
+
+The volume scaler in the user interface is applied in conjunction with
+the automatic gain control corrector.  Generally, you always want the
+volume scaler to be less than 1.00, so that if the automatic gain
+control correction factor is slightly off, your sound output will not
+get clipped.  Remember, the volume scaler only requests Slider to
+attempt to adjust to a goal amplitude for automatic gain control.  The
+hard maximum is determined by your sound hardware's volume settings.
+
+The Control Area
+================
+
+The other main part of the user interface, the control area, is
+devoted to editing a single grouping of a fundamental frequency and
+its harmonics.  Multiple different sets of fundamental frequencies and
+their harmonics can be mixed together to create the sound effect.
+Separate fundamental frequencies must be edited separately.
+
+The button labeled "Multiply Amplitudes" will change the current
+maximum displacement (amplitude) to become the value that you type in.
+Basically, it will calculate the height of the highest sample and
+scale all component amplitudes so that the height of that sample will
+become the value that you typed in.  If for some reason the number of
+points that must be sampled exceeds 1000, you will be asked if you
+still want to do the calculation.  On typical modern PCs with a CPU
+that runs at a multi-gigahertz clock frequency, the calculation will
+not run unbearably slow unless the number of points exceeds 100,000 or
+so.
+
+Recommended Workflow
+********************
+
+Slider does not support undo or redo.  When working on a project, you
+are recommended to save lots of little files with small changes at a
+time into a project folder, and then you can switch between your files
+in any order whatsoever to further work on them.  When you have files
+that you believe will no longer be of use to you, you would move them
+into a "trash" folder that you created within your project folder, and
+when you are really sure that you do not need those files anymore, you
+would delete them for real.
+
+You may notice that the files that Slider saves are just plain text
+files.  This is intentional, of course, so that your data is not bound
+to any special software.  However, there are limits to what Slider can
+do with its project files.  In particular, when Slider loads its
+project files, it completely ignores comments and thus cannot write
+them back out on the next save.  Also, comments are only allowed in a
+single continuous comment header at the absolute beginning of the
+file.
+
+Unusual or Missing Features
+***************************
+
+Originally, there were plans to add a command called "1st Harmonic
+Drop."  It was never added due to a design misconception.
+Conceptually, if you can add higher frequencies to the end of a
+waveform, you should be able to add lower frequencies to the beginning
+of a waveform from inside of an editor program.  The way this feature
+would work would be to conceptually delete the current fundamental
+frequency and make the second harmonic become the first harmonic.
+However, that would cause some frequencies that were harmonics to no
+longer be an integer multiple of the fundamental frequency and thus
+become invalid, so this feature is currently disabled unless the other
+understanding of it is implemented: add a lower frequency for which
+the fundamental is a harmonic of.  Unfortunately, that also has a
+disadvantage: the lower frequency is always half of the higher
+frequency.
+
+You may wonder why there are multiple redundant window management
+buttons on the editor windows in the user interface, such as the
+add/remove buttons for harmonic editor windows.  This is intended to
+be a mechanism to insert the new window after the current one.  Right
+now, you cannot click and drag windows to reorganize them, but you can
+change which harmonic the windows are viewing to achieve a similar
+task.
+
+The combination of the mantissa editor, exponent editor, and multiple
+scroll bars that are used to edit various numbers in the program are
+called scientific number editors.  Because their implementation is not
+yet complete, they have various hard-coded parameters which are not
+yet configurable beyond modifying the source code.  These controls may
+be improved in a later version of Slider Wave Editor.
+
+Note that you can remove all harmonics of a given fundamental
+frequency.  If you do, you will be unable to add then back using
+conventional means.  You can of course delete the fundamental
+frequency and recreate it to add harmonics back.
+
+You will notice that when working with complex sounds, the display
+window is noticeably deficient.  That is intentional for this version
+of Slider, along with the unusual user interface. Improvements to
+these deficiencies might be made in a later version.
+
+Goodies and Enhancements
+************************
+
+As this program was not originally intended for other people to use,
+its feature set may seem quite limited.  However, if that is how you
+are thinking about this program, then perhaps you did not explore
+enough of its features, and perhaps you did not think of how it could
+be used in conjunction with other tools such as Audacity.  If you
+select the "Export" action from the menu, then you can save a Nyquist
+script that can be evaluated in Audacity to generate your waveform.
+Then you can do further audio processing in Audacity.  Audacity's
+website is <http://audacity.sourceforge.net>.  JACK
+<http://jackaudio.org> can also facilitate transporting audio out of
+Slider and into other audio applications.  JACK is the recommended
+export mechanism for Slider.  The other, older export mechanism is
+still provided for platforms where audio application integration with
+JACK is either not as strong or non-trivial to set up.
+
+Hopefully this program will help you experiment, analyze, and discover
+various aspects of sound that you probably are not normally privileged
+to access.
+
+License Conditions
+******************
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+  * Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+
+  * Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in
+    the documentation and/or other materials provided with the
+    distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

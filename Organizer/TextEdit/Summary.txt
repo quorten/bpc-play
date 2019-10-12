@@ -1,0 +1,49 @@
+Text Editor
+
+Rendering		Caching and Optimization
+
+Font
+
+Caret Positioning
+
+Insert/Delete
+
+Motion			Cursor Caret Positioning Double Clicking
+
+Line Breaking		Line Truncation		 Word Wrapping
+
+Scrolling		Scrolling Render Cache	 Numeric Precision Control
+
+Tabs
+
+Undo/Redo		Undo Memory Limits
+
+Notifications
+
+Mouse Wheel
+
+Mouse Wheel Pan
+
+Character Properties	In-Memory Compression
+
+Layout Frame
+
+Rich Text Editor
+
+Context Structures
+Array Types
+Character Manager
+Array Run-Length Compressor
+Other In-Memory Compressors
+Platform Independence
+Interface Translator
+
+The fact that the code is comprised about several major level modules
+does not mean that each module is independent of each other.  However,
+the majority of the functions and data structures are encapsulated
+into such modules, and each module is accessed from the other only by
+clean and well-defined interfaces.  When defining the interfaces, care
+must be taken to make sure the interfaces are programmer friendly.
+
+Interfaces can be installed into modules so that one module depends on
+another.

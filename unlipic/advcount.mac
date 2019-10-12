@@ -1,0 +1,891 @@
+; Library of basic circuits optimized for NAND-based logic.
+; Native OR gate is also included for the sake of correct timing.
+
+  Gate: NAND
+  Inputs: A B
+  Outputs: C
+  Truth table:
+  A B  C
+  0 0  1
+  0 1  1
+  1 0  1
+  1 1  0
+
+  Gate: OR
+  Inputs: A B
+  Outputs: C
+  Truth table:
+  A B  C
+  0 0  0
+  0 1  1
+  1 0  1
+  1 1  1
+
+; --------------------------------------------------------------------
+
+  Macro: NOT
+  Inputs: A
+  Outputs: B
+  Intermediates:
+  Truth table:
+  A  B
+  0  1
+  1  0
+NAND A A B
+
+  Macro: COPY
+  Inputs: A
+  Outputs: B
+  Intermediates:
+  Truth table:
+  A  B
+  0  0
+  1  1
+OR A A B
+
+;   Macro: COPY
+;   Inputs: A
+;   Outputs: C
+;   Intermediates: B
+;   Truth table:
+;   A  B
+;   0  0
+;   1  1
+; NOT A B
+; NOT B C
+
+;   Macro: OR
+;   Inputs: A C
+;   Outputs: E
+;   Intermediates: B D
+;   Truth table:
+;   A B  C
+;   0 0  0
+;   0 1  1
+;   1 0  1
+;   1 1  1
+; NOT A B
+; NOT C D
+; NAND B D E
+
+  Macro: AND
+  Inputs: A B
+  Outputs: D
+  Intermediates: C
+  Truth table:
+  A B  C
+  0 0  0
+  0 1  0
+  1 0  0
+  1 1  1
+NAND A B C
+NOT C D
+
+  Macro: NOR
+  Inputs: A B
+  Outputs: D
+  Intermediates: C
+  Truth table:
+  A B  C
+  0 0  1
+  0 1  0
+  1 0  0
+  1 1  0
+OR A B C
+NOT C D
+
+  Macro: ZERO
+  Inputs: A
+  Outputs: C
+  Intermediates: B
+  Truth table:
+  A  C
+  0  0
+  1  0
+NOT A B
+AND A B C
+
+  Macro: ONE
+  Inputs: A
+  Outputs: C
+  Intermediates: B
+  Truth table:
+  A  C
+  0  1
+  1  1
+NOT A B
+NAND A B C
+
+  Macro: ZERO_ONE
+  Inputs: A
+  Outputs: C D
+  Intermediates: B
+  Truth table:
+  A  C D
+  0  0 1
+  1  0 1
+NOT A B
+NAND A B D
+NOT D C
+
+  Macro: XOR
+  Inputs: A B
+  Outputs: F
+  Intermediates: C D E
+  Truth table:
+  A B  E
+  0 0  0
+  0 1  1
+  1 0  1
+  1 1  0
+NAND A B C
+NAND A C D
+NAND B C E
+NAND D E F
+
+  Macro: XNOR
+  Inputs: A B
+  Outputs: D
+  Intermediates: C
+  Truth table:
+  A B  E
+  0 0  1
+  0 1  0
+  1 0  0
+  1 1  1
+XOR A B C
+NOT C D
+
+; 1-bit Functional Increment
+; CIN = Carry-in, DIN = Data in, DOUT = Data out, COUT = Carry-out
+; Label-variable correspondence:
+; CIN DIN DOUT COUT
+; A   B   C    D
+  Macro: FINC1
+  Inputs: A B
+  Outputs: C D
+  Intermediates: 
+  Truth table:
+  A B  C D
+  0 0  0 0
+  0 1  1 0
+  1 0  1 0
+  1 1  0 1
+XOR A B C
+AND A B D
+
+; --------------------------------------------------------------------
+; Combinatorial logic gates with more than two inputs
+
+  Macro: NAND3
+  Inputs: A B C
+  Outputs: F
+  Intermediates: D E
+  Truth table:
+  A B C  F
+  0 0 0  1
+  0 0 1  1
+  0 1 0  1
+  0 1 1  1
+  1 0 0  1
+  1 0 1  1
+  1 1 0  1
+  1 1 1  0
+NAND A B D
+NOT D E
+NAND E C F
+
+  Macro: AND3
+  Inputs: A B C
+  Outputs: E
+  Intermediates: D
+  Truth table:
+  A B C  E
+  0 0 0  0
+  0 0 1  0
+  0 1 0  0
+  0 1 1  0
+  1 0 0  0
+  1 0 1  0
+  1 1 0  0
+  1 1 1  1
+AND A B D
+AND D C E
+
+  Macro: AND4
+  Inputs: A B C D
+  Outputs: G
+  Intermediates: E F
+  Truth table:
+  A B C D  G
+  0 0 0 0  0
+  0 0 0 1  0
+  0 0 1 0  0
+  0 0 1 1  0
+  0 1 0 0  0
+  0 1 0 1  0
+  0 1 1 0  0
+  0 1 1 1  0
+  1 0 0 0  0
+  1 0 0 1  0
+  1 0 1 0  0
+  1 0 1 1  0
+  1 1 0 0  0
+  1 1 0 1  0
+  1 1 1 0  0
+  1 1 1 1  1
+AND A B E
+AND C D F
+AND E F G
+
+  Macro: AND5
+  Inputs: A B C D E
+  Outputs: G
+  Intermediates: F
+  Truth table:
+  A B C D E  G
+  0 0 0 0 0  0
+  0 0 0 0 1  0
+  0 0 0 1 0  0
+  0 0 0 1 1  0
+  0 0 1 0 0  0
+  0 0 1 0 1  0
+  0 0 1 1 0  0
+  0 0 1 1 1  0
+  0 1 0 0 0  0
+  0 1 0 0 1  0
+  0 1 0 1 0  0
+  0 1 0 1 1  0
+  0 1 1 0 0  0
+  0 1 1 0 1  0
+  0 1 1 1 0  0
+  0 1 1 1 1  0
+  1 0 0 0 0  0
+  1 0 0 0 1  0
+  1 0 0 1 0  0
+  1 0 0 1 1  0
+  1 0 1 0 0  0
+  1 0 1 0 1  0
+  1 0 1 1 0  0
+  1 0 1 1 1  0
+  1 1 0 0 0  0
+  1 1 0 0 1  0
+  1 1 0 1 0  0
+  1 1 0 1 1  0
+  1 1 1 0 0  0
+  1 1 1 0 1  0
+  1 1 1 1 0  0
+  1 1 1 1 1  1
+AND4 A B C D F
+AND E F G
+
+; --------------------------------------------------------------------
+; Sequential logic
+
+; Zero-one macro with cheat to get a deterministic value out of a
+; floating input wire.  This only works in the this particular
+; simulation, don't try it in the real world.  That's one of the
+; reasons why real-world chips always have Vcc and GND pins.
+  Macro: ZERO_ONE_S
+  Inputs: A
+  Outputs: D E
+  Intermediates: B C
+  Sequential: Yes
+COPY A B
+NOT A C
+NAND B C E
+NOT E D
+
+; 4-gate signal delay circuit.
+  Macro: DELAY4
+  Inputs: A
+  Outputs: E
+  Intermediates: B C D
+  Sequential: Yes
+COPY A B
+COPY B C
+COPY C D
+COPY D E
+
+; 8-gate signal delay circuit.
+  Macro: DELAY8
+  Inputs: A
+  Outputs: C
+  Intermediates: B
+  Sequential: Yes
+DELAY4 A B
+DELAY4 B C
+
+; 16-gate signal delay circuit.
+  Macro: DELAY16
+  Inputs: A
+  Outputs: C
+  Intermediates: B
+  Sequential: Yes
+DELAY8 A B
+DELAY8 B C
+
+; 32-gate signal delay circuit.
+  Macro: DELAY32
+  Inputs: A
+  Outputs: C
+  Intermediates: B
+  Sequential: Yes
+DELAY16 A B
+DELAY16 B C
+
+; 64-gate signal delay circuit.
+  Macro: DELAY64
+  Inputs: A
+  Outputs: C
+  Intermediates: B
+  Sequential: Yes
+DELAY32 A B
+DELAY32 B C
+
+; 128-gate signal delay circuit.
+  Macro: DELAY128
+  Inputs: A
+  Outputs: C
+  Intermediates: B
+  Sequential: Yes
+DELAY64 A B
+DELAY64 B C
+
+; 1-gate delay edge trigger circuit.
+  Macro: EDGEZ1
+  Inputs: A
+  Outputs: C
+  Intermediates: B
+  Sequential: Yes
+NOT A B
+AND A B C
+
+; 5-gate delay edge trigger circuit.
+  Macro: EDGEZ5
+  Inputs: A
+  Outputs: G
+  Intermediates: B C D E F
+  Sequential: Yes
+NOT A B
+NOT B C
+NOT C D
+NOT D E
+NOT E F
+AND A F G
+
+; 11-gate delay edge trigger circuit.
+  Macro: EDGEZ11
+  Inputs: A
+  Outputs: M
+  Intermediates: B C D E F G H I J K L
+  Sequential: Yes
+NOT A B
+NOT B C
+NOT C D
+NOT D E
+NOT E F
+NOT F G
+NOT G H
+NOT H I
+NOT I J
+NOT J K
+NOT K L
+AND A L M
+
+; SR NAND flip-flop.
+; Also known as SR NAND latch.
+; 'S and 'R inputs are normally one.  To trigger the "set" or "reset"
+; behavior, temporarily bring the corresponding input to zero.
+; Label-variable correspondence:
+; 'S 'R Q Q'
+; A  B  C D
+  Macro: SRFF
+  Inputs: A B
+  Outputs: C D
+  Intermediates:
+  Sequential: Yes
+NAND A D C
+NAND B C D
+
+; D flip-flop
+; Also known as gated D latch.
+; Please note that the gated D latch has a maximum practical frequency
+; at which its clock can be driven at.  If it is driven too fast, it
+; will "fibrillate" uncontrollably and be useless.
+; Label-variable correspondence:
+; D CK Q Q'
+; A B  F G
+  Macro: DFF
+  Inputs: A B
+  Outputs: F G
+  Intermediates: C D E
+  Sequential: Yes
+NOT A C
+NAND A B D
+NAND B C E
+SRFF D E F G
+
+; Rising edge triggered master-slave D flip flop
+; Label-variable correspondence:
+; D CK Q Q'
+; A B  G H
+  Macro: MSEDFF
+  Inputs: A B
+  Outputs: G H
+  Intermediates: C D E F
+  Sequential: Yes
+NOT B D
+DFF A D C E
+NOT D F
+DFF C F G H
+
+; Classical rising edge triggered D flip-flop.
+; This circuit is functionally identical to MSEDFF, although less
+; intuitive to understand.  What is the advantage?  The main advantage
+; is less signal propagation delay due to a few less intermediate
+; gates.
+; Label-variable correspondence:
+; D CK Q Q'
+; A B  G H
+  Macro: CEDFF
+  Inputs: A B
+  Outputs: G H
+  Intermediates: C D E F
+  Sequential: Yes
+SRFF C B D E
+NAND3 E B C F
+NAND F A C
+SRFF E F G H
+
+; JK flip-flop
+; Label-variable correspondence:
+; J CK K Q Q'
+; A B  C G H
+  Macro: JKFF
+  Inputs: A B C
+  Outputs: G H
+  Intermediates: E F
+  Sequential: Yes
+NAND3 A B H E
+NAND3 G B C F
+SRFF E F G H
+
+; Please note that gate delay ring oscillator circuits need a unifying
+; RESET input to be employed in order to function correctly.
+; Otherwise, they're never going to start correctly.  Please also note
+; that for long delay ring oscillators, the RESET signal must be held
+; high long enough for the entire delay chain to hold the same signal
+; value.
+
+; A RESET brings all ring oscillators to a LOW output.  After a RESET,
+; gate delay ring oscillators hold the LOW value for the number of
+; delay cycles before switching.
+
+; My recommendation is to avoid using long delay ring oscillators.  If
+; you want a lower frequency clock signal, use a counter circuit as a
+; frequency divider, with the smallest possible delay ring oscillator
+; to control its clock.  A counter circuit also allows you to properly
+; implement a phase-locked loop.
+
+; Likewise, if you want to extend a RESET signal, a saturating counter
+; circuit can be employed.
+
+; 1-gate ring oscillator WITHOUT RESET
+  Macro: ROSCZ
+  Inputs:
+  Outputs: A
+  Intermediates:
+  Sequential: Yes
+NOT A A
+
+; 1-gate ring oscillator with RESET
+  Macro: ROSC
+  Inputs: A
+  Outputs: B
+  Intermediates: C
+  Sequential: Yes
+OR A B C
+NOT C B
+
+; 16-gate delay ring oscillator with RESET
+  Macro: ROSC16
+  Inputs: A
+  Outputs: B
+  Intermediates: C D
+  Sequential: Yes
+OR A B C
+DELAY16 C D
+NOT D B
+
+; 32-gate delay ring oscillator with RESET
+  Macro: ROSC32
+  Inputs: A
+  Outputs: B
+  Intermediates: C D
+  Sequential: Yes
+OR A B C
+DELAY32 C D
+NOT D B
+
+; 64-gate delay ring oscillator with RESET
+  Macro: ROSC64
+  Inputs: A
+  Outputs: B
+  Intermediates: C D
+  Sequential: Yes
+OR A B C
+DELAY64 C D
+NOT D B
+
+; 128-gate delay ring oscillator with RESET
+  Macro: ROSC128
+  Inputs: A
+  Outputs: B
+  Intermediates: C D
+  Sequential: Yes
+OR A B C
+DELAY128 C D
+NOT D B
+
+; --------------------------------------------------------------------
+; Registers and memory
+
+; Please note that all registers and counter circuits need a RESET
+; signal to stabilize the flip-flops to a deterministic state.
+; Otherwise, they will "fibrillate" uncontrollably and never function
+; as a correct memory in a counter circuit.
+
+; Sometimes it may seem like a counter circuit is working correctly
+; most of the time, but there will be some times where the circuit
+; will "fibrillate" uncontrollably.  Chances are that if you bring
+; down the clock frequency a tad bit, the problem will become a lot
+; less likely.  Unfortunately, that does mean that your circuit
+; simulation will perform begrudgingly more slowly.
+
+; TODO: Figure out how to completely eliminate the issue.
+
+; TODO: Please note, I have observed some transient high-frequency
+; flickering on the outputs of the synchronous counter circuits when
+; in the middle of a clock cycle.  Be careful.  Your best bet is to
+; also feed these outputs into clocked logic.  Also, this may be the
+; primary reason why simply operating at a slower clock frequency
+; helps prevent fibrillation on the counter circuits.
+
+; TODO: A shift register square wave generator.  Unlike the full
+; synchronous counter circuits, this can be initialized faster and can
+; operate at higher frequencies.  It may be a good option for taking
+; the high frequency output of a gate delay ring oscillator and
+; dividing it down to something slow enough to drive a synchronous
+; counter circuit.
+
+; Ring counter, Johnson counter, switch tail ring counter, twisted
+; ring counter, walking ring counter, Mobius counter.
+
+; TODO: DCD HEX display decoder
+
+; 1-bit Register with RESET
+; NRST = NOT RESET
+  Macro: REG1
+  Inputs: NRST PD CK
+  Outputs: Q QN
+  Intermediates: D
+  Sequential: Yes
+AND NRST PD D
+MSEDFF D CK Q QN
+
+; 4-bit Register with RESET
+; NRST = NOT RESET
+  Macro: REG4
+  Inputs: NRST CK PD0 PD1 PD2 PD3
+  Outputs: V0 V1 V2 V3 V0N V1N V2N V3N
+  Intermediates: D0 D1 D2 D3
+  Sequential: Yes
+REG1 NRST PD0 CK V0 V0N
+REG1 NRST PD1 CK V1 V1N
+REG1 NRST PD2 CK V2 V2N
+REG1 NRST PD3 CK V3 V3N
+
+; 6-bit Register with RESET
+; NRST = NOT RESET
+  Macro: REG6
+  Inputs: NRST CK PD0 PD1 PD2 PD3 PD4 PD5
+  Outputs: V0 V1 V2 V3 V4 V5 V0N V1N V2N V3N V4N V5N
+  Intermediates: D0 D1 D2 D3 D4 D5
+  Sequential: Yes
+REG1 NRST PD0 CK V0 V0N
+REG1 NRST PD1 CK V1 V1N
+REG1 NRST PD2 CK V2 V2N
+REG1 NRST PD3 CK V3 V3N
+REG1 NRST PD4 CK V4 V4N
+REG1 NRST PD5 CK V5 V5N
+
+; 8-bit Register with RESET
+; NRST = NOT RESET
+  Macro: REG8
+  Inputs: NRST CK PD0 PD1 PD2 PD3 PD4 PD5 PD6 PD7
+  Outputs: V0 V1 V2 V3 V4 V5 V6 V7 V0N V1N V2N V3N V4N V5N V6N V7N
+  Intermediates: D0 D1 D2 D3 D4 D5 D6 D7
+  Sequential: Yes
+REG4 NRST CK PD0 PD1 PD2 PD3 V0 V1 V2 V3 V0N V1N V2N V3N
+REG4 NRST CK PD4 PD5 PD6 PD7 V4 V5 V6 V7 V4N V5N V6N V7N
+
+; PLEASE NOTE: This 4-bit asynchronous counter does in fact work, but
+; obviously it doesn't work as well as the synchronous counters.
+
+; 4-bit Asynchronous Counter
+; Label-variable correspondence:
+; RESET CK
+; A     J
+  Macro: ACTR4
+  Inputs: A J
+  Outputs: B D F H
+  Intermediates: C E G I K L M N
+  Sequential: Yes
+OR A J K
+MSEDFF C K B C
+OR C J L
+MSEDFF E L D E
+OR E J M
+MSEDFF G M F G
+OR G J N
+MSEDFF I N H I
+
+; Synchronous counters need to have a RESET and a CLOCK input.  The
+; rising clock edge is used for increment, the falling clock edge is
+; used for store.
+
+; Wire up to the positive outputs for an ascending counter.  Wire up
+; to the negative outputs for a descending counter.
+
+; PLEASE NOTE: It is critical that the clock is held HIGH during RESET
+; in order for the RESET to actually function.  Also, the CLOCK must
+; run a few cycles while RESET is held HIGH so that the RESET value is
+; stored.  BUT, please note that I've still had good experimental
+; results even with just one cycle.  Finally, the CLOCK must be HIGH
+; just before RESET drops LOW.  If you let off on RESET at the exact
+; same time you drop the CLOCK down to LOW, that is okay too.  What is
+; not okay is if the CLOCK is LOW just before RESET drops LOW.
+
+; Admittably, it's pretty hard to get digital sequential logic started
+; correctly.
+
+; 1-bit Synchronous Counter
+; NRST = NOT RESET, CIN = Carry-in, COUT = Carry-out
+  Macro: SCTR1
+  Inputs: NRST CIN CK
+  Outputs: Q QN COUT
+  Intermediates: PD D
+  Sequential: Yes
+FINC1 CIN Q PD COUT
+REG1 NRST PD CK Q QN
+
+; PLEASE NOTE: When a saturating counter reaches its limit, although
+; we nullify changes to the register data value, we still compute the
+; carry just as normal.  Otherwise, the carry would not lock, and then
+; our counter would still run off rather than stopping at its limit.
+
+; 1-bit Synchronous Counter sub-module, with internal WE
+; NRST = NOT RESET, CIN = Carry-in, COUT = Carry-out, WE = Write-Enable
+  Macro: SCTRWEM1
+  Inputs: NRST CIN CK WE
+  Outputs: Q QN COUT
+  Intermediates: WECIN PD D
+  Sequential: Yes
+AND WE CIN WECIN
+XOR WECIN Q PD
+AND CIN Q COUT
+REG1 NRST PD CK Q QN
+
+; 4-bit Synchronous Counter
+; NRST = NOT RESET, CIN = Carry-in, COUT = Carry-out
+  Macro: SCTR4
+  Inputs: NRST CIN CK
+  Outputs: V0 V1 V2 V3 V0N V1N V2N V3N COUT
+  Intermediates: C1 C2 C3
+  Sequential: Yes
+SCTR1 NRST CIN CK V0 V0N C1
+SCTR1 NRST C1 CK V1 V1N C2
+SCTR1 NRST C2 CK V2 V2N C3
+SCTR1 NRST C3 CK V3 V3N COUT
+
+; 4-bit Ascending Synchronous Counter
+; NRST = NOT RESET, CIN = Carry-in
+  Macro: ASCTR4
+  Inputs: NRST CIN CK
+  Outputs: V0 V1 V2 V3
+  Intermediates: V0N V1N V2N V3N COUT
+  Sequential: Yes
+SCTR4 NRST CIN CK V0 V1 V2 V3 V0N V1N V2N V3N COUT
+
+; 4-bit Descending Synchronous Counter
+; NRST = NOT RESET, CIN = Carry-in
+  Macro: DSCTR4
+  Inputs: NRST CIN CK
+  Outputs: V0N V1N V2N V3N
+  Intermediates: V0 V1 V2 V3 COUT
+  Sequential: Yes
+SCTR4 NRST CIN CK V0 V1 V2 V3 V0N V1N V2N V3N COUT
+
+; 4-bit Saturating Synchronous Counter
+; NRST = NOT RESET, CIN = Carry-in, COUT = Carry-out, WE = Write-Enable
+  Macro: SSCTR4
+  Inputs: NRST CIN CK
+  Outputs: V0 V1 V2 V3 V0N V1N V2N V3N COUT
+  Intermediates: C1 C2 C3 WE
+  Sequential: Yes
+SCTRWEM1 NRST CIN CK WE V0 V0N C1
+SCTRWEM1 NRST C1 CK WE V1 V1N C2
+SCTRWEM1 NRST C2 CK WE V2 V2N C3
+SCTRWEM1 NRST C3 CK WE V3 V3N COUT
+NOT COUT WE
+
+; 4-bit Ascending Saturating Synchronous Counter
+; NRST = NOT RESET, CIN = Carry-in
+  Macro: ASSCTR4
+  Inputs: NRST CIN CK
+  Outputs: V0 V1 V2 V3 COUT
+  Intermediates: V0N V1N V2N V3N
+  Sequential: Yes
+SSCTR4 NRST CIN CK V0 V1 V2 V3 V0N V1N V2N V3N COUT
+
+; 4-bit Descending Saturating Synchronous Counter
+; NRST = NOT RESET, CIN = Carry-in
+  Macro: DSSCTR4
+  Inputs: NRST CIN CK
+  Outputs: V0N V1N V2N V3N COUT
+  Intermediates: V0 V1 V2 V3
+  Sequential: Yes
+SSCTR4 NRST CIN CK V0 V1 V2 V3 V0N V1N V2N V3N COUT
+
+; I can't use the one-bit counter macros here because I need to gain
+; access to an intermediate value, hence it is unrolled here.
+
+; Synchronous Decade Counter
+; CIN = Carry-in
+  Macro: S10CTR4
+  Inputs: RESET CIN CK
+  Outputs: V0 V1 V2 V3 COUT
+  Intermediates: NRST PD0 D0 V0N C1 PD1 D1 V1N C2 PD2 D2 V2N C3 PD3 D3 V3N
+  Sequential: Yes
+NOR RESET COUT NRST
+XOR CIN V0 PD0
+AND NRST PD0 D0
+CEDFF D0 CK V0 V0N
+AND CIN V0 C1
+XOR C1 V1 PD1
+AND NRST PD1 D1
+CEDFF D1 CK V1 V1N
+AND C1 V1 C2
+XOR C2 V2 PD2
+AND NRST PD2 D2
+CEDFF D2 CK V2 V2N
+AND C2 V2 C3
+XOR C3 V3 PD3
+AND NRST PD3 D3
+CEDFF D3 CK V3 V3N
+AND PD1 PD3 COUT ; 2 + 8 = 10
+
+; 8-bit Synchronous Counter
+; NRST = NOT RESET, CIN = Carry-in, COUT = Carry-out
+  Macro: SCTR8
+  Inputs: NRST CIN CK
+  Outputs: V0 V1 V2 V3 V4 V5 V6 V7 V0N V1N V2N V3N V4N V5N V6N V7N COUT
+  Intermediates: C4
+  Sequential: Yes
+SCTR4 NRST CIN CK V0 V1 V2 V3 V0N V1N V2N V3N C4
+SCTR4 NRST C4 CK V4 V5 V6 V7 V4N V5N V6N V7N COUT
+
+; 8-bit Ascending Synchronous Counter
+; NRST = NOT RESET, CIN = Carry-in
+  Macro: ASCTR8
+  Inputs: NRST CIN CK
+  Outputs: V0 V1 V2 V3 V4 V5 V6 V7
+  Intermediates: V0N V1N V2N V3N V4N V5N V6N V7N COUT
+  Sequential: Yes
+SCTR8 NRST CIN CK V0 V1 V2 V3 V4 V5 V6 V7 V0N V1N V2N V3N V4N V5N V6N V7N COUT
+
+; 8-bit Descending Synchronous Counter
+; NRST = NOT RESET, CIN = Carry-in
+  Macro: DSCTR8
+  Inputs: NRST CIN CK
+  Outputs: V0N V1N V2N V3N V4N V5N V6N V7N
+  Intermediates: V0 V1 V2 V3 V4 V5 V6 V7 COUT
+  Sequential: Yes
+SCTR8 NRST CIN CK V0 V1 V2 V3 V4 V5 V6 V7 V0N V1N V2N V3N V4N V5N V6N V7N COUT
+
+; 8-bit Saturating Synchronous Counter
+; NRST = NOT RESET, CIN = Carry-in, COUT = Carry-out, WE = Write-Enable
+  Macro: SSCTR8
+  Inputs: NRST CIN CK
+  Outputs: V0 V1 V2 V3 V4 V5 V6 V7 V0N V1N V2N V3N V4N V5N V6N V7N COUT
+  Intermediates: C1 C2 C3 C4 C5 C6 C7 WE
+  Sequential: Yes
+SCTRWEM1 NRST CIN CK WE V0 V0N C1
+SCTRWEM1 NRST C1 CK WE V1 V1N C2
+SCTRWEM1 NRST C2 CK WE V2 V2N C3
+SCTRWEM1 NRST C3 CK WE V3 V3N C4
+SCTRWEM1 NRST C4 CK WE V4 V4N C5
+SCTRWEM1 NRST C5 CK WE V5 V5N C6
+SCTRWEM1 NRST C6 CK WE V6 V6N C7
+SCTRWEM1 NRST C7 CK WE V7 V7N COUT
+NOT COUT WE
+
+; 8-bit Ascending Saturating Synchronous Counter
+; NRST = NOT RESET, CIN = Carry-in
+  Macro: ASSCTR8
+  Inputs: NRST CIN CK
+  Outputs: V0 V1 V2 V3 V4 V5 V6 V7 COUT
+  Intermediates: V0N V1N V2N V3N V4N V5N V6N V7N
+  Sequential: Yes
+SSCTR8 NRST CIN CK V0 V1 V2 V3 V4 V5 V6 V7 V0N V1N V2N V3N V4N V5N V6N V7N COUT
+
+; 8-bit Descending Saturating Synchronous Counter
+; NRST = NOT RESET, CIN = Carry-in
+  Macro: DSSCTR8
+  Inputs: NRST CIN CK
+  Outputs: V0N V1N V2N V3N V4N V5N V6N V7N COUT
+  Intermediates: V0 V1 V2 V3 V4 V5 V6 V7
+  Sequential: Yes
+SSCTR8 NRST CIN CK V0 V1 V2 V3 V4 V5 V6 V7 V0N V1N V2N V3N V4N V5N V6N V7N COUT
+
+; TODO: How about counters that you can either count up or down, on
+; the same register value?
+
+; TODO: Now time for storing register values.  Store a register value,
+; then implement a counter circuit functionally and separately, like
+; an ALU function.  Heck, that's literally what our existing circuits
+; already do, so why not do a code refactor for that.
+
+; 1. D register with RESET, CLOCK, and DATA input.
+; 2. Functional increment and decrement circuits.
+; 3. Counter circuit that puts the two together.
+; 4. Register adder circuits, zero test, etc.
+
+; --------------------------------------------------------------------
+; Advanced circuit for testing for the UART.
+
+; A ring oscillator drives a 4-bit synchronous counter, and the UART
+; serial output clock is driven by the synchronous counter as a means
+; of a frequency divider.  For the high 4 bits of the UART output
+; byte, we send 0x3 (0b0011) so that the output will be a string of
+; readable numbers, plus a few special characters.
+
+  Macro: MAIN
+  Inputs: R0 R1 R2 R3 R4 R5 R6 R7 W0 W1 W2 W3 W4 W5 W6 W7 IK OK IQ OQ IR RESET CLOCK SHUTDOWN
+  Outputs:
+  Intermediates: NRST A B C D E F G H I J K L M N
+  Sequential: Yes
+NOT RESET NRST
+ZERO_ONE_S A B C
+ROSC32 RESET D
+NOT D E ; Start the clock on HIGH after RESET
+NOT SHUTDOWN N ; Stop counting when we reach SHUTDOWN time.
+ASCTR4 NRST N E W0 W1 W2 W3
+COPY C W4
+COPY C W5
+COPY B W6
+COPY B W7
+COPY W0 OK
+; Use a saturating counter as a nifty trick to drive the SHUTDOWN pin.
+DSSCTR8 NRST C E F G H I J K L M SHUTDOWN

@@ -1,0 +1,328 @@
+/*
+   At the edge, you have wire inputs and outputs.  These are mapped to
+   memory buffers and you must map them in supporting processes that
+   process them into useful logic to make sense of them.  Or, link in
+   code in the same process.
+
+   The gate array is an array of NAND gates.
+
+   Determine the inputs and outputs.  These are the floating wires at
+   the edges.  Inputs and outputs are renumbered, but kept in
+   ascending order.
+
+   Next up: I should use a simulator that allows more than one kind of
+   gate type.  You know, processor design, standard modules.  Allowing
+   generation of more optimal layouts.  The most modern processor
+   design systems don't reduce everything down to NAND gates.  That
+   technique was mainly used only in the very early days of integrated
+   circuit engineering.
+
+   Why no support for distributed computing simulation?  Well, here
+   when we're simulating individual gates, I think it's safe to say
+   that such a system would be bound to perform too slowly.  That is,
+   a distributed system that actually uses networked computers should
+   be specially written.  Or, conversely, a system that extensively
+   uses disk access should be specially written to minimize random
+   access patterns.  Thus, those are the practical considerations in
+   developing this system.
+*/
+
+/* I emphasize this point.  What is the most computationally expensive
+   part of this simulation?  It is not the actual gate computations
+   themselves, it is the addressing computations.  Computing the
+   addresses to load and store the bits.  But, as a matter of fact,
+   this is the only way to do gate array simulations in software, so
+   it is a necessary evil in comparison to programming an FPGA and
+   executing your program there.  If only the input and output of
+   /every/ gate operation could be logically grouped into bit vectors
+   that do not need to permutate in order from the input to the
+   output, this problem would be remedied.
+
+   As a matter of fact, all software to be executed by microprocessors
+   suffers from this ill: computing the address to load and store
+   operands to.  Were address computation not necessary, programs
+   could in theory run a lot faster.
+
+   Yes, indeed, the computation time of the actual bitwise operators
+   is negligible compared to the overhead of address computations in
+   full arithmetic.
+
+   If you really want to, you can "speed up" address computations by
+   padding things out to only store one bit per byte.
+
+   Hey!  If you have to pad things out anyways to get fast address
+   computations, why don't you just do a full analog simulation?
+   Because, I said, simplicity!  */
+
+/* Overall, your simulator idea is pretty good.  Parallelism to
+   mitigate, in the end, limited by fetch-decode overhead.  Do take
+   the optimizations that are readily obvious and result in
+   substantial gains, don't worry about those that can only provide
+   negligible gains.  Hence, in semiconductor design, lots of
+   optimization of simple Boolean logic gates, but not trying too hard
+   on anything much more sophisticated.  */
+
+/* NOTE: There is no need to simulate randomness for non-determinism
+   in the output values.  As I have covered elsewhere, routing two
+   input wires to one output wire is a wire-OR gate, and of course any
+   circuit that uses such a construct can be rewritten to use logic
+   gates explicitly.  Furthermore, such a construct (fan-in) is also
+   electrically safe: since you are sourcing one load from two
+   electrical sources, you need not worry about overloading the supply
+   current capacity of the source wires.  However, the opposite,
+   taking at single output and using it to source multiple inputs
+   (fan-out) is not electrically safe: if you connect too many
+   parallel circuits, they could exceed the maximum current supply
+   rating of the originating logic gate, even though the design of
+   schematic logic circuit diagrams would seem to suggest otherwise.
+
+   What is a reasonable fan-out then?  Given the Fan-out Wikipedia
+   article, 10 would be a rule-of thumb maximum, but if you ask me, I
+   would intuitively say no more than 4.  Or, if you really want to be
+   a purist, you can say that each logic gate has a max of two "output
+   ports" and thus limit the fan-out to 2.
+
+   Nevertheless, even as a practical matter, fan-in needs to be
+   limited for the performance of very high-speed circuits.  So, it is
+   okay to define only support for binary logic gates.  It achieves
+   simplicity while also being reasonably realistic, although up-to
+   quad-input logic gates are optimal real-world circuit designs.  */
+
+/*
+
+Okay, let's put out the entire argument.  Should you use fixed-length
+addresses or variable-length addresses?  Here's my chip in the
+argument: as far as a gate array simulator is concerned, if you know
+in advance how many gates there are to be, and the total number of
+gates are fixed, it makes more sense to use fixed-length addresses.
+Why is this?  Well, fundamentally, in order to uniquely identify the
+largest wire region in the array, you need a number with the largest
+number of required bits.  But, now I'm arguing, that by encoding
+smaller numbers with less bits, you are not really saving very much,
+since the number of numbers that can be encoded with a small number of
+bits is comparatively small.
+
+Let's take an example.  Suppose you start with a design that only
+requires 4 wire-regions.  That means you can encode the numbers using
+only two bits, for a total of 16 bits stored, assuming fixed-length
+numbers for all 4 wire-regions.
+
+Now let's extend the number of wire-regions to 256.  For this, you'll
+need 8 bits per number in the last 128 wire regions, or a total of
+1024 bits.  Well, let's continue the series and see what we get were
+we to use shortest-number encoding, and compare that to fixed-width
+encoding.
+
+Variable-width:
+2 * 1 = 2
+(4 - 2) * 2 = 4
+(8 - 4) * 3 = 12
+(16 - 8) * 4 = 32
+(32 - 16) * 5 = 80
+(64 - 32) * 6 = 192
+(128 - 64) * 7 = 448
+(256 - 128) * 8 = 1024
+Total = 1794
+
+Fixed-width: 256 * 8 = 2048
+
+Savings = (2048 - 1794) / 2048 = 254 / 2048 ~= 12.4%
+
+Only 12.4% of the storage space is saved by variable-length encoding.
+That's not a drastic and significant amount of saving, it's not
+like you're reducing the required storage space by 75%, nope, it's
+note remotely like that.
+
+By contrast, fixed-length memory addresses dramatically simplifies
+the engineering of a computer system, and that is a great advantage
+in its own right.
+
+Incidentally, this was also always the premise in
+historically-engineered computer systems, that they have been tested
+and optimized under certain limits, and if you exceed those limits,
+well, then you're going to have to add your own software layer on
+top of the hardware to handle that.
+
+Let's continue the series to 128 bits and see what we get:
+
+(512 - 256) * 9 = 2304
+(1024 - 512) * 10 = 5120
+(2048 - 1024) * 11 = 11264
+(4096 - 2048) * 12 = 24576
+(8192 - 4096) * 13 = 53248
+(16384 - 8192) * 14 = 114688
+(32768 - 16384) * 15 = 245760
+(65536 - 32768) * 16 = 524288
+(131072 - 65536) * 17 = 1114112
+(262144  - 131072) * 18 = 2359296
+(524288  - 262144) * 19 = 4980736
+(1048576  - 524288) * 20 = 10485760
+(2097152  - 1048576) * 21 = 22020096
+(4194304  - 2097152) * 22 = 46137344
+(8388608  - 4194304) * 23 = 96468992
+(16777216  - 8388608) * 24 = 201326592
+(33554432  - 16777216) * 25 = 419430400
+(67108864  - 33554432) * 26 = 872415232
+(134217728 - 67108864) * 27 = 1811939328
+(268435456 - 134217728) * 28 = 3758096384
+(536870912 - 268435456) * 29 = 7784628224
+(1073741824 - 536870912) * 30 = 16106127360
+(2147483648 - 1073741824) * 31 = 33285996544
+(4294967296 - 2147483648) * 32 = 68719476736
+(8589934592 - 4294967296) * 33 = 141733920768
+(17179869184 - 8589934592) * 34 = 292057776128
+(34359738368 - 17179869184) * 35 = 601295421440
+(68719476736 - 34359738368) * 36 = 1236950581248
+(137438953472 - 68719476736) * 37 = 2542620639232
+(274877906944 - 137438953472) * 38 = 5222680231936
+(549755813888 - 274877906944) * 39 = 10720238370816
+(1099511627776 - 549755813888) * 40 = 21990232555520
+(2199023255552 - 1099511627776) * 41 = 45079976738816
+(4398046511104 - 2199023255552) * 42 = 92358976733184
+(8796093022208 - 4398046511104) * 43 = 189115999977472
+(17592186044416 - 8796093022208) * 44 = 387028092977152
+(35184372088832 - 17592186044416) * 45 = 791648371998720
+(70368744177664 - 35184372088832) * 46 = 1618481116086272
+(140737488355328 - 70368744177664) * 47 = 3307330976350208
+(281474976710656 - 140737488355328) * 48 = 6755399441055744
+(562949953421312 - 281474976710656) * 49 = 13792273858822144
+(1125899906842624 - 562949953421312) * 50 = 28147497671065600
+(2251799813685248 - 1125899906842624) * 51 = 57420895248973824
+(4503599627370496 - 2251799813685248) * 52 = 117093590311632896
+(9007199254740992 - 4503599627370496) * 53 = 238690780250636288
+(18014398509481984 - 9007199254740992) * 54 = 486388759756013568
+(36028797018963968 - 18014398509481984) * 55 = 990791918021509120
+(72057594037927936 - 36028797018963968) * 56 = 2017612633061982208
+(144115188075855872 - 72057594037927936) * 57 = 4107282860161892352
+(288230376151711744 - 144115188075855872) * 58 = 8358680908399640576
+(576460752303423488 - 288230376151711744) * 59 = 17005592192950992896
+(1152921504606846976 - 576460752303423488) * 60 = 34587645138205409280
+(2305843009213693952 - 1152921504606846976) * 61 = 70328211781017665536
+(4611686018427387904 - 2305843009213693952) * 62 = 142962266571249025024
+(9223372036854775808 - 4611686018427387904) * 63 = 290536219160925437952
+(18446744073709551616 - 9223372036854775808) * 64 = 590295810358705651712
+(36893488147419103232 - 18446744073709551616) * 65 = 1199038364791120855040
+(73786976294838206464 - 36893488147419103232) * 66 = 2434970217729660813312
+(147573952589676412928 - 73786976294838206464) * 67 = 4943727411754159833088
+(295147905179352825856 - 147573952589676412928) * 68 = 10035028776097996079104
+(590295810358705651712 - 295147905179352825856) * 69 = 20365205457375344984064
+(1180591620717411303424 - 590295810358705651712) * 70 = 41320706725109395619840
+(2361183241434822606848 - 1180591620717411303424) * 71 = 83822005070936202543104
+(4722366482869645213696 - 2361183241434822606848) * 72 = 170005193383307227693056
+(9444732965739290427392 - 4722366482869645213696) * 73 = 344732753249484100599808
+(18889465931478580854784 - 9444732965739290427392) * 74 = 698910239464707491627008
+(37778931862957161709568 - 18889465931478580854784) * 75 = 1416709944860893564108800
+(75557863725914323419136 - 37778931862957161709568) * 76 = 2871198821584744289927168
+(151115727451828646838272 - 75557863725914323419136) * 77 = 5817955506895402903273472
+(302231454903657293676544 - 151115727451828646838272) * 78 = 11787026741242634453385216
+(604462909807314587353088 - 302231454903657293676544) * 79 = 23876284937388926200446976
+(1208925819614629174706176 - 604462909807314587353088) * 80 = 48357032784585166988247040
+(2417851639229258349412352 - 1208925819614629174706176) * 81 = 97922991388784963151200256
+(4835703278458516698824704 - 2417851639229258349412352) * 82 = 198263834416799184651812864
+(9671406556917033397649408 - 4835703278458516698824704) * 83 = 401363372112056886002450432
+(19342813113834066795298816 - 9671406556917033397649408) * 84 = 812398150781030805402550272
+(38685626227668133590597632 - 19342813113834066795298816) * 85 = 1644139114675895677600399360
+(77371252455336267181195264 - 38685626227668133590597632) * 86 = 3326963855579459488791396352
+(154742504910672534362390528 - 77371252455336267181195264) * 87 = 6731298963614255244763987968
+(309485009821345068724781056 - 154742504910672534362390528) * 88 = 13617340432139183023890366464
+(618970019642690137449562112 - 309485009821345068724781056) * 89 = 27544165874099711116505513984
+(1237940039285380274899124224 - 618970019642690137449562112) * 90 = 55707301767842112370460590080
+(2475880078570760549798248448 - 1237940039285380274899124224) * 91 = 112652543574969605015820304384
+(4951760157141521099596496896 - 2475880078570760549798248448) * 92 = 227780967228509970581438857216
+(9903520314283042199192993792 - 4951760157141521099596496896) * 93 = 460513694614161462262474211328
+(19807040628566084398385987584 - 9903520314283042199192993792) * 94 = 930930909542605966724141416448
+(39614081257132168796771975168 - 19807040628566084398385987584) * 95 = 1881668859713778017846668820480
+(79228162514264337593543950336 - 39614081257132168796771975168) * 96 = 3802951800684688204490109616128
+(158456325028528675187087900672 - 79228162514264337593543950336) * 97 = 7685131763883640746573763182592
+(316912650057057350374175801344 - 158456325028528675187087900672) * 98 = 15528719852795810168334614265856
+(633825300114114700748351602688 - 316912650057057350374175801344) * 99 = 31374352355648677687043404333056
+(1267650600228229401496703205376 - 633825300114114700748351602688) * 100 = 63382530011411470074835160268800
+(2535301200456458802993406410752 - 1267650600228229401496703205376) * 101 = 128032710623051169551167023742976
+(5070602400912917605986812821504 - 2535301200456458802993406410752) * 102 = 258600722446558797905327453896704
+(10141204801825835211973625643008 - 5070602400912917605986812821504) * 103 = 522272047294030513416641720614912
+(20282409603651670423947251286016 - 10141204801825835211973625643008) * 104 = 1054685299389886862045257066872832
+(40564819207303340847894502572032 - 20282409603651670423947251286016) * 105 = 2129653008383425394514461385031680
+(81129638414606681695789005144064 - 40564819207303340847894502572032) * 106 = 4299870835974154129876817272635392
+(162259276829213363391578010288128 - 81129638414606681695789005144064) * 107 = 8680871310362914941449423550414848
+(324518553658426726783156020576256 - 162259276829213363391578010288128) * 108 = 17524001897555043246290425111117824
+(649037107316853453566312041152512 - 324518553658426726783156020576256) * 109 = 35372522348768513219364006242811904
+(1298074214633706907132624082305024 - 649037107316853453566312041152512) * 110 = 71394081804853879892294324526776320
+(2596148429267413814265248164610048 - 1298074214633706907132624082305024) * 111 = 144086237824341466691721273135857664
+(5192296858534827628530496329220096 - 2596148429267413814265248164610048) * 112 = 290768624077950347197707794436325376
+(10384593717069655257060992658440192 - 5192296858534827628530496329220096) * 113 = 586729545014435522023946085201870848
+(20769187434139310514121985316880384 - 10384593717069655257060992658440192) * 114 = 1183843683745940699304953163062181888
+(41538374868278621028243970633760768 - 20769187434139310514121985316880384) * 115 = 2388456554926020709124028311441244160
+(83076749736557242056487941267521536 - 41538374868278621028243970633760768) * 116 = 4818451484720320039276300593516249088
+(166153499473114484112975882535043072 - 83076749736557242056487941267521536) * 117 = 9719979719177197320609089128300019712
+(332306998946228968225951765070086144 - 166153499473114484112975882535043072) * 118 = 19606112937827509125331154139135082496
+(664613997892457936451903530140172288 - 332306998946228968225951765070086144) * 119 = 39544532874601247218888260043340251136
+(1329227995784915872903807060280344576 - 664613997892457936451903530140172288) * 120 = 79753679747094952374228423616820674560
+(2658455991569831745807614120560689152 - 1329227995784915872903807060280344576) * 121 = 160836587489974820621360654293921693696
+(5316911983139663491615228241121378304 - 2658455991569831745807614120560689152) * 122 = 324331630971519472988528922708404076544
+(10633823966279326983230456482242756608 - 5316911983139663491615228241121378304) * 123 = 653980173926178609468673073657929531392
+(21267647932558653966460912964485513216 - 10633823966279326983230456482242756608) * 124 = 1318594171818636545920576603798101819392
+(42535295865117307932921825928971026432 - 21267647932558653966460912964485513216) * 125 = 2658455991569831745807614120560689152000
+(85070591730234615865843651857942052864 - 42535295865117307932921825928971026432) * 126 = 5359447279004780799548150067050349330432
+(170141183460469231731687303715884105728 - 85070591730234615865843651857942052864) * 127 = 10803965149739796214962143785958640713728
+(340282366920938463463374607431768211456 - 170141183460469231731687303715884105728) * 128 = 21778071482940061661655974875633165533184
+Total: 43215860598959184859848575143834562854914
+
+Fixed-width: 340282366920938463463374607431768211456 * 128 = 43556142965880123323311949751266331066368
+
+Difference: 43556142965880123323311949751266331066368 - 43215860598959184859848575143834562854914 = 340282366920938463463374607431768211454
+
+Saving: 340282366920938463463374607431768211454 / 43556142965880123323311949751266331066368 ~= 0.78125%
+
+As you can see, as the space that needs to be addressed gets bigger,
+the savings from using variable-length memory addresses get smaller.
+So, that being said, why not just use fixed-length addresses all
+the time?  The only counter to this argument is that if you don't
+know in advance how long the memory addresses might need to be.  In
+that case, I have shown that it is indeed possible to use memory
+algorithms that don't depend on knowing the memory addresses in
+advance, so that a user of such a system could theoretically extend
+the addressable space indefinitely by attaching together multiple
+discrete modules running the right program.
+
+*/
+
+/* Okay, fine, I'll have to extend this simulator to have two
+   different "modes" of operation: single-chip integrated circuit mode
+   and "modular" mode, where new units can be added dynamically during
+   the simulation.  Also, I guess now that I went that far, I'd have
+   to also add a "hybrid" mode, where you can add chunks of new logic,
+   but you cannot perform surgical operations on those blocks.  Or, to
+   be even more simulative, modifying integrated circuits would
+   require special tools, but would still be possible.
+
+   Come on, let's just assume that you have all the tools that you need
+   to work surgically on circuits at whatever level they are in fact
+   being deployed in.  Okay, I guess that works.  It is a theoretic
+   ideal that is currently not a reality in the practice of integrated
+   circuit manufacturing, but it works as far as this simulator is
+   concerned.  */
+
+/* So, anyways, I don't know why it too me so long to getting to
+   writing this down, I guess I had to prove my point on fixed-length
+   memory address formats, the way to portably indicate the address
+   width on some sort of class of data that can have different classes
+   of integer widths per file and different file sizes is to store an
+   "pointer image" up front: a series of leading zeros, followed by a
+   one for the last bit.  This will indicate the width of all pointer
+   data types that are to be used within the file.
+
+   For executable images, the general style is to use a magic number
+   for a specific file type such as "ELF64" to indicate that the image
+   uses 64-bit images, or is destined for a specific 64-bit computer
+   architecture.
+
+   There has been a lot of argument behind act or recompiling 32-bit
+   images for 64-bit architectures, but this is the logic and the
+   mathematics behind the argument.  As far as compatibility and
+   convenience goes, it's definitely a better idea to design the
+   system so that it can interoperate well with existing 32-bit
+   software, considering not only is there so much of it, but many
+   existing computer users nowadays seem to have an impetus to keep
+   using the same software for much longer rather than switch to new
+   software on new computer platforms entirely as has often times been
+   the case in the past.  */

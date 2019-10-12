@@ -1,0 +1,29 @@
+This is how the physical record manager should work:
+Name
+Chronological Fields:
+	When the object was aquired/created (choose one)
+	When the object was last modified
+	When the object was last used
+	When the database entry was last updated
+Physical Data:
+	Shape
+	Mass
+	Volume
+	Center of Mass
+	Materials
+	Pigments
+	Texture
+	Weathering
+Functional Fields:
+	What type of object is this?
+	What do you use it for?
+	What are the results of using it?
+	How important are those results?
+Access Priority
+	How often do you need to use it?
+History
+% Current Importance
+Reason
+	Why should you keep this?
+	Does this interfere with other things?
+	Will discarding this discomplete a system?

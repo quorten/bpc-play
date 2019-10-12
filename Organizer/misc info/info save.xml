@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<preview>
+	<section name="Tree">
+Filer:		[Mode]
+______________________
+|_____________________|
+
+ -  Root
+      README.txt ->
+ + Pictures
+ + Music
+ + Sound Effects
+  - Projects
+      Flying Bunny
+      MAD LIBS
+ + Downloads
+ + Backups
+	</section>
+	<section name="Timeline">
+					          Timeline
+							     | Flying Bunny project started
+							     | circa Aprill 20, 2004
+<-----------------------------------------------------------------------------------------|-------------------------|--------------------------------------------------------------------->
+					           | circa May 5, 2003
+					           | Computer crashed
+	</section>
+	<section name="DataPane">
+		         Main Selection Info
+Statistics:
+Filename: README.txt
+Date Created: 2009-11-21 12:05:13 PM (Saturday)
+Date Modified: 2009-11-29 6:06:21 PM (Sunday)
+Keywords: Root
+
+History:
+One time I wondered if...
+So I created this file so that...
+
+Importance: 100%
+Reason: Without it, ...
+
+[View Data]
+[View Metadata]
+	</section>
+</preview>

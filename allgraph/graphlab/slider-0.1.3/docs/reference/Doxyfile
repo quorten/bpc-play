@@ -1,0 +1,17 @@
+# Doxygen configuration file, with syntax like a -*- makefile -*-
+# This file is in Public Domain.
+
+INPUT = ../../src
+
+JAVADOC_AUTOBRIEF = YES
+FULL_PATH_NAMES = NO
+EXTRACT_ALL = NO
+OPTIMIZE_OUTPUT_FOR_C = YES
+
+GENERATE_LATEX = NO
+USE_PDFLATEX = YES
+COMPACT_LATEX = YES
+GENERATE_RTF = NO
+GENERATE_XML = NO
+GENERATE_HTML = YES
+GENERATE_HTMLHELP = NO

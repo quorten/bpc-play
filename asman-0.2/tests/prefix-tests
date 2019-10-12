@@ -1,0 +1,56 @@
+simsum sums.txt
+
+rm -rf ./tests
+
+mv ./tests ./complete
+
+mv ./tests .
+
+mv . ./subd
+
+rm -rf .
+
+cp -pR ./tests ./complete
+
+fmsimp
+
+touch d1/f1
+touch d1/f2
+rm -rf d1
+
+mv d1 d2
+touch d2/f1
+mv d2 d3
+
+mv d1/d3 d1/d4
+mv d1 d2
+
+# Fixed (failed in the past), but need to do other safety checks.
+mv d1 d2
+mkdir d2/d4
+mv d2 d3
+
+mv one two
+touch two/x1
+mv two one
+
+# Fixed (failed in the past), case insensitivity
+mv Java java
+touch java/Calculator.jar
+mv java Java
+
+
+# Fixed (failed in the past), case insensitivity
+mv Java java-stuff
+mv java-stuff java
+touch java/Calculator.jar
+mv java Java
+
+# PASSES (???) Correct behavior.
+mv Java other
+mv other another
+mv another other
+mv other Java
+mv Java foo
+mv foo bar
+mv bar java

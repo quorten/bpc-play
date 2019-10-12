@@ -1,0 +1,4 @@
+Write the improvement list:
+Finalize word wrapping.
+Correct backspace on blank line bug.
+Inserting near the beginning line doesn't work.

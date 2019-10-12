@@ -1,0 +1,121 @@
+2013-06-13  Andrew Makousky  <Andrew@HOME-DELL-2300>
+
+	* src/callbacks.c, src/callbacks.h, src/interface.c: Fixed the
+	imprecise precision sliders bug.
+
+2013-06-07  Andrew Makousky  <Andrew@HOME-DELL-2300>
+
+	* virtually-everything: Rebranded Sound Studio as Slider Wave
+	Editor, or Slider for short.
+
+2013-06-07  Andrew Makousky  <Andrew@HOME-DELL-2300>
+
+	* src/binreloc.c ("_br_find_exe"): Added support for FreeBSD to
+	BinReloc.
+
+	* docs/help.txt: Improved the user documentation by writing more
+	about the automatic scaling display.
+
+2013-06-05  Andrew Makousky  <Andrew@HOME-DELL-2300>
+
+	* src/audio.c, src/audio.h: Added audio playback support.
+
+2013-06-03  Andrew Makousky  <Andrew@HOME-DELL-2300>
+
+	* src/callbacks.h: Updated function headers.
+
+	* src/interface.c, src/callbacks.c (wv_edit_div_allocate): Fixed
+	window resizing bug with the window divider.
+
+	* docs/help.txt: Improved documentation.
+
+2013-06-02  Andrew Makousky  <Andrew@HOME-DELL-2300>
+
+	* pixmaps/icon16.png, pixmaps/icon32.png, pixmaps/icon48.png,
+	pixmaps/icon256.png: Regenerated from master SVG.
+
+	* svgs/sound-studio-icon.svg: Improved application icon by adding
+	a border.
+
+	* src/main.c (main): Added support for relocatable binaries on
+	Linux-based systems.  Support for BSD systems is not yet
+	available.
+
+	* src/binreloc.c, src/binreloc.h: New files.
+
+2012-02-20  Andrew Makousky  <Andrew@HOME-DELL-2300>
+
+	* src/callbacks.c (wavrnd_expose): Changed x-axis maximum extent
+	algorithm to produce nicer results.
+	(precslid_value_changed): Finished precision slider functionality.
+	Even though the code works as intended, it probably needs better
+	organization.
+
+2012-02-19  Andrew Makousky  <Andrew@HOME-DELL-2300>
+
+	* src/interface.c (create_wvedit_holder): Fixed bug where the
+	program would try to access a GTK+ widget from the data model
+	before the valid widget was stored in the data model.
+
+2011-12-05  Andrew Makousky  <Andrew@HOME-DELL-2300>
+
+	* src/wv_editors.c (save_ss_project, export_ss_project): Relocated
+	fprintf functions to file_business.c, in order to work around
+	problems with file descriptor runtime passing from libintl
+	overrides.
+
+	* src/file_business.c, src/file_business.h: New files.
+
+2011-10-31  Andrew Makousky  <Andrew@HOME-DELL-2300>
+
+	* src/wv_editors.c (mult_amplitudes): Improved code for
+	calculating the maximum displacement when there are multiple
+	fundamental sets.
+	(render_waves): Changed calling syntax.
+	(plot_waveform): New function.
+	(load_ss_project): Fixed bug when loading files with no harmonics
+	on the fundamental frequency.
+
+2011-10-29  Andrew Makousky  <Andrew@HOME-DELL-2300>
+
+	* src/callbacks.c (harmc_remove_clicked): Added saftey code to
+	prevent modification of wave editor windows before they are about
+	to get deleted when the last harmonic gets deleted.
+
+2011-10-27  Andrew Makousky  <Andrew@HOME-DELL-2300>
+
+	* sound-studio.glade, src/interface.c: Renamed hbox1, vbox1,
+	etc. to more meaningful names.
+
+2011-10-24  Andrew Makousky  <Andrew@HOME-DELL-2300>
+
+	* src/callbacks.c, src/interface.c, src/wv_editors.c: Wrapped long
+	lines involving many "this.that.that->that" structure references.
+
+2011-10-23  Andrew Makousky  <Andrew@HOME-DELL-2300>
+
+	* src/interface.c (create_wvedit_holder): Added code to disable
+	harmonic window remove button.
+
+	* src/wv_editors.c (remove_wv_editor): Added code to remove only
+	the last wave editor window in the list.
+
+	* src/callbacks.c (fundset_add_clicked): Added code to change the
+	selected fundamental set before it is changed by the combo box
+	handler.
+
+2011-10-18  Andrew Makousky  <Andrew@HOME-DELL-2300>
+
+	* src/wv_editors.c (add_harmonic, remove_harmonic): Added code for
+	pointer rebasing during array operations.
+
+2011-10-14  Andrew Makousky  <Andrew@HOME-DELL-2300>
+
+	* src/wv_editors.c, src/wv_editors.h: New files.  Contains the
+	progam's model code.
+
+2011-10-11  Andrew Makousky  <Andrew@HOME-DELL-2300>
+
+	* configure.in: Renamed to configure.ac and modified according to
+	more modern standards.
+

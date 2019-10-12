@@ -1,0 +1,72 @@
+Now I need to take a simplified list of file management commands and
+translate them into commands that operate on a specific archive
+system.
+
+* Touches, copies, moves, removes, mkdir, and rmdir within remain
+  unchanged.
+* Moves in translate to touches.
+* Copies in translate to touches.
+* Moves out translate to removes.
+* Copies out get ignored.
+* Touches outside get ignored.
+* Removes outside get ignored.
+
+What about symlinks?  They are ignored for now.  All files under the
+archive system should have a single canonical name.  If links were
+processed, then links from inside to out would signal serious errors
+and links from outside to in would be ignored.
+
+Once we have a list that operates on the archive system, we need to
+translate the commands into update commands.
+
+* Touches are converted into rsyncs from source to destination.
+* All other management commands and translated to operate on the
+  destination.
+* All commands use ${SRC} and ${DEST} variables rather than explicit
+  path prefixes.
+
+Then we will have the traditional "update.sh" script that can be
+easily retargeted for executing multiple updates from a server.
+
+And guess what?  We can even use `fmsimp' to merge multiple pending
+update scripts.  Brilliant!
+
+What about crosslogs?  Crosslogs?!  Well, isn't a crosslog just a
+special case of an update script from the point of view of an archive
+system being updated?  Well, yes.  So a crosslog is basically the same
+as a simplified list of archive management commands.  Good!
+
+The last things I will need is new file searching, checksum
+maintenence, priority lists, and computing changes from checksums.
+Then I will really be ready.  Wait, can't you just do an rsync... yes,
+but an rsync won't tell you what got changed.  This is where asman
+comes in.
+
+Tool summary:
+
+asown
+fmsimp
+delempty
+dirtrans
+asops
+asrebase
+asblack
+asup
+asclone
+asglob
+dategather
+dateapply
+permsave
+lfnsave
+sumxfr
+
+apt-clean
+
+wget
+rsync
+
+Note: There should also be a shared library and a daemon to facilitate
+modifying applications to create hooks to update dired-log.txt.
+
+asglob -- Glob filenames in a newline-separated list of files and
+write out quoted output as a series of `touch' commands.

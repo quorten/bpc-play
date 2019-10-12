@@ -1,0 +1,4 @@
+System call number header files have been copied from the Linux kernel
+source code.  Function prototypes have been filled in from the Linux
+system call man pages.  Data structures have been copied from
+miscellaneous system header files, usually either Linux or glibc.

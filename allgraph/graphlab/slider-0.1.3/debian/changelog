@@ -1,0 +1,5 @@
+slider (0.1.3-1) unstable; urgency=low
+
+  * Initial release (Closes: #nnnn)  <nnnn is the bug number of your ITP>
+
+ -- Andrew <andrew@liberty-dell>  Thu, 13 Jun 2013 05:30:13 -0500

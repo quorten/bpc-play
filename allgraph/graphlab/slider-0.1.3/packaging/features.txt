@@ -1,0 +1,4 @@
+GTK+ Runtime Library:
+	2.12.10-dist
+Slider Wave Editor:
+	instdir

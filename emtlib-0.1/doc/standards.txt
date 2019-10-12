@@ -1,0 +1,20 @@
+Standard Computer Program Attributes
+----------------------------------------------------------------------
+Documentation
+Configurable Variables
+	File Picking
+	Validity Constraints
+	Automation/General Customizability
+		Source Code
+		Quick and Easy Modification
+Good User Interface (GoUI)
+	High Dynamic Range Sliders
+	Data Viewer
+	Data Editor
+Code Optimization
+	Memory Management
+	System-Specific Caching
+File Formats
+Command-Line Execution
+Error Correction
+International Support

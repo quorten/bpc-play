@@ -1,0 +1,6 @@
+# A very simple filter script for archive operations.
+delsuffix Thumbs.db
+delsuffix Desktop.ini
+delsuffix desktop.ini
+delpart /restricted/
+prefix /home/hafm/

@@ -1,0 +1,391 @@
+Archive System Management Tools
+*******************************
+
+The Archive System Management Tools, or Asman for short, are a series
+of lightweight programs and scripts that can be used to efficiently
+keep a remote clone of a directory structure up-to-date.  Note that
+because this is a series of lightweight tools, you will have to do
+some programming to configure your system.  But don't worry: the
+documentation contains examples of common use cases to get you
+started.
+
+WARNING!  This documentation is not complete.  Why?  Well, it's
+basically because I haven't fully used my own tools yet.  In other
+words, even I don't yet understand how they work... but this is what I
+know of my own tools so far.
+
+Prerequisites
+*************
+
+The scripts in Asman use common Unix programs extensively.  Basically,
+you will need the following standards-compliant tools: sh (and
+coreutils), sed, awk, and make.  Most of the tools have been carefully
+written to conform to the POSIX standards, and any tools that do not
+strictly conform with POSIX have their additional requirements
+documented.  Testing on FreeBSD is currently pending.
+
+Building and Installing
+***********************
+
+At the top level directory, you can just type `make install' and two
+new subdirectories will be created: `bin' and `lib'.  Now copy the
+directories `bin', `lib', `schema', and `doc' into whatever directory
+you plan on storing Asman.
+
+Okay, this documentation may seem too vauge, but the idea is that you
+can do whatever you want once you've got the C programs built.
+However, if you are running on a Unix-like system, then you should
+probably create a new user called `asman' and copy these directories
+into that user's home directory.  Then make sure you set up that
+user's shell so that their private binaries are in their PATH.  You
+will also want to make sure that the home directory is writable by any
+other members of the same group.
+
+Basic Usage
+***********
+
+These are the basic tools that comprise the Archive System Management
+Tools:
+
+* sh, sed, awk, make -- your ubiquitous power tools
+
+* dired-log.diff -- Emacs Lisp code to allow logging of file
+  management operations performed within Emacs.
+
+* sumxfr -- Analyze two checksum listings and generate a list of file
+  management commands reflecting the differences.
+
+* archsys.mak -- A library of common makefile rules for archive
+  management configurations.
+
+* dq-escape.sed -- Escape characters that are special within shell
+  double quotes.
+
+* fmprim -- Convert arbitrary file management commands to a basic
+  command format.
+
+* fmsimp -- Simplify a list of file management operations.
+
+* asops -- Filter a list of file management commands to only those
+  that operate on a specific archive root.
+
+* asup -- Generate an update script from a list of file management
+  commands.
+
+* asrebase -- Change a list of file management commands to operate on
+  a different archive root or prefix.
+
+There are also primary threads of thought that transcend Asman.  Most
+noteably, the tools tend to work on a stream of file management
+operations, and logging of any changes is essential.  In the absense
+of logging, tools are used to regenerate a net list of commands that
+probably would have been collected had there been logging.
+
+Okay, so that is a very nice pile of bricks, but how do you put them
+together into something useful?
+
+File Management Command Logging
+===============================
+
+First, choose a file management command collection system.  Basically,
+copies, links, moves, and deletes should be logged as their equivalent
+shell commands into a log file.  General file creations and
+modifications by any other program should be logged as a generic
+`touch' command.  Setting this up depends on how you generally use
+your system:
+
+* If you are using a command-line shell, then you can modify your
+  history and logout mechanisms to collect and store certain file
+  management operations.  However, you must be careful on how you type
+  in commands to your shell: use of file name globbing may render you
+  with meaningless commands in your logs.
+
+* If you will be using graphical file managers and GUI programs
+  extensively, you may need to individually modify the source code of
+  the programs to save file management operations.  There is a patch
+  available in Asman for PCManFM that adds crude file logging
+  capabilities.
+
+* If you don't want to log commands as they are performed, you can use
+  `sumxfr' and saved checksum listings to generate a list of commands.
+
+* If you will only be creating modifying files and never moving or
+  deleting them, you can use `find' to search for newer files.
+
+* If you will be using Emacs to do most of your file management (and
+  file editing), then you can use the provided Emacs Lisp code for
+  logging file management commands from Emacs.  Any files modified
+  with a program other than Emacs can be put in the list manually by
+  dragging and dropping into Emacs and typing `M-x file-log-write', or
+  by using `sumxfr'.
+
+* You might want to try creating a C library to link programs with
+  that will create file management commands whenever they make the
+  relevant system calls.  This has never actually been tested.
+
+* A final possible option is to add kernel hooks that will write log
+  commands for file operations.  This is not recommended, though, and
+  it hasn't been tested either.
+
+See the README in the directory `app-support' for more information on
+how to setup various applications for use with Asman.  Once you choose
+your logging technique, you will need a place to put the logs.  You
+are recommended to put the logs in the same place where you put Asman
+after you compiled it earler (i.e. the `asman' home directory).  Make
+sure this directory is writable by all users who you want to log file
+management activities from.
+
+Configuring Asman
+=================
+
+To start, you should have an idea of what you want to do.  Usually,
+you will use Asman to watch certain directory trees to keep a backup
+system current for those top level directories.  Start by making a
+copy of `schema' within asman's home directory for the directory that
+you want to keep current.  Now edit the schemas.  You will notice that
+there are some references to global configuration.  So go make a copy
+of `lib/as-config.mak' and edit that as necessary.  If you will be
+using global logs, then you may need to make a makefile to maintain
+them.
+
+Okay, these are not the best instructions, but maybe that is because I
+hardly even understand my own system myself.  Or maybe my system is
+too programmable to be explained.  I don't know...
+
+And finally, MAKE SURE you review the update commands before actually
+applying them.  The great benefit of the Archive System Management
+Tools is that you have the opportunity to do a sanity check on the
+update commands before you actually apply them, so use that
+opportunity!
+
+Advanced Usage
+**************
+
+Over time, you will need to perform a larger variety of tasks when
+working with archive systems and backups.  Here is a summary of the
+rest of Asman:
+
+* gc-collect.sh -- Build a list of files from oldest to newest with an
+  accumulated storage total.
+
+And that's not even the full listing.  Why?  Because the Archive
+System Management Tools were specifically designed to be used within a
+programmable environment.  Thus, you can always make more tools as
+conditions demand them, and the possibilities are limited only by your
+own limits.
+
+Overriding the source root is useful when executing the script from a
+remote machine, and overriding the destination root is useful when
+retargeting to bring multiple copies of an archive root up-to-date.
+
+Generally, it is not safe to execute this update script more than once
+on a single copy of an archive root.  Doing so may corrupt the update
+logs on the destination root, unless the destination is a terminal
+node.
+
+About symlinks.  Symlinks are supported, with only one restriction:
+you may not have symlinks that point to a file outside of a specific
+archive root, and symlinks must be relative, not absolute.  The idea
+of an "archive system" is that it is a canonical place to store files,
+thus symlinks will always point into the archive root, not out.
+Second, the archive root may have a different base prefix on different
+systems.
+
+Limitations
+***********
+
+Currently, the command-line processing mechanisms in the Archive
+System Management tools are rudimentary at best.  Touch and remove
+commands can only take one file argument, and copy and move commands
+can only take two file arguments.  Command-line options are always
+ignored by the processing tools, and the behavior of the file
+management commands is always assumed to be the default behavior.  In
+the future, a tool to transform commands in their full complexity to
+simpler commands may be added.  (A particularly annoying behavior of
+the Unix `mv' command is to unlink the destination by default.  This
+makes the simplification algorithms for `mv' more complicated.)
+
+Asman does not have explicit design for supporting links, as some of
+the operating systems that the Archive System Management tools are
+designed to work on historically did not support links.
+
+Asman works with absolute paths extensively.  For some systems and and
+some large datasets, this might lead to memory problems.
+
+As as best practive, avoid inputting copy and move commands that
+operate with an existing file or directory where the final file or
+directory would be written.  Unfortunately, the Unix commands have the
+very bad practice of acting differently whether the destination is an
+existing directory and whether the source is an existing directory.
+This whole issue can be sidestepped by simply making sure that there
+is no existing destination file or directory that would impede a copy
+or move command.
+
+Unfortunately, it happens that fmsimp's run-time is O(n^2), but the
+time saved from avoiding redundant copies should far outweigh the long
+run-times of these optimization tools.  `sumxfr' must buffer up it's
+output so that it can output it in the right sort order.
+
+History
+*******
+
+Third, all file management commands (mkdir, cp*, mv, rm, and rmdir)
+should also be logged in a file called "dired-cmd.txt".  *(Note that
+cp does not need to be logged if the new files are already logged via
+"emacs-rec.txt".)  Again, this file name is due to modifications to
+Emacs Dired mode that allowed me to maintain the *Dired Log* in a
+file, which the top-level makefile can then process to create
+"dired-cmd.txt".  Any commands you type at a shell prompt can be
+retrieved from its history log.  If you perform file management in a
+graphical file manager and have no history log to retrieve, then you
+should fix your file manager first.
+
+Rather than giving you a the package at a completely empty working
+state, I decided to leave in some of my configuration information and
+log information to give you an example of how the input data is
+supposed to look like.  Note that since your file system configuration
+is probably different, you should not expect my example data to be too
+close to what you will be working with.
+
+A few last notes:
+
+You should write files and path prefixes to ignore in "blacklist.in".
+
+Make sure you configure the variables at the top of the configuration
+makefile before actually trying to use it.
+
+After you synchronize a remote archive clone, you should clear the
+logs so that the management system will not attempt to perform past
+commands twice.  I included the targets "clear-logs" and "shrink-hist"
+in the master configuration makefile that basically clear the logs and
+maintain histories of the logs.
+
+If you want to, you can tweak my Emacs packages so that they also log
+the date and time when file saves and dired commands happened at.
+
+You can use makefiles in subdirectories to maintain subsystems or
+independent copy chains.  For example, you could have an archive
+subsystem that mirrors into the central archive system by copying
+files into an archive subdirectory within the central archive system
+root directory.  Because this creates a need to log audits into the
+central archive system from the subsystem update script, I created a
+make target called "update-crosslog" that turns the update script into
+a series of filesystem commands that can be appended onto the file
+manager log.
+
+Note: There are some intentional deficiencies within the checksum
+maintenance code.  The basic problem is the utilization of relative
+paths within the checksum code rather than absolute paths.  This
+causes some file name corner cases (such as files under a directory
+with a trailing dot in the directory name) to fail.  The way I am
+thinking of solving this problem is to change the code to keep all
+file names absolute, and if system operators want to compare checksums
+under different archive system clones, then they can run a sed script
+to replace the path prefix.
+
+This code does not support multi-byte character sets.  However, adding
+support would likely be trivial.  UTF-8 and "wide characters" (UCS-2)
+are currently the only character encodings officially supported.  If
+you are using an obsolete or minority natural language that is missing
+Unicode code points, then you've probably got more tough luck using a
+computer in general and should upgrade to a mainstream language that
+has corporate backing and commercial support.  Unless, of course, you
+are a arch-hacker who is capable of modifying all the software on your
+system to support your minority language.
+
+No effort is made to provide extra-complicated quoting for your
+favorite nonstandard shell such as bash, zsh, or whatever else it may
+be.
+
+But because scanning for changes is likely to be slow on hard drives
+of modern capacities, file alteration monitors are provided to catch
+changes when they happen.  Yet even this has a downside: the
+alteration monitoring program must request a potentially large number
+of file alteration monitoring resources from the kernel, possibly to
+the level that such a request cannot be satisfied for some setups.
+So, as an alternative, Asman also provides an application integration
+API.  With proper changes to the source code of your major
+applications, you can get immediate change commands logged from the
+program which they originated.  Of course, a problem with this is that
+since there is no way for an application to communicate with the
+kernel about already logged messages to anothe program, running a file
+alteration monitor simultaneously will result in double logging.  One
+last option not covered by the source code distribution in Asman is
+kernel patches to all major open-source operating system kernels to
+facilitate all of these problems.  Although patching OS kernels to
+solve these problems is easy, keeping a custom kernel up-to-date might
+be difficult for some users to maintain, so this task is left open to
+kernel developers who can get their changes merged with the mainstream
+version of the kernel.
+
+However, it must also be noted that this is a time-sensitive
+assertion, because next-generation self-healing solid-state drives
+(SHSSDs anyone?) could easily render this statement obsolete when they
+come to mass market.
+
+Note Amanda, Bacula, simplebackup, afbackup, chiark-backup, Simple
+Backup, etc.  Note dump, tar, tapes, hard drive speeds, etc.
+
+----------------------------------------------------------------------
+
+With Asman, all deletions are logged, so you'll know exactly what
+you've lost by looking at the logs.
+
+----------------------------------------
+
+No backup software to fit everyone's needs.
+
+Modern sysadmins style.  Manage multiple computers, each has its own
+configuration and therefore backup specifics, all goes to a central
+server, then from central server to backup destinations.  Very
+specific use pattern, very specific software developed for it.
+
+Or other way, have central data, have subset copies, sync all.  Total
+overlap, partial overlap, no overlap.  Centralized, decentralized.  No
+one true way.
+
+What can be done for this?  Can there be a solution more in line with
+the Unix philosophy, with central tools at one end and a host of
+programmed configurations at another?  More than one way to put
+together the tools?  Good base tools to work with?
+
+Personally managed versus centrally managed backup.  They never did
+learn how to backup their data.  They never did learn Unix.  They
+never did learn CAD software.  So, the best recommendation is to use
+centrally managed backup, at least to a certain limit.  Beyond that
+limit, those who buy additional storage space must manage the backups
+themselves, including convincing other people (i.e. paying) for
+geographically distant storage space.
+
+Don't we have that already now?  No.  There are plenty of basic
+filesystem management operations for which there is no elegant way to
+do on current Unix systems.
+
+Merge the contents of one directory with another?  Oh, no command to
+do that.  Like a move, but not really.  A merge.  Search the Internet,
+StackOverflow answer, use rsync.  Well, I don't know.  Rsync has a lot
+of features, but it's not Unix-like.  Just add another command line
+option, but I think there are already too many.  It's only about
+synchronization.  Transactional filesystem use?  Per-user journals?  A
+more friendly way to setup a filesystem.
+
+So, hopefully Asman will fill that void where the other tools have
+been reluctant.  Large enterprise users, redefine what a filesystem
+means.  Object storage, as they say.  Let more than one file share the
+same file name, because files are not addressed by their names, but by
+their randomly assigned ID numbers.  Hyperlinks, people won't care,
+will they?  I think they will care.  They'd rather not go with all of
+Tim Berners-Lee's recommendations just for the heck of it, though tech
+companies seem to fancy at this practice.
+
+----------------------------------------
+
+Unfortunately, I hate to break it to you, but security.  I know, you
+say it is central to Unix and all and it's why Unix is so much better
+than all those other non-Unix operating systems, but really, it's only
+a policy.  It's only a fad.  It's only a trend of the times, a
+political matter, something bound to change frequently, as frequently
+as the tecnological environment allows.  So, if politicians know that
+computers can change timezone information in a moment's notice,
+they'll change the timezone information however frequently they
+please!  Which, in some jurisdictions, means basically all the time.

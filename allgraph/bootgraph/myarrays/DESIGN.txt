@@ -1,0 +1,67 @@
+Okay, minor implementation overhaul going on here.  Separate into
+allocation implementation specifics and the programmer API.  The
+allocation API is fairly simple, define a few macros.
+
+EA_STMT_START
+EA_STMT_END
+
+EA_TYSIZE
+EA_TYPE
+EA_INIT
+EA_DESTROY
+EA_GROW
+EA_NORMALIZE
+EA_SR
+
+Okay, so now I have a goal.  I will implement these primitives once
+for each allocation type.  No more trying to use #ifdefs to put it all
+in one file, with the considerable disadvantage of constraining all
+code to use one array type.
+
+So, what are my allocator variants?
+
+* exparray "classic" (EA)
+* exparray with linear reallocator (EA1). "1" chosen for n^1 power =
+  linear.  Saves memory but wastes more time on memory management.
+* GArray-style exparray (EGA)
+* explarray (ELA), i.e. exparray with arbitrary length limit
+* explarray with linear reallocator (ELA1), i.e. exparray with
+  arbitrary length limit, linear reallocation
+* fixarray (FA), i.e. initial static allocation is arbitrary length limit
+
+Similar variant, but so highly constrained as to restrict helper
+macros to "begin" and "end" only.
+
+* ffixarray (FFA), "fully fixed array," initial static allocation and
+  length are equivalent
+
+Okay, how about this better idea.  Rather than re-defining all macros
+per allocator, just define one set of macros.  Then have the user
+define an allocator TYPE macro for every exparray variable they use.
+Here is where things get a bit hacky, but they make it easier
+for the implementer.
+
+Okay, that being said, we need to go both ways.
+
+----------------------------------------
+
+Three major variations:
+
+1. Fixed-length allocation, fixed-length array.
+2. Fixed-length allocation, variable-length array.
+3. Variable-length allocation, maximum allocation length,
+   variable-length array.
+4. Variable-length allocation, variable-length array.
+
+Also, more allocator variations.
+
+* Static allocation only
+* Initial static allocation, continued dynamic allocation
+* Dynamic allocation only
+
+* Linear reallocation
+* Exponential reallocation
+
+So, what you need to know.  When you define the allocator type, you
+define both the methods used for specific allocation and the data
+structure itself.

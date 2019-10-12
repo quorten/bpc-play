@@ -1,0 +1,24 @@
+Packed Data Storage in Structures
+
+Now, to be as straight to the point as possible, I will make this
+article short.  Computer programs work with data referenced by
+variables.  Individual variables can be grouped together into
+structures, which are sometimes called records.
+
+There are three ways of tracking grouped variables.  One way is to
+have each variable have a maximum size and pack that into a structure.
+This way is primarily used because of past programming practices, but
+storing variables in this fashion poses arbitrary limits on the size
+of variables in such programs.
+
+Another way is to use dynamically allocated variables and the
+structure that packs the variables together only specifies pointers to
+the variables.  This may seem disadvantageous because of the extra
+memory provisions required for the structure of pointers.
+
+A third way of keeping track of grouped variables to to pack them into
+continuous memory, each variable having size determination properties.
+When you realize that refering to the last variable in the structure
+requires parsing all of the preceding variables, you may consider that
+the second way of grouped variable tracking could be more optimal in
+certain circumstances.

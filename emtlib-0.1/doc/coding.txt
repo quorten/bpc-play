@@ -1,0 +1,13 @@
+This file describes the coding standards used in the core library.
+
+Write the source code according to the ANSI C standard.
+
+Indent with one tab.  Each tab corresponds to 4 spaces.
+
+Use underscores to separate words in variable names.  However, there
+is an exception: in Window's specific code, variable naming will use
+capitals to separate words in variable names.  Struct names will
+begin with a capital letter.
+
+Comments should have a space after the beginning indicator and two
+spaces before the end indicator.

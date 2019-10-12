@@ -1,0 +1,21 @@
+This is a miniature and deliberately incomplte "libc" library for
+simple Unix programs.  Originally, it started out as a very small
+handful of C source code files, but for educational purposes, it was
+broken out into multiple files more similar to the source code of
+larger and more complete standard C library implementations.
+
+Currently, there is only platform support for Linux kernel systems.
+However, additional systems can easily be added by creating the proper
+system call definitions for that particular platform.
+
+If you're wondering why there are so many little files rather than a
+few larger files, it's because static-linked libraries are generally
+broken up so that there is one function per file.  The way the static
+linker works is that it will search a static library for an object
+code file containing the required function, and then include the
+entire object code file in the link process.  By including only one
+function per C source file, the number of extra functions brought in
+during link time is minimized.  Thus, the total size of the resulting
+executable file is also minimized.
+
+See the COPYING file for license details.

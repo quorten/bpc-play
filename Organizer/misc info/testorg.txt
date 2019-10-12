@@ -1,0 +1,50 @@
+Organizer Version: 1.1
+Purpose: File system cataloging by metadata
+
+Root
+****
+
+Type: Hierarchial group
+Members: "this" "that" "here" "there" "plus" "even" "more" "that"
+ "there" "are" "so" "many" "that" "they" "don't" "fit" "on" "one"
+ "line."
+
+History: This was to start a more organized file system.
+
+Importance Rank: 100%
+
+Importance Reason: Without it, this would be nothing.
+
+README.txt
+**********
+
+Type: File
+Keywords: introduction
+
+Short Description: Information on every file in this system.
+
+Description: This is a very long description.  It details everything
+ that you may want to know about the file, except its history.  That
+ is saved for the history section.
+
+History: This was to start a more organized file system.  In fact,
+ this system should have been so organized that even the source code
+ for the program should have to be regarded as organized.  Coming back
+ to reality, perhaps that is not quite realized.
+
+ We even went through the extra work of making sure that this parser
+ actually conforms to the full standard by using every possible
+ feature!
+
+Importance Rank: 100%
+
+Importance Reason: Without it, this would be nothing.
+
+File System Information
+=======================
+
+Filename: README.txt
+Date Created: none
+Date Modified: none
+Size: 46
+Size on Disk: 4096

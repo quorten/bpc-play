@@ -1,0 +1,25 @@
+#! /bin/sh
+# Usage: mergemv SRC_DIR DEST_DIR
+#
+# Move and merge the contents of SRC_DIR into the destination
+# directory DEST_DIR, similar to `cp SRC_DIR/* DEST_DIR/'.  Warning:
+# filenames with newlines in them will not work with this script.
+
+# If you want mv to prompt rather than overwrite automatically, then
+# you should use `alias mv='mv -i'' in the shell environment that you
+# execute the resulting script in.
+
+SRC_DIR="$1"
+DEST_DIR="$2"
+SSRC_DIR=`echo "$SRC_DIR" | sed -f ./sed-escape.sed`
+SDEST_DIR=`echo "$DEST_DIR" | sed -f ./sed-escape.sed`
+
+find "$SRC_DIR" -type d | sed -e "s/^$SSRC_DIR/$SDEST_DIR/g" | ./dq-escape | \
+  sed -e 's/^/mkdir -p "/g' -e 's/$/"/g'
+# NOTE: It would be better if $DESTCOL were a FIFO.
+DESTCOL=`mktemp`
+find "$SRC_DIR" -not -type d | sed -e "s/^$SSRC_DIR/$SDEST_DIR/g" | \
+  ./dq-escape | sed -e 's/^/"/g' -e 's/$/"/g' > $DESTCOL
+find "$SRC_DIR" -not -type d | ./dq-escape | \
+  sed -e 's/^/mv "/g' -e 's/$/"/g' | paste -d' ' - $DESTCOL
+rm $DESTCOL

@@ -1,0 +1,32 @@
+Graphical User Interface Design
+
+When designing your user interface, the first question you should ask
+is "How big is this application going to be?"  For small applications,
+you should design the user interface to have small windows that can
+share their space well with other such applications on screen.
+
+For big applications, though, you should design an interface that is
+meant to run full screen.  Note, however, that user's may want to also
+see your application in a smaller window on screen, and you should
+make some, but not too many, provisions for that.  Generally, all the
+tools for a big application should be anchored into one window, with
+the document being edited.  The layout should be clean and organized
+by default, and be customizable to the user's preferences.  Ideally,
+most of the user interface should use non-blocking, non-overlapping,
+non-modal panes that the user and easily and quickly switch between.
+The panes should be consistent, organize common
+functions/notifications to common areas and the amount of content that
+flashes on and off the screen should be minimized.
+
+One of the most annoying things that you can do with such an
+application is make use of modal dialogs: that is, dialogs that the
+user must fill out and finish before doing anything else in the
+application.  Chances are that the user will want to refer back to
+something in their document before they finish filling out the dialog,
+in which this user interface being described here is the best way to
+implement such a program.
+
+Sometimes users may leave an application and never come back in a long
+time.  In these cases it is a good idea to perform an automated action
+to get the application out of an elevated privileges state or a state
+that may endanger computer hardware.

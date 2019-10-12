@@ -1,0 +1,91 @@
+User Interface Implementations
+
+Introduction
+----------------------------------------------------------------------
+
+Over the history of computers, the way a computer is used has evolved
+drastically.  There was once a time when a computer's program was
+physically stored on the outside of the computer on punch cards, but
+now, computers are capable of rendering and simulating interactive 3D
+environments in real time.  It is even commonplace to hear about how
+people may "play" with their computer's physics system.  From a
+computer program's perspective, some of these changes are impossible
+to predict and adapt to.  However, there is at least a long
+established history in the evolution of computer user interfaces, and
+from a simple analysis of web technologies, it is quite evident that
+large scale evolution of computer user interfaces has come to an end.
+Therefore, it is possible to make a library of software routines that
+will be more than good enough to cover all of the variations possible
+with past, present, and future user interfaces.
+
+User Interface Classifications
+----------------------------------------------------------------------
+
+The first and foremost simplest user interfaces are the category of
+non-interactive interfaces.  These include the hard-coded calculator
+and the command-line based program.  The hard coded calculator takes
+no input variables; its user interface is identical to the programmer
+interface.  In other words, the user IS the programmer, and
+programming tools are not considered something that is out of reach or
+difficult to use.  The command-line based program takes input
+variables from the command-line.  This is where the distinction
+between a computer user and a computer programmer begins to emerge.
+It is no longer necessary for the user to have programming tools, and
+the programmer is not obligated to use the program after writing it.
+Programs that get their data from a file are also considered
+non-interactive interfaces that have a user-programmer diversion.
+
+The next more sophisticated category of user interfaces is interactive
+interfaces.  These interfaces include both the non-graphical category
+of user interfaces and the graphical category of user interfaces.  It
+is important to note that non-graphical user interfaces do not only
+include text-based user interfaces but also include speech based user
+interfaces.  In other words, non-graphical interfaces include all
+language-based interfaces.  Obviously, for all such interfaces,
+protocol design must be taken into account.
+
+Interactive interfaces involve mid-program data acquisition.
+Non-graphical interfaces may prompt the user for input and ask for a
+retry if they enter invalid input.  Graphical user interfaces include
+the entire set of traditional graphical user interface controls.  In
+this context, the arrow key interface commonly used in video games is
+NOT considered part of this concept of an interactive interface
+because that requires real-time computation.  This concept of an
+interactive interface is more of a "call and response" idea: the
+computer will give the user a prompt or a dialog, then the user will
+enter their input.
+
+The last most sophisticated category of user interfaces is multimedia
+interfaces.  This can involve everything that computer technology has
+to offer.  In particular, the most important concept for multimedia
+interfaces is real time computation, because they are supposed to be
+reflective of real world phenomenon in several ways.  Multimedia
+interfaces treat input and output operations as continuous rather than
+the sequential "call and response" idea used for interactive
+interfaces.  These interfaces are typically used in video games and
+media players but rarely used directly for web technologies.  Media
+players practically never use 3D graphics computation, so web sites
+therefore follow the same trend.
+
+Hopefully, the trend regarding user interface sophistication limits
+will followed in the future.  Generally, the types of people who do
+"web design" aren't going to be too daring to create 3D interactive
+environments.  This should be a good sign that in general, the number
+of people who work on advanced user interfaces is percentile limited,
+so only a very few select will continue to increase the sophistication
+of user interfaces.  For the rest of user interface developers,
+continued sophistication of user interfaces is going to only revolve
+around making small time changes to the implementation of a graphical
+user interface.
+
+User Interface Implementations
+----------------------------------------------------------------------
+
+This is how the user interfaces will be implemented: Each user
+interface category will be accessed through the proper header file.
+The specific compile-time implementation will be accessed through
+preprocessor definitions.
+
+An exception to this rule is the hard coded calculator: no include
+files are required to be used.  In other words, hard coded calculators
+do not utilize core infrastructure support.

@@ -1,0 +1,8 @@
+#! /bin/sed -f
+# Replace all characters that are special within double quotes with
+# their proper escape sequence.
+
+s/\\/\\\\/g
+s/"/\\"/g
+s/\$/\\$/g
+s/`/\\`/g

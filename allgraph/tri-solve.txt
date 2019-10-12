@@ -1,0 +1,1530 @@
+2018-12-23
+
+Measurements through distances.
+
+Say you're measuring a house.  So you want to recreate a model of a
+house by only measuring distances?  And, you want to keep the basic
+math as simple as possible when building the initial model?
+
+So, here's how to do it.  First start by only concentrating on
+two-dimensional floorplan measurements.  For most home designs, the
+third dimension is rather trivial to deal with, so we'll discuss it
+later.  It is the first two dimensions that tend to be tricky.
+
+Okay, first of all, we're trying to keep this really basic for
+starters.  So, what is the easiest geometric primitive to solve for by
+only distances in the most general case?  The triangle.
+
+The basic idea is that you define points and the distances between
+them.  The positions of each point are solved for piece-meal by
+solving for the triangle within them.
+
+For triangles.  Your first two points, you measure the distance and
+you've got a line segment.  With no existing structure, you assume the
+first point to be at the origin and the second point to be directly to
+the right of it, on the positive x-axis.  Measuring the final two
+segments of the line gives you two possible locations for the point,
+either above or below the first line segment.  For the very first
+point, you just assume "above."  For subsequent points building off of
+a connected triangle, you always assume the opposite side of the
+existing triangle on that same line segment.
+
+Pretty easy so far, eh?  Now you get to this problem where you have
+this existing built-up structure, but you measure an edge length and
+it doesn't fit the existing point positions.  What do you do?  You can
+save the data for later, but we won't use it for starters.
+
+Okay, so here's what's going on.  When you are defining points, they
+are either "free" or "solved."  Solved points have a known position in
+coordinates, whereas free points can still be assumed to be moved
+around.  For starters, you can only input measurements to move around
+unsolved points.  This means that starters can only make changes to
+triangles that have one or two free points.  Also, the only time
+you'll have a triangle with two free points is at the very beginning.
+
+Okay, that's enough for us to discuss objects and properties, for two
+dimensional triangle meshes only.
+
+typedef unsigned PointID;
+typedef unsigned EdgeID;
+typedef unsigned MeasureTechID;
+typedef unsigned TriID;
+
+struct Point_tag
+{
+  PointID id;
+  /* Neighboring edges of this point.  */
+  EdgeID_array neighbor_edge_ids;
+  bool solved;
+  /* The three edges that form the triangle used to solve for the
+     position.  The first edge comprises the two existing solved
+     points.  */
+  EdgeID anchored_edge_id;
+  EdgeID free_edge_ids[2];
+  /* The solved coordinates.  */
+  double x;
+  double y;
+};
+
+struct Edge_tag
+{
+  EdgeID id;
+  PointID p1;
+  PointID p2;
+  Measure_array measures;
+  /* Should this edge be used for display geometry, or is it only a
+     distance measurement for improved accuracy?  */
+  bool is_geom;
+};
+
+struct Measure_tag
+{
+  /* Ranking of preference to use this measurement.  #0 least
+     preferred, larger numbers more preferred.  */
+  unsigned pref_rank;
+  /* Date/time this measurement was acquired.  */
+  time_t mtime;
+  /* Value of this measurement, of course.  */
+  double len;
+  /* Some distance indicating the expected +/- margin of error of this
+     measurement technique/technology.  */
+  double err_margin;
+  /* Identifier indicating a schematic measurement technology ID.
+     Useful in recomputing `err_margin' automatically if the value is
+     not intrinsically available.  */
+  MeasureTechID tech_id;
+};
+
+/* Formally defined triangles are not used in initial measurement,
+   rather triangles are determined implicitly and dynamically.
+   However, later in the process when we want to define walkable
+   surfaces, defined triangles with properties is a must.  */
+struct Triangle_tag
+{
+  TriID id;
+  bool is_walkable : 1;
+  bool is_step : 1;
+  PointID vertex_ids[3];
+};
+
+We've already reviewed the algorithm and user interface workflow for
+the first few points.  Now let's describe a little bit more detail for
+subsequent points.
+
+* User defines a new point by means of defining a new edge at the same
+  time.
+
+* User interface display is edge oriented.  Either select existing or
+  new point for each end of the edge.
+
+* If selecting two existing points, one of them must be "free" if any
+  point motion is going to happen upon entering a measurement.
+  Otherwise, the edge measurement is simply stored without any
+  geometry changes.
+
+* Global contraint: Unmeasured edges are only allowed to be added
+  between two solved points.  This avoids a degenerate case where you
+  have two unsolved neighboring triangles.
+
+* Global constraint: You can only have one free point in flight at a
+  time.  This also helps avoid degenerate cases.
+
+* Global constraint: Edges may never be shared by more than two
+  triangles.  When adding a new edge, always check this constraint as
+  follows.  Find the triangles that the new edge is in.  This should
+  never be more than two.  Now check each edge of those triangles to
+  make sure that each such edge is not part of more than two
+  triangles.
+
+  NOTE: This constraint may not be required with the other two in
+  place.
+
+* If a point is free and a new measurement is added to a neighboring
+  edge, check if there are enough measurements to solve for the point.
+
+    * Check if there are at least two neighboring edges connecting to
+      the point.
+
+    * Next check all the neighboring edges.  Check for a neighboring
+      triangle that includes the measured edge: two neighboring edges
+      are connected together via a non-neighboring edge.
+
+    * At this point, without constraints, you may have up to two
+      neighboring triangles involved.  However, thanks to our earlier
+      constraints, there should only ever be one triangle involved,
+      which makes solving for the point position easy.
+
+    * Simply solve for the point position as follows.  Given two
+      existing coordinates, each edge is an x^2 + y^2 = r^2 equation
+      from the two points.  The solution to this equation will give
+      you two points.
+
+    * Find the other neighboring triangle of the solved edge.  Find
+      which side of the edge it is on.  Discard the point from the
+      solution set that is on the same side.
+
+    * You now have your single solved point.
+
+* Subdividing edges is an important part of the workflow too, for wall
+  details, etc.
+
+* Now what about computing your location in the middle of a room?  You
+  might violate the two triangles per edge rule.  Okay, so we need to
+  revisit that constraint for practical reasons.  I think, basically,
+  this means more "measurement only" lines, not geometric ones.
+
+  So, discussion on subdividing.  Subdividing should be treated
+  specially.  Of course with strictly adjacent geometry, edges should
+  never be used by more than two triangles.  For geometric
+  subdividing, however, the rules are slightly different.  Generally
+  you want to preserve both the original un-divided geometry and the
+  newer, more detailed divided geometry.  Indeed, this was the main
+  problem I was having with Blender modeling of the house, the issue
+  of geometry sub-dividing.
+
+----------------------------------------
+
+Now if we extend into three dimensions.  We have a new free variable:
+the edge angle of two triangles sharing an edge.  If every point is
+shared by two or more triangles, this can be solved for automatically.
+
+Now, we also have to change our conditions under which points are
+considered free or solved.  If a triangle is solved, the point is
+still free until the edge angle is also solved.  An easy way to solve
+for the edge angle is to measure a line length between two free points
+of two adjacent triangles to form a third triangle.  As it turns out,
+this will give you two potential solutions: "concave"/"inside" and
+"convex"/"outside."  Choose the according solution based off which
+side you are measuring from.
+
+Also, a word needs to be stated on the constraints of free triangles.
+Free triangles are less disorderly than free edges, so we can afford
+to have some more flapping triangles, so long as we don't have a chain
+of them connected together.  Matter of fact, you can say the same for
+free edges: no long chains of free edges, no long chains of free
+triangles.
+
+Now a word on the math.  When you solve for a triangle, you compute
+the orthogonal of the solved point to the fixed edge, then use that to
+form the equation of the circle in 3D that defines the potential
+positions.  With two circles in 3D and a third circle (?) defining the
+distance between the two, you have two potential solutions.
+
+Okay, let's not say circle, let's just say a third distance equation
+between two points chosen on the existing circles to solve for the
+solution.  Oh, and I guess there could be even more than two
+solutions?  I'll have to check this out in more detail.  Yep, actually
+it can get quite bad, with some cases **any point** on the opposite
+circle is an equally good candidate, if the point chosen on one circle
+is effectively the top of a cone.
+
+So, that being said, a few things are clear.  First, we need to
+actually measure the _edge angles_ per se.  Second, using only
+distance measures, it's not always possible to get a stable
+measurement of edge angles.  This is particularly true of very shallow
+edges.  Triangulation 3D scanning could give you better data for these
+particular cases.  Otherwise, you might be better off assuming such
+faces to be "planar."
+
+One important facet of measuring edge angles.  The longer the edges
+that are involved, the more precise the angle measurements must be in
+order to get precise position measurements.  At face value, one good
+technique for measuring edge angles when you'd otherwise form an
+unstable triangle by creating an end-to-end edge would be to subdivide
+down the triangles until your angle measuring triangle is a stable
+triangle.  But alas, because you've just shortened all of the
+triangle's edge lengths, you also loose angular precision in the
+process.  On the other hand, we have quite good news for using lengths
+to determine edge angles.  Your choices are between zero and 180
+degrees.  When you are close to zero degrees, the uncertainty stays
+close to zero degrees, of almost zero length for the third edge.  When
+you are close to 180 degrees, the uncertainty stays close to the total
+length of the two edges.  If you exceed the maximum length, simply
+assume 180 degrees.
+
+So... that being said.  Now revisiting the subject of unstable
+triangles.  Actually it could be okay to accept measurements on these.
+But yes, like you said, it depends on your error thresholds and the
+size of the triangles in question.
+
+So, this is actually where 3D scanning really shines: you can form
+stable triangles for the full sweep of the scan.  On the other hand,
+the risk that comes with 3D scanning is that you are not as sure that
+your longest distance measurements are accurate compared to direct
+distance measurement.
+
+Okay, so let's combine the best of the two.  Start by using a laser
+measuring technique for your longest distances.  You will get very
+accurate distances, but not very accurate angles.  Then fill in the
+gaps with 3D scanning.  You will get very accurate angular
+measurements that you can then fit into your very accurate longest
+distance measurements.  Then you can have accurate measurements all
+the way through.
+
+Yes!  Indeed, I've done a simulation of laser 3D scanning of a near
+planar surface.  Then I compare that to third edge to constrain two
+flappy triangles.  Clearly, the 3D scanning method for angles is much
+better than trying to build a triangle mesh with the third angle
+measure.  That being said, we'll leave it to the user to be able to
+say edges are "planar," "right angle," or measure a length between two
+opposite points of the edge and let the computer determine that.
+Plus, this is the easiest way to extend from 2D to 3D.
+
+Yep, it's all about triangles.  Build your triangles correctly and you
+can see _everything_.
+
+So, think about the process of measuring a room now.  Now you measure
+all four sides so that you know the boundary lengths.  Then you need
+to measure one diagonal because that is a triangle edge.  Then you
+need to measure the other diagonal so that you can compute the edge
+angle.  Yes, this sounds super slick.
+
+----------------------------------------
+
+Now we want a "walk-through" house model, not just a "fly-through,"
+and we want our own software to do this.  So, how do we do it?  Use
+the concept of floor-plan meshes, sort of.  Gravity weighs you down so
+you stand on the surface of one face.  Assume there is infinite
+friction to hold you in place on surfaces marked "walkable."  You can
+walk between two walkable surfaces with connected edges.  There is
+also another type of surface called "step."  You cannot stand on this
+surface, but it is used to connect surfaces that you can stand on.
+Okay, easy as that.
+
+Now, in another sense, you could define a software means to
+automatically compute these properties.  Surfaces that are too steep
+are not walkable.  Of non-walkable surfaces, those that connect
+walkable surfaces that are not too far apart can be flagged as steps.
+You may need to subdivide existing non-walkable triangles in order to
+have a rational step between walkable triangles.  Basically, if you
+look at a triangle and it has a max elevation that exceeds
+stepability, try to check if it has an edge extent that doesn't exceed
+stepability.  If so, subdivide it to practical thresholds and keep
+searching for the walkable surface beyond.  If none are found you can
+undo all the subdivision.
+
+In the case of a walk-through house, per-edge properties are
+superfluous.  And, conversely, in the case of a measurement scenario,
+per-face properties are superfluous.
+
+So, the main math we need for this.
+
+* Determine if a point is within bounds of a triangle.
+
+* Determine if a box is within bounds of a triangle.
+
+* Determine if a circle is within bounds of a triangle.
+
+* Compute the elevation of a point on a triangle.  Use the equation of
+  a plane to solve for this.
+
+* Find neighboring triangles.
+
+* BSP trees or Kd-trees for rendering.
+
+* Automatic Level-of-Detail (LOD) decimation, especially since
+  automatically generated data sets will be used gratuitously.
+
+a*x + b*y + c*z + d = 0
+z = -(a*x + b*y + d) / c
+
+let d = 0
+
+Use two edge vectors to compute a, b, and c.  Compute the orthogonal
+projection of the two edge vectors, then you can solve for the
+equation of the plane.  Of course, the question of numerical stability
+is not out of discussion.  Some triangles are, of course, not
+"well-formed" such that you cannot compute a numerically stable
+equation of a plane for that triangle.  Generally you want to avoid
+creating such triangles in the beginning when possible.  In some cases
+subdividing such triangles may help.  Otherwise, you can use a
+step-wise numerical approximation algorithm to compute solutions.
+
+----------
+
+More considerations that are required for walkable surfaces.
+
+* You must take into consideration _overhang ledges_.  The user cannot
+  be allowed to walk under overhang ledges in a way that would result
+  in them penetrating the ground.
+
+* You must also take into consideration _fallable edges_.  There may
+  distances that are too great and slopes too steep to walk up, but it
+  is totally possible to go the reverse direction by simply falling.
+
+  In this case, there may generally be less restrictions.  The most
+  permissive restrictions center around mere safety: the user must not
+  be able to walk over a ledge that would result in a dangerous fall,
+  but there is no regard toward requiring a return path before
+  venturing down.
+
+  A user can slide down a long gentle slope that is too steep to
+  climb, so long as it is not so steep or so long that velocities
+  would become dangerously high.
+
+  There's also the "daredevil approach": the user may slide down
+  slopes that could potentially be dangerous if there were an
+  obstruction early on, but the end of the slope allows for a safe
+  stop.
+
+  Indeed, you can argue that falling allows for too much
+  experimentation on the way of safety, and the easiest implementation
+  is to either only allow bi-directional walkable navigation or to
+  permit falling regardless of the potential safety implications.
+
+* Oh, now that you mention it, there are also upside-down surfaces.
+  Yeah, it's easiest to exclude these from the walkable surface path
+  entirely.  But, if they were included, how would they be treated?
+  Well, the main problem is that these surfaces are simply "too steep"
+  to be walkable, or even standable for that matter.  You simply can't
+  adhere to the ceiling without suction cups.  Okay, great point
+  there.  Now if you had suction cups, you could walk across any
+  connected surface, no questions asked.
+
+----------
+
+General math requirements:
+
+* Subdivide triangles
+
+* Merge triangles, simplify triangles, undo subdivide, join.
+  Basically, you delete vertices and reskin faces to preserve
+  connectivity.
+
+* So, with your simplification algorithm in place, you want to
+  automatically define volume regions in the shape of frustums and use
+  the visibility of those to guide recursive rendering of more
+  detailed structures.
+
+----------
+
+UPDATE 2019-09-03
+
+The best/easiest mathematical model for walk-through is
+sliding/rolling a ball.  This works gracefully for walking up stairs
+too.  Collision detection is determined with the rest of a virtual
+body to prevent the camera from ghosting through walls.
+
+So, here's how you do it.  First of all, use a bounding box to detect
+the collision domain of your ball.  Now, check for intersections of
+your ball with your triangles.  The depth of displacement into the
+ball provide a pushing force against the ball, and you use vector math
+on this to determine the final position of the ball that does not
+exceed the limits of your solid geometry.  Also, based off of the
+floor normals, you update the forward direction of your ball
+accordingly.
+
+Corner collisions?  Find the direction of the corner faces and the
+collision vector.  This is how you determine which face is collided.
+Then you know how to compute the force vector for sliding.
+
+Find the component of the motion vector in the direction of the face
+normal, via dot product.  This motion is restricted 100%, so you add
+the opposite of this dot product to the motion vector, and that is
+your final motion vector.
+
+To prevent flying through walls at high speed, you extrude your
+collision detection ball into a... espiloid-like solid.  Check for
+intersections in that, and determine the specific time position of the
+first ball intersection.
+
+Okay, so I could have stated everything from a much easier
+perspective.  Find the time of the first collision, and set the
+position to that, so that we don't exceed the limits.  Now, with the
+remainder of the motion, compute the motion vector via the face dot
+product method, and apply that.  Do this recursively until there is no
+more pending motion in the simulation step.
+
+Sure, you can update the forward direction recursively too, but this
+allows for wall-walking.  How to restrict wall-walking?  In addition
+to pending motion vectors, you can calculate future motion vectors.
+If the motion vector has too great a vertical ascent in one step, then
+you restrict motion in that direction.
+
+Make it really simple if you do this.  You can allow the user to try
+to travel up by one step, but if that is not enough they have to stop
+there.  So, you must keep track of the last position before attempted
+vertical ascent.  Yes, just like a virtual foot standing below.  Of
+course, if the angle is sufficiently shallow, it can be traveled
+immediately on "one foot."
+
+So, all this being said, the one thing missing is the ability to
+specifically position feet for the sake of climbing very rocky and
+rugged terrain where an algorithm would not fare well in automatic
+positioning, not to mention good automatic positioning would ruin the
+human experience too.
+
+The constraints world is easier if you are not weighed down by gravity
+and can fly around.  Here, restricting motion is strictly based on
+restricting collisions and using angle sliding.
+
+----------------------------------------
+
+Now what about flying?  You want the user to be able to fly about, but
+not be able to fly through walls.  Well, in this case, the solution
+space is different.  Rather than traversing surfaces by means of
+edges, you traverse volumes by means of windows that are polygons.
+You may only to other volumes by means of window polygons.  Otherwise,
+you are confined to the bounds of your current volume.
+
+At the outset, this sounds simple enough.  However, things start to
+reach their limits when you think about very complex sub-volumes
+contained within simpler super-volumes.  Wouldn't it make sense to
+define a means to fly _into_ a sub-volume?  Indeed it would.  In this
+case, we have a clever solution, actually.  If you start by assuming
+your first point always starts out in a valid volume region, and that
+region is pre-labeled accordingly, you can always determine which
+regions you are attempting to fly _into_ or _out of_ by means of
+testing for plane intersection.  In extreme circumstances you will get
+multiple plane intersections and will have to test each one
+sequentially for validity.  Otherwise, in the simple case, you get
+zero or one intersections.  Zero intersections, you are in the same
+volume as usual.  One intersection, you are trying to cross into
+something else.  If it is a valid window, let the user pass.
+Otherwise, stop the user at the edge of the volume, and keep them back
+from the edge by their "head size."
+
+This actually works very well, even for plain 2D "suction cup" surface
+navigation, when you think about it.  No matter what the complexity of
+the environment, you always start by testing for navigation within
+your current partition, whether to a sub-partition or a
+super-partition.  Just make sure you never allow for a case where a
+user can "escape through the corners."  Yeah, numerical stability is
+important here.  Or, conversely, you can have the edges overlap at the
+corners by an epsilon threshold.
+
+I realize this is many the domain of existing video game engines.
+But...  let me put it this way.  The existing means have placed a lot
+of emphasis on the most entertaining means of navigation, and the full
+range of mathematical possibilities unfortunately got a bit of a
+backburner because of this.
+
+----------
+
+General math requirements:
+
+* Point in volume?
+
+* Line through plane
+
+----------------------------------------
+
+So, for geometric primitives.  Numeric stability is in the primary
+interest.  What is the most numerically stable?  By far the easiest
+way to define the starting primitives is by parametric means.  Given a
+series of points, define vectors and positions when parameters are at
+their limits, zero and one.
+
+    p1 = point = { p1.x, p1.y, p1.z }
+    v1 = line vector = { p2.x - p1.x, p2.y - p1.y, p2.z - p1.z }
+    le1(u) = line equation = p1 + u * v1
+    t1(u, v) = triangle equation = p1 + u * v1 + v * v2 | u + v <= 1
+    te1(u) = triangle edge = p1 + u * v1 + (1 - u) * v2
+
+Choose the two longest edges for the line vectors in the triangle
+equation.
+
+Now we remove the parameter from the equation to get an equation of a
+line only in terms of x and y.
+
+    x = p1.x + u * v1.x
+    y = p1.y + u * v1.y
+    u = (x - p1.x) / v1.x
+    y = p1.y + ((x - p1.x) / v1.x) * v1.y
+    y * v1.x = p1.y * v1.x + (x - p1.x) * v1.y
+    (y - p1.y) * v1.x = (x - p1.x) * v1.y
+
+Now we replace v1 with its computation to get a super-slick form.
+
+    (y - p1.y) * (p2.x - p1.x) = (x - p1.x) * (p2.y - p1.y)
+
+Now it should be obvious that if you are rasterizing integer pixel
+coordinates, you step x and y by one in a way to try to keep the error
+difference as small as possible.  For extending into three dimensions,
+you can readily add additional equations that need to be satisfied
+like so.
+
+    (y - p1.y) * (p2.x - p1.x) = (x - p1.x) * (p2.y - p1.y)
+    (z - p1.z) * (p2.x - p1.x) = (x - p1.x) * (p2.z - p1.z)
+    (z - p1.z) * (p2.y - p1.y) = (y - p1.y) * (p2.z - p1.z)
+
+Solve for intersection between 2D lines by solving system of
+equations.  Rearranging the equation of a line into matrix coefficient
+format:
+
+    (y - p1.y) * v1.x = (x - p1.x) * v1.y
+    v1.y * x - v1.x * y = v1.y * p1.x - v1.x * p1.y
+
+Just use Gaussian elimination with partial pivoting, floating point
+arithmetic.
+
+That was a pretty spiffy exercise.  Now, let's try determining the
+equation of a triangle or plain by a similar strategy.  Start by
+taking the parametric equations, define equations to determine the
+parameters implicitly, and reconstruct to eliminate the parameters.
+
+    t1(u, v) = triangle equation = p1 + u * v1 + v * v2 | u + v <= 1
+    s1(u, v) = plane equation = p1 + u * v1 + v * v2
+    { x, y, z } = p1 + u * v1 + v * v2
+
+    x = p1.x + u * v1.x + v * v2.x
+    y = p1.y + u * v1.y + v * v2.y
+    z = p1.z + u * v1.z + v * v2.z
+
+    (x - p1.x) - v * v2.x = u * v1.x
+    u = ((x - p1.x) - v * v2.x) / v1.x
+    (x - p1.x) - u * v1.x = v * v2.x
+    v = ((x - p1.x) - u * v1.x) / v2.x
+
+    u = ((x - p1.x) - (((x - p1.x) - u * v1.x) / v2.x) * v2.x) / v1.x
+    u = (x - p1.x) / v1.x - ((x - p1.x) - u * v1.x) * v2.x / (v2.x * v1.x)
+    u + u * v1.x * v2.x / (v2.x * v1.x) =
+      (x - p1.x) / v1.x - (x - p1.x) * v2.x / (v2.x * v1.x)
+    2u = (x - p1.x) / v1.x - (x - p1.x) * v2.x / (v2.x * v1.x)
+    u = (x - p1.x) / (2 * v1.x) - (x - p1.x) * v2.x / (2 * v2.x * v1.x)
+
+    v = (x - p1.x) / (2 * v2.x) - (x - p1.x) * v1.x / (2 * v1.x * v2.x)
+
+Ouch, now that's a mess, but it shows that you can (1) implicitly
+compute `u` from `v` and vice versa and (2) compute `u` entirely from
+implicit values.  So the same is true with `v`, and because of this,
+you can define an implicit equation of a triangle.
+
+Okay, but let's see if we can be more strategic and solve this a
+second time.
+
+* Use `u` to primarily tie together the `x` and `y` equations.
+
+* Use `v` to primarily tie together the `xy` and `z` equations.
+
+    u = ((x - p1.x) - v * v2.x) / v1.x
+    u = ((y - p1.y) - v * v2.y) / v1.y
+    v = ((z - p1.z) - u * v1.z) / v2.z
+    ((x - p1.x) - v * v2.x) / v1.x = ((y - p1.y) - v * v2.y) / v1.y
+    ((x - p1.x) - v * v2.x) * v1.y = ((y - p1.y) - v * v2.y) * v1.x
+
+Okay, now that's starting to look interesting.
+
+    (x - p1.x) * v1.y - v * v2.x * v1.y = (y - p1.y) * v1.x - v * v2.y * v1.x
+    (x - p1.x) * v1.y - (y - p1.y) * v1.x = v * v2.x * v1.y - v * v2.y * v1.x
+    (x - p1.x) * v1.y - (y - p1.y) * v1.x = v * (v2.x * v1.y - v2.y * v1.x)
+    v = ((x - p1.x) * v1.y - (y - p1.y) * v1.x) / (v2.x * v1.y - v2.y * v1.x)
+
+Now this is getting tough.  Still have an extra `u` variable to get
+rid of in our other `v` equation.
+
+    v = ((z - p1.z) - u * v1.z) / v2.z
+    v = ((z - p1.z) - (((y - p1.y) - v * v2.y) / v1.y) * v1.z) / v2.z
+    v = (z - p1.z) / v2.z - (((y - p1.y) - v * v2.y) / v1.y) * v1.z / v2.z
+    v = (z - p1.z) / v2.z - ((y - p1.y) / v1.y - v * v2.y / v1.y) * v1.z / v2.z
+    v = (z - p1.z) / v2.z - (y - p1.y) / v1.y * v1.z / v2.z -
+      v * v2.y / v1.y * v1.z / v2.z
+    v + v * v2.y / v1.y * v1.z / v2.z =
+      (z - p1.z) / v2.z - (y - p1.y) / v1.y * v1.z / v2.z
+    v * 2 * v2.y / v1.y * v1.z / v2.z =
+      (z - p1.z) / v2.z - (y - p1.y) / v1.y * v1.z / v2.z
+    v =
+      (z - p1.z) / v2.z / 2 / v2.y * v1.y / v1.z * v2.z -
+      (y - p1.y) / v1.y * v1.z / v2.z / 2 / v2.y * v1.y / v1.z * v2.z
+    v = (z - p1.z) * v1.y / (2 * v2.y * v1.z) - (y - p1.y) / (2 * v2.y)
+
+Now we can slap together a giant equation.
+
+    ((x - p1.x) * v1.y - (y - p1.y) * v1.x) / (v2.x * v1.y - v2.y * v1.x) =
+      (z - p1.z) * v1.y / (2 * v2.y * v1.z) - (y - p1.y) / (2 * v2.y)
+
+`v2.z` got canceled out quite aggressively.  Otherwise, this is an
+implicit equation of a triangle in terms of the points and vectors
+that define it.
+
+Let's simplify, or at least try.
+
+    (2 * v2.y * v1.z) * ((x - p1.x) * v1.y - (y - p1.y) * v1.x) /
+      (v2.x * v1.y - v2.y * v1.x) =
+      (z - p1.z) * v1.y - (y - p1.y) * v1.z
+    (2 * v2.y * v1.z) * ((x - p1.x) * v1.y - (y - p1.y) * v1.x) =
+      ((z - p1.z) * v1.y - (y - p1.y) * v1.z) * (v2.x * v1.y - v2.y * v1.x)
+
+    (2 * v2.y * v1.z) * ((x - p1.x) * v1.y - (y - p1.y) * v1.x) +
+      ((z - p1.z) * v1.y - (y - p1.y) * v1.z) * (v2.y * v1.x - v2.x * v1.y)
+      = 0
+
+    (2 * v2.y * v1.z) * ((x - p1.x) * v1.y)
+      - (2 * v2.y * v1.z) * ((y - p1.y) * v1.x)
+      - ((y - p1.y) * v1.z) * (v2.y * v1.x - v2.x * v1.y)
+      + ((z - p1.z) * v1.y) * (v2.y * v1.x - v2.x * v1.y)
+      = 0
+
+    (2 * v2.y * v1.z) * (x * v1.y)
+      - (2 * v2.y * v1.z) * (p1.x * v1.y)
+      - (2 * v2.y * v1.z) * (y * v1.x)
+      + (2 * v2.y * v1.z) * (p1.y * v1.x)
+      - (y * v1.z) * (v2.y * v1.x - v2.x * v1.y)
+      + (p1.y * v1.z) * (v2.y * v1.x - v2.x * v1.y)
+      + (z * v1.y) * (v2.y * v1.x - v2.x * v1.y)
+      - (p1.z * v1.y) * (v2.y * v1.x - v2.x * v1.y)
+      = 0
+
+    (2 * v2.y * v1.z) * (x * v1.y)
+      - (2 * v2.y * v1.z) * (y * v1.x)
+      - (y * v1.z) * (v2.y * v1.x - v2.x * v1.y)
+      + (z * v1.y) * (v2.y * v1.x - v2.x * v1.y)
+      - (2 * v2.y * v1.z) * (p1.x * v1.y)
+      + (2 * v2.y * v1.z) * (p1.y * v1.x)
+      + (p1.y * v1.z) * (v2.y * v1.x - v2.x * v1.y)
+      - (p1.z * v1.y) * (v2.y * v1.x - v2.x * v1.y)
+      = 0
+
+    (2 * v2.y * v1.z * v1.y) * x
+      - (2 * v2.y * v1.z * v1.x) * y
+      - y * (v1.z * v2.y * v1.x - v1.z * v2.x * v1.y)
+      + z * (v1.y * v2.y * v1.x - v1.y * v2.x * v1.y)
+      + (2 * v2.y * v1.z) * (p1.y * v1.x - p1.x * v1.y)
+      + (p1.y * v1.z) * (v2.y * v1.x - v2.x * v1.y)
+      - (p1.z * v1.y) * (v2.y * v1.x - v2.x * v1.y)
+      = 0
+
+    (2 * v2.y * v1.z * v1.y) * x
+      - ((2 * v2.y * v1.z * v1.x) + (v1.z * v2.y * v1.x - v1.z * v2.x * v1.y)) * y
+      + z * (v1.y * v2.y * v1.x - v1.y * v2.x * v1.y)
+      + (2 * v2.y * v1.z) * (p1.y * v1.x - p1.x * v1.y)
+      + (p1.y * v1.z - p1.z * v1.y) * (v2.y * v1.x - v2.x * v1.y)
+      = 0
+
+    (2 * v2.y * v1.z * v1.y) * x
+      - (v1.z * (2 * v2.y * v1.x + v2.y * v1.x - v2.x * v1.y)) * y
+      + (v1.y * v2.y * v1.x - v1.y * v2.x * v1.y) * z
+      + (2 * v2.y * v1.z) * (p1.y * v1.x - p1.x * v1.y)
+      + (p1.y * v1.z - p1.z * v1.y) * (v2.y * v1.x - v2.x * v1.y)
+      = 0
+
+Okay, no more division, just multiplication, and a lot of it.  But
+gosh, it looks like too much to include `p1` in the mix... actually,
+now that's interesting.  `p1` is the least recurring variable used.
+The vectors are the most used.
+
+Okay, after all that, let's try another solution path, hopefully
+simpler this time.
+
+    u = ((x - p1.x) - v * v2.x) / v1.x
+    u = ((y - p1.y) - v * v2.y) / v1.y
+    u = ((z - p1.z) - v * v2.z) / v1.z
+
+    v = ((x - p1.x) - u * v1.x) / v2.x
+    v = ((y - p1.y) - u * v1.y) / v2.y
+    v = ((z - p1.z) - u * v1.z) / v2.z
+
+    u = (x - p1.x) / v1.x - v * v2.x / v1.x
+    v = (z - p1.z) / v2.z - u * v1.z / v2.z
+    u + v * v2.x / v1.x = (x - p1.x) / v1.x
+    u + ((z - p1.z) / v2.z - u * v1.z / v2.z) * v2.x / v1.x =
+      (x - p1.x) / v1.x
+    u + (z - p1.z) / v2.z * v2.x / v1.x - u * v1.z / v2.z * v2.x / v1.x =
+      (x - p1.x) / v1.x
+    u - u * v1.z / v2.z * v2.x / v1.x =
+      (x - p1.x) / v1.x - (z - p1.z) / v2.z * v2.x / v1.x
+    u * (1 - v1.z / v2.z * v2.x / v1.x) =
+      (x - p1.x) / v1.x - (z - p1.z) / v2.z * v2.x / v1.x
+
+    u = ((x - p1.x) - (z - p1.z) / v2.z * v2.x) /
+      (v1.x * (1 - v1.z / v2.z * v2.x / v1.x))
+
+Now we eliminate `u`.  Well, things are seeming easier this time
+through.
+
+    u = ((x - p1.x) - (z - p1.z) / v2.z * v2.x) /
+      (v1.x * (1 - v1.z / v2.z * v2.x / v1.x))
+
+Try again by another way.
+
+    u = ((x - p1.x) - v * v2.x) / v1.x
+    v = ((x - p1.x) - u * v1.x) / v2.x
+
+    u = (x - p1.x) / v1.x - v * v2.x / v1.x
+    v = (x - p1.x) / v2.x - u * v1.x / v2.x
+    u + v * v2.x / v1.x = (x - p1.x) / v1.x
+    u + ((x - p1.x) / v2.x - u * v1.x / v2.x) * v2.x / v1.x = (x - p1.x) / v1.x
+    u + (x - p1.x) / v2.x * v2.x / v1.x - u * v1.x / v2.x * v2.x / v1.x =
+      (x - p1.x) / v1.x
+    u - u * v1.x / v2.x * v2.x / v1.x =
+      (x - p1.x) / v1.x - (x - p1.x) / v2.x * v2.x / v1.x
+    u * (1 - v1.x / v2.x * v2.x / v1.x) =
+      ((x - p1.x) - (x - p1.x) / v2.x * v2.x) / v1.x
+    u = ((x - p1.x) - (x - p1.x) / v2.x * v2.x) /
+      (v1.x * (1 - v1.x / v2.x * v2.x / v1.x))
+
+----------
+
+Okay, okay, intermission.  I've made a few omissions and mistakes that
+I need to clarify here.
+
+* The equation of a line in 3D?  Technically, you only need two
+  equations to equate all three quantities.  However, I wrote out all
+  three equations just for completeness.
+
+* The equation of a plane in 3D can be solved for with ease, albeit an
+  incomplete explanation for now.  The derivative of an equation in 3D
+  is the perpendicular vector, which can be found from the cross
+  product of your two line vectors.  Now if you look at my 2D
+  equations, you'll realize the same is also true, if you instead
+  define the cross product in 2D to result in a 2D vector.  So, you
+  will determine `a`, `b`, and `c` from the perpendicular vector.  To
+  solve for `d`, plug in your point `p1` and solve the rest of the
+  equation.
+
+* The cross product in 3D:
+
+  { p1.y * p2.z - p1.z * p2.y,
+    p1.z * p2.x - p1.x * p2.z,
+    p1.x * p2.y - p1.y * p2.x }
+
+  The cross product is a perpendicular vector, one whose magnitude is
+  dependent upon the sine of the angle between the two vectors times
+  their magnitudes.  Thus, very narrow angles will result in a shorter
+  vector, and rightfully so, as you cannot compute the perpendicular
+  vector with as much precision in these cases.  Likewise is true with
+  very short vectors.
+
+* For the equations of a line in 3D.  If you just pick two out of
+  three of these equations, whichever two equations are most
+  numerically stable, that passes for two equations of a plane that
+  intersect to form a line.  As it turns out, as all of the equations
+  constrain only two out of three coordinates, any two that you pick
+  will be fairly orthogonal.  Pick the two planes where the angular
+  difference between the normals is closest to 90 degrees, the
+  perpendicular vectors determined from the coefficients `a`, `b`, and
+  `c`.
+
+* Given those pieces of information, it should then be obvious how you
+  solve for the a point from a line and a plane.  You've got three
+  linear equations and three unknowns.
+
+* Alternatively, you can use all three line equations, in which case
+  you would compute a linear regression instead of solving a system of
+  linear equations.
+
+* Okay, how about this alternative method of constructing the equation
+  of a line in 3D.  Start by using your line vector as the normal
+  vector for the equation of a plane.  This will give you a reference
+  plane from which you can choose two orthogonal vectors that lie
+  within that plane.  Choose the first point at random, a reasonable
+  distance away, to create one perpendicular vector, then the second
+  vector is chosen to be perpendicular to both.  Those two new vectors
+  define orthogonal planes that intersect to form your ideal equation
+  of a line in 3D.
+
+  But how are you going to determine what point to pick on the plane?
+  Won't that involve complex math?  Okay, fine, I guess it is simpler
+  to use the other method.  You already have some potentially good
+  guesses, just pick the two out of three that are the best.  It's
+  also easy to determine bad guesses by means of the dot product.
+
+* Better idea for solving intersection of plane and line.  Do it
+  entirely using vector projections.  Project the point of your line
+  onto your plane by subtracting plane and line points to get a
+  vector.  Compute the orthogonal projection (i.e. dot products) of
+  that vector into the plane vectors, including the perpendicular,
+  using the dot product.  Now you have a perpendicular shortest
+  distance reference point to the plane.  Your goal.  Solve the
+  quantity such that the dot product of the line vector times a
+  multiple and the normal vector equals the distance to the plane.
+  One that multiple is found, multiplying the line vector times that
+  and adding that to the line point will give you the intersection
+  point on the plane.
+
+  Major advantage: No need to deal with finicky Gaussian elimination
+  and its numerical stability issues.  Also, all of your computations
+  are in terms of vector spaces based very closely off of original
+  measurements.
+
+      dist_2(v) = distance/length/magnitude squared of vector v
+      vp = pp - pl
+
+      dot(vl * s, vp) = dist_2(vp)
+
+      vl.x * s * vp.x + vl.y * s * vp.y + vl.z * s * vp.z =
+        vp.x^2 + vp.y^2 + vp.z^2
+      s * (vl.x * vp.x + vl.y * vp.y + vl.z * vp.z) =
+        vp.x^2 + vp.y^2 + vp.z^2
+      s = dist_2(vp) / dot(vl, vp)
+
+----------------------------------------
+
+Fixed-point integer division by powers of two?  Yeah, for unsigned
+integer arithmetic, this is an easy shift right.  But for signed
+integer arithmetic, a simple shift right won't be fully accurate: once
+you get to -1, you'll be stuck there.  So, how to do it in a correct
+manner for signed arithmetic?  Here's how.
+
+    int
+    idiv_pow_2 (int x, unsigned char pow)
+    {
+      if (x < 0)
+        x++;
+      x >>= pow;
+      return x;
+    }
+
+Now, you might argue that this is not very efficient for superscalar
+pipelined processors, but no worries, as you can easily transform it
+into a code that doesn't use conditional jumping by adding the sign
+bit.
+
+    int
+    idiv_pow_2 (int x, unsigned char pow)
+    {
+      #define INT_BITS (sizeof(int) * 8)
+      x += (x >> (INT_BITS - 1)) & 1;
+      x >>= pow;
+      return x;
+    }
+
+Also, it's important to use this kind of shifting for fixed-point
+arithmetic too.  When you are truncating digits after a multiply, you
+will not get a correctly truncated result without using this method
+for shifting.
+
+No worries for multiplying by powers of two by shifting left.  This is
+fully accurate with signed arithmetic and no changes.
+
+    int
+    imul_pow_2 (int x, unsigned char pow)
+    {
+      x <<= pow;
+      return x;
+    }
+
+----------
+
+Approximate square and approximate square root?  Now, here are some
+really nifty tricks Squaring approximately doubles the number of
+digits in a number.  Conversely, square rooting a number approximately
+divides the number of digits by two.  Also note that cubing a number
+approximately triples the number of digits.  Matter of fact, these
+relations can be easily proven in base 2 as follows.
+
+    2^8 = 2^(4*2) = (2^4)^2
+    2^12 = 2^(4*3) = (2^4)^3
+
+You can quickly obtain the number of digits in a binary integer by
+means of the _bit scanning_ instructions.  Bit-scan reverse to search
+for the most significant bit.  Once you have the number of bits in a
+number, you can shift left by that number of bits to square.  To cube,
+double the number of bits to shift left by, yep, you've guessed it,
+shifting left by one on the number of bits, then using that to shift.
+Alternatively, run the same shift instruction twice in succession.
+For square root, shift right by one bit on the number of bits in the
+number, then use that to shift right on your number.
+
+NOTE: This method of squaring can generally overestimate the result.
+Let's show some examples.
+
+  (0b10)^2 = 2^2 = 4 = 0b100
+  (0b11)^2 = 3^2 = 9 = 0b1001
+  2^2 ~= 0b1000 = 8
+  (0b1111)^2 = 15^2 = 225 = 0b11100001
+  15^2 ~= 0b11110000 = 240
+  (0b1100)^2 = 12^2 = 144 = 0b10010000
+  12^2 ~= 0b11000000 = 192
+  (0b10000)^2 = 16^2 = 256 = 0b100000000
+  16^2 ~= (0b1000000000) = 512
+
+There is also an alternative variation that can generally
+underestimate the result, by shifting left by one less bit.  If you
+want to hit right in the middle of the uncertainty range, you average
+the two.  On the other hand, the approximate square root can be quite
+accurate, only being off by a few integer steps, given the limitations
+of an integer-only square root result.  In general, assume an
+under-estimate for square root.
+
+Now let's implement this in C.
+
+    #define ABS(x) (((x) >= 0) ? (x) : -(x))
+
+    unsigned num_bits (unsigned x)
+    {
+      if (x == 0) return 0;
+      asm ("bsr eax, eax" : "=a" (x) : "a" (x));
+      x++;
+      return x;
+    }
+
+    /* unsigned approximate square */
+    unsigned a_sq (unsigned x)
+    {
+      return x << num_bits (x);
+    }
+
+    /* unsigned approximate cube */
+    unsigned a_cube (unsigned x)
+    {
+      return x << (num_bits (x) << 1);
+    }
+
+    /* unsigned square root */
+    unsigned a_sqrt (unsigned x)
+    {
+      return x >> (num_bits (x) >> 1);
+    }
+
+    unsigned i_num_bits (int x)
+    {
+      return num_bits (ABS(x));
+    }
+
+    /* integer approximate square, result is always unsigned */
+    unsigned i_a_sq (int x)
+    {
+      return a_sq (ABS(x))
+    }
+
+    /* integer approximate cube */
+    int i_a_cube (int x)
+    {
+      return x << (i_num_bits (x) << 1);
+    }
+
+    /* accurate unsigned/integer square */
+    unsigned sq (unsigned x)
+    {
+      return x * x;
+    }
+
+    /* accurate unsigned/integer cube */
+    int cube (int x)
+    {
+      return x * x * x;
+    }
+
+    Point3D dist_vec_3d (Point3D a, Point3D b)
+    {
+      Point3D d = { b.x - a.x, b.y - a.y, b.z - a.z };
+      return d;
+    }
+
+    int dot_vec_3d (Point3D a, Point3D b)
+    {
+      return a.x * b.x + a.y * b.y + a.z * b.z;
+    }
+
+    /* Accurate distance squared of vector */
+    unsigned dist_sq_3d (Point3D d)
+    {
+      return sq (d.x) + sq (d.y) + sq (d.z);
+    }
+
+    /* Accurate distance between 3D points */
+    unsigned dist_3d (Point3D a, Point3D b)
+    {
+      Point3D d_vec = dist_vec_3d (a, b);
+      unsigned d_sq = dist_sq_3d (d_vec);
+      unsigned d = sqrt (d_sq);
+      return d;
+    }
+
+    /* Approximate distance squared of vector */
+    unsigned a_dist_sq_3d (Point3D d)
+    {
+      return i_a_sq (d.x) + i_a_sq (d.y) + i_a_sq (d.z);
+    }
+
+    /* Approximate distance between 3D points */
+    unsigned a_dist_3d (Point3D a, Point3D b)
+    {
+      Point3D d_vec = dist_vec_3d (a, b);
+      unsigned d_sq = dist_sq_3d (d_vec);
+      unsigned d = a_sqrt (d_sq);
+      return d;
+    }
+
+    /* Approximate distance between 3D points, less accurate */
+    unsigned a2_dist_3d (Point3D a, Point3D b)
+    {
+      Point3D d_vec = dist_vec_3d (a, b);
+      unsigned d_sq = a_dist_sq_3d (d_vec);
+      unsigned d = a_sqrt (d_sq);
+      return d;
+    }
+
+----------
+
+How do you perform bit scanning without a dedicated CPU instruction?
+The basic strategy is to instead rephrase the problem into a binary
+search one.  Is the left half of the integer entirely zero?  Is the
+right half entirely zero?  Then you binary search to focus in on more
+specific splits until you get down to an uncertainty range that is
+only 4 bits in size.  At that point you do a sequential search, as is
+best practice with fast searching algorithms.
+
+So, there are two ways to test if a certain sub-chunk is zero.  The
+first way is to shift away all the bits that you don't care about, to
+the left or to the right.  The second way, if you are running on a
+processor that doesn't have a multi-bit shift instruction, is to use
+AND-mask patterns to mask away the bits that you don't care about.
+This is a little bit more challenging and computationally expensive as
+you're basically going to end up implementing a look-up table of masks
+that you index into before loading the corresponding mask.  Or, the
+binary search involves jumping into different literal code portions
+that load the corresponding mask.  However, the sequential search at
+the edge is just as efficient, since you'll only be shifting by one
+bit at that point.  If you are really running on a processor that
+doesn't have a single bit shift instruction, you can obviously achieve
+the same by adding a number to itself.
+
+Overall, this method is quite a bit slower as it is an iterative
+binary search method, but it can still be faster than an iterative
+binary search for square roots, Newton's method of approximation,
+series, etc.
+
+----------
+
+So, now I'm still wondering about computing row-reduced echelon forms.
+Gaussian elimination with partial pivoting, yeah that works well for
+floating point arithmetic.  However, floating point arithmetic is
+slow, and I don't really need it given the numbers I am computing
+with.  What about rational integer arithmetic?  What about fixed-point
+arithmetic?
+
+Now, this is interesting.  So, at face value, using rational integers
+for the calculations sounds like a good idea, but you have a
+particular problem relating to overflow and huge numbers if you use
+rational numbers in the naive sense.  In the naive sense, when you
+need to do a row-reduction that involves a division, you simply
+multiply the divisor into the denominator, and correspondingly scale
+the numerator.  Sounds great, doesn't it?  Effectively, you turn a
+division into two multiplications, and that's going to surely be
+faster.  Yeah, until your numbers grow so big that you start getting
+overflow.
+
+So, what strategy can we use for overflow control?  First of all,
+let's discuss the dynamic range we want our numbers to support.
+Because many of our computations are under the general notion that we
+want to multiply two arbitrary integers and not loose bits from
+overflow, we can have a general limit that the value of individual
+integer values cannot be larger half the number of bits of the machine
+integer supported.  For a plain integer, that limit is enforced as-is.
+But because we want to support both fractions and whole numbers with
+our rational numbers, the numerator of rational numbers can be up to
+the max machine integer, but the denominator is limited to half these
+bits.
+
+* Alternatively, you can argue that allowing for larger numerators
+  isn't entirely necessary.  In that case, your overflow control is
+  simplified as you do not need to worry about pre-multiply overflow
+  control.
+
+  Also, keep in mind the effects of reciprocal operations.  Are you
+  only going to use reciprocal operations on small multipliers?  If
+  reciprocals are an important part of your calculations, then it
+  doesn't make sense to provide biased support for the numerator over
+  the denominator.
+
+  But, if you know for sure you're primarily starting with integers,
+  will use small fractional multipliers, then finally finish off only
+  caring about the quotient and not the remainder, then it does make
+  sense to provide a biased function on the bits of precision in the
+  numerator.
+
+Second point relating to overflow control.  In the sense that closely
+mimics floating point arithmetic, your goal is to keep the most
+significant bits sound, and the least significant bits can get
+truncated when multiplications cause them to grow too long.  So, the
+idea here is that when we have a multiplication that results in the
+numerator or denominator growing too big, we shift both by the same
+number of bits to truncate them back down to controlled ranges.  Here,
+we have a particular problem with the numerator that we allow to grow
+bigger.  If the numerator is big enough such that multiplying it out
+would result in overflowing the most significant bits before it would
+be reduced, we need to shift away less significant bits in advance of
+the multiplication, and then perform it.  Also note, due to our
+restrictions on the denominator, if the numerator overflows, we have a
+predominantly integer quantity, rather than one that is dominated by a
+specification in fractional form.
+
+Now, let's compare this with the fixed-point alternative.  What is the
+key difference between the two?  Yeah, we know that the concept of
+fixed-point is generally easier and more intuitive for most people to
+think about and implement.  But, let's get down to the numerical
+basis.
+
+* Adding and subtracting is easier with fixed-point than with rational
+  integers because you do not need to multiply to obtain common
+  denominators.  In a simple implementation of rational numbers
+  designed for stable and consistent computational runtime, you will
+  always multiply the denominators to obtain a common denominator
+  before adding.  Another alternative that may somewhat compromise on
+  accuracy is to simply shift around numeric quantities before adding
+  if the denominators are reasonably close to each other by some
+  measure.
+
+  Factoring to obtain least common denominators is way too
+  computationally expensive to be used for arbitrarily large
+  denominators, so it is best avoided.  Either that, or if it is to be
+  used, the denominators must be limited to be very small, like less
+  than 1024, give or take.
+
+    * Okay, let's think this through carefully in more detail.  When
+      you add two numbers, what denominator do you _need_?  The
+      smallest denominator that still gives you an accurate result.
+      If the denominators are, in fact, very similar to each other,
+      but not identical, then it probably makes a lot of sense to
+      shift down in a manner similar to a square root once the
+      operation is completed.  Or, if one of the denominators was very
+      small and the other one was very big, just shift away to get a
+      denominator similar to the big one at the end of the
+      calculation.  Ultimately, if you are adding, you have a very
+      large integer quantity already, and only care about a final
+      integer result, then you don't need to be really finicky about
+      the precision of the fractional part.
+
+* Multiplying is easier with fixed-point than with rational integers
+  because you only need to multiply two quantities directly, and
+  fractional parts are handled by shifting.
+
+* Dividing is more difficult with fixed-point than with rational
+  numbers because you effectively need to divide twice.  Once to
+  compute the quotient-remainder, and a second time to convert the
+  remainder to the correct base: bits_after_decimal * remainder /
+  divisor.  With rational numbers, however, you simply multiply by the
+  reciprocal and shift away if there are too many significant bits.
+
+  A particular optimization that is common with rational numbers is
+  when you only ever care about an integer quotient at the final
+  computation.  In this case, you only ever need to do a single actual
+  division operation at the last step of your computations when
+  computing the final quotient integer.  Unlike with fixed-point, you
+  may never need to do a second division operation to compute the
+  remainder in the correct base.
+
+So, there you have it.  Select your numeric format based off of the
+computational characteristics of your workload.
+
+Finally, I must note.  My mention of shifting away less significant
+bits when working with rational numbers?  Yes, I must indeed admit
+that it is a kind of "quasi-floating point" implementation that I was
+describing here.  The main difference from full floating point is that
+we don't allow the decimal to float to be quite as large or quite as
+small as we don't specify it by its exponent.
+
+----------
+
+So, some final verdicts after some thinking here.
+
+* I need to define a full domain specific minilanguage for specifying
+  survey data.  Lengths, points, define them as objects, solve.  Yeah,
+  I must also say.
+
+* So, the barcode scanning methodology.  It can be made to work quite
+  well.  Here's how.  Instead of specifying a full purpose-built
+  placemat, and instead of measuring out all lengths, you build
+  yourself some triangular cross-section paper/cardboard bars built
+  out to specific length measures and assigned IDs.  Lay out your
+  custom field and device positioning that you want, then sort out
+  your deck of barcode cards to describe the scene parameters you've
+  built.  One-dimensional barcodes, please, for ease of scanning.
+
+  This way, there's not too many combinations, so there's not too much
+  data to input, it's very discrete, and easy to solve for.  Also,
+  measurement error is minimized as it can only happen in terms of
+  variations of the bar lengths.  Temperature and date-specific
+  measurements of the longest reference can be taken as compensation
+  measures in advance.
+
+----------
+
+JJJ TODO:
+
+So, I looked at some of my old OpenGL Rubik's Cube code as I knew it
+contained a solution to the intersect ray on plane problem.  Of
+course, becasue that's what I used to figure out how to rotate the
+Rubik's Cube from mouse clicking and dragging.  Then I found I already
+had a quite similar implementation to solve for the intersection that
+I described above, and I've even copied a `Plane.h` file from the
+OpenGL book sample code that used the same method, though admirably I
+didn't fully understand it or could explain it.  Now I can, so here's
+the explanation, full tie-in between the vector solving method and the
+original equation of a plane.
+
+* Yes, define "line" as "ray from point" is indeed the simpler way to
+  define things.
+
+The equation of a plane:
+
+    ax + by + cz + d = 0
+
+If you look at this carefully, `ax + by + cz` is actually a dot
+product of a sort.  We know (a, b, c) to be the normal vector, and (x,
+y, z) is your point vector.  In the case of my previous equations, you
+needed to subtract from a reference point on the plane to compute the
+proper point vector.  Now, there's a special case in which your
+reference point on the plane is the projection of the origin point.
+In the case that the plane runs through the origin, there is no
+difference between your reference point and your point vector to the
+plane: they are one-in-the-same.  Now, what if your plane does not run
+through the origin?  Well, you can project the origin point onto the
+plane.  What you will get is a ray that travels along the
+perpendicular vector of the plane from the origin to the plane.  Now,
+if your normal vector is of unit length, and you take the dot product
+of your normal vector and that vector through the origin, you will get
+two things: (1) the distance from the origin to the plane along the
+perpendicular vector, and (2) a solution for `d` in the equation of
+the plane.  After all, once you dot-product the perpendicular vector
+and a point on the plane, `d` is the only unknown remaining that can
+be solved for to satisfy the zero constraint.  In this case, the best
+point to pick for reference is the origin point, though you can pick
+any point on the plane.
+
+What happens if you choose a point that is not a vector that goes
+through the origin?  Well, remember that your multiplication is
+essentially a dot product, and your dot product basically throws away
+all vector components that are not running along the perpendicular.
+So, no matter what point you choose, you will essentially get the same
+value for `d`.  Caveat emptor: `d` will be a rational or floating
+point quantity.
+
+My recommendation is to use the point through plane equations for
+numerical stability rather than the basic equation of a plane.
+
+JJJ TODO:
+
+Explaining equations in terms of vectors.  It will make your life so
+much easier, for how long I was at loss in understanding the equation
+of a plane coming from the equation of a line in Algebra.
+
+My goal is for you to understand how all these equations work.  Not
+just be told "you don't need to fully understand how it works.  Just
+remember that it is an important tool in 3D game programming" like my
+OpenGL book said to me times back.
+
+Also, yes, for people who are not already familiar with the subject,
+hopefully.  If my experience of working professionally and not
+regularly using 3D math programming is anything indicative.
+
+And how I like the C++ programming language for 3D math programming
+and operator overloading.
+
+----------
+
+JJJ TODO:
+
+* Discuss approximate linear regressions and their computational
+  complexity compared to complete linear regressions.  Divide space
+  into two halves, compute two means, define equation of a line
+  through that.  Compute mean, sum squares of distances to compute
+  slope.
+
+* Try to discuss determinants and row-reductions?
+
+* Other considerations relating to sub-pixel precision, camera RAWs,
+  image processing.
+
+----------------------------------------
+
+x^2 + y^2 = r^2
+
+(x - x_1)^2 + (y - y_1)^2 = r_1^2
+(x - x_2)^2 + (y - y_2)^2 = r_2^2
+(x^2 - 2*x*x_1 + x_1^2) + (y^2 - 2*y*y_1 + y_1^2) = r_1^2
+(x^2 - 2*x*x_2 + x_2^2) + (y^2 - 2*y*y_2 + y_2^2) = r_2^2
+
+You can subtract the two equations from each other, and the equality
+will be the same.
+
+(x^2 - 2*x*x_1 + x_1^2) + (y^2 - 2*y*y_1 + y_1^2) = r_1^2
+(-x^2 + 2*x*x_2 - x_2^2) + (-y^2 + 2*y*y_2 - y_2^2) = -r_2^2
+
+(-2*x*x_1 + x_1^2) + (2*x*x_2 - x_2^2) +
+(-2*y*y_1 + y_1^2) + (2*y*y_2 - y_2^2) = r_1^2 - r_2^2
+
+x*(2*x_2 - 2*x_1) + y*(2*y_2 - 2*y_1) +
+x_1^2 - x_2^2 + y_1^2 - y_2^2 = r_1^2 - r_2^2
+
+2*x*(x_2 - x_1) + 2*y*(y_2 - y_1) +
+x_1^2 - x_2^2 + y_1^2 - y_2^2 = r_1^2 - r_2^2
+
+2*(x*(x_2 - x_1) + y*(y_2 - y_1)) =
+r_1^2 - r_2^2 - x_1^2 + x_2^2 - y_1^2 + y_2^2
+
+x*(x_2 - x_1) + y*(y_2 - y_1) =
+(r_1^2 - r_2^2 - x_1^2 + x_2^2 - y_1^2 + y_2^2) / 2
+
+let
+a = (x_2 - x_1)
+b = (y_2 - y_1)
+c = (r_1^2 - r_2^2 - x_1^2 + x_2^2 - y_1^2 + y_2^2) / 2
+
+a*x + b*y = c
+
+But that only gives one equation and two variables.  We need a second
+equation.  Or do we?  Well, with that equation, we can solve by
+substitution, then proceed to inserting that into the non-linear
+equation, and using the quadratic formula to finish.
+
+y = (c - a*x) / b
+
+Provided that b != 0.  Otherwise, you can do for this instead:
+
+x = (c - b*y) / a
+
+a == 0 and b == 0 is verboten: the line must be of non-zero length.
+
+Yeah, so we do have an easy method of solution, but I fear numerical
+stability will sometimes suffer.
+
+Okay, let's go back to two equations.
+
+(x^2 - 2*x*x_1 + x_1^2) + (y^2 - 2*y*y_1 + y_1^2) = r_1^2
+(x^2 - 2*x*x_2 + x_2^2) + (y^2 - 2*y*y_2 + y_2^2) = r_2^2
+
+(x^2 - 2*x*x_1) + (y^2 - 2*y*y_1) = r_1^2 - x_1^2 - y_1^2
+(x^2 - 2*x*x_2) + (y^2 - 2*y*y_2) = r_2^2 - x_2^2 - y_2^2
+
+x*(x - 2*x_1) + y*(y - 2*y_1) = r_1^2 - x_1^2 - y_1^2
+x*(x - 2*x_2) + y*(y - 2*y_2) = r_2^2 - x_2^2 - y_2^2
+
+let
+a = 2*x_1
+b = 2*y_1
+c = 2*x_2
+d = 2*y_2
+e = r_1^2 - x_1^2 - y_1^2
+f = r_2^2 - x_2^2 - y_2^2
+
+x*(x - a) + y*(y - b) = e
+x*(x - c) + y*(y - d) = f
+
+Those are some super-slick looking equations, I just need to figure
+out how to solve them.  Derivative.
+
+(2*x - a) + (2*y - b) = 0
+(2*x - c) + (2*y - d) = 0
+
+Well, I'd be.  Now you can solve for the rate of change of both x and
+y as a linear equation, whatever that means.
+
+2*x + 2*y = a + b
+2*x + 2*y = c + d
+
+x + y = (a + b) / 2
+x + y = (c + d) / 2
+
+Well, now I guess you use the rate of change equations to guide a
+step-wise numerical approximation algorithm.  It's how the algorithm
+knows which direction to step to get closer to the solution.  No
+"algebraic solution," but excellent numeric stability.  And hey,
+remember after all.  Don't you have to do a numerical approximation
+algorithm to compute a square root anyways?  In other words, this is
+simply a better way of solving the same problem.
+
+So you approach this just like you'd approach Bressenham's algorithm.
+Start with four quadrants... sort of, then iterate on the interior.
+
+Well, yeah, it does make sense.  Solving for the zeros in the
+derivative tells us where the turning points are, we we know that
+there could be a "zero crossing" somewhere between the turning points
+that are of opposite sign.  So that's also where our derivative helps
+us adjust our stepping as we approach the solution.
+
+N.B.: You can bound your variables by the bounding boxes of the
+circles, and there should only be two crossing points.  If the
+bounding boxes don't intersect, you know there are definitely zero
+crossing points.  If the bounding boxes do intersect but the distance
+between them is greater than the sum of their radii, they also don't
+intersect.  Also, it's easy to filter out coincident circles right at
+the start: same center, same radius.
+
+Another useful constraint.  Think about the line between the two
+circles.  Check the midpoint of this line, and check the circle
+intersections on this line.  If each circle does not exceed the other
+circle's center, you can apply another simplification.  Compute the
+farthest distance of each circle from that line.  Now you can form
+another bounding box (when rotated), the intersection must be within
+that region.
+
+Also check if one circle completely contains another by means of the
+center line check.  Heck, it's best to do the entire solution space in
+center line coordinates.
+
+Compare the size of circles relative to each other and use that to
+adjust your estimates.
+
+Best rule of thumb.  Look at bigger circle, and never check to
+opposite side of center on it.
+
+What were you saying about circles of dramatic size difference?  Don't
+overthink it.  If you do have such circles, you do know for a fact
+that they form a numerically unstable triangle.  No need to use
+numerically stable algorithms to handle this if the original
+measurements are no good.  Finally, all stable triangle measurements
+can be very well solved on only one dimension and one variable, so
+relax with the substitution method!
+
+Essentially, any highly obtuse triangle will deviate significantly
+from our simplifying assumptions, not to mention that solving for its
+location will be inherently unstable in relation to real-world
+measurements.  Actually, that's a great design.  Warn the user
+up-front if they are making unstable measurements, and require them to
+use alternative measurements on their first go.
+
+The general case of unstable triangles are any long skinny triangles.
+Very easy to check for automatically: the sum of the two shortest
+edges is not much longer than the longest edge.
+
+----------
+
+Yeah, seriously, before you start solving with complex math.  Solve
+the simple case.  Solve for the intersection between two circles
+aligned on the x-axis.  This is simple to setup with arbitrary circles
+simply by computing the distance between the centerpoints.  Or, in the
+case of solving triangles from lengths, we'll already be given this
+quantity.
+
+x^2 + y^2 = ra^2
+(x - d)^2 + y^2 = rb^2
+
+y^2 = ra^2 - x^2
+y^2 = rb^2 - (x - d)^2
+y^2 = rb^2 - x^2 + 2*x*d - d^2
+
+(rb^2 - x^2 + 2*x*d - d^2) - (ra^2 - x^2) = 0
+rb^2 + 2*x*d - d^2 - ra^2 = 0
+2*x*d = -rb^2 + d^2 + ra^2
+x = (-rb^2 + d^2 + ra^2) / (2*d)
+
+Nonsense!  How can this be?  I thought it was a system of non-linear
+equations that required a non-linear solution.  Ah, oh, but once you
+simplify the problem domain, the solution becomes obviously linear.
+Tricky, tricky.  And because we know that the intersection between
+circles will have identical x and y values, we can cancel them out of
+our equations.
+
+But, anyways... Analyzing the solution equation, it becomes obvious
+that `x` is numerically stable so long as `d` is not a tiny integer
+value.  Large integers, of course, will give you an excellent
+solution, without requiring floating point arithmetic.  Once `x` is
+known, `y^2` can be solved for in a straightforward fashion, and
+finally `y` is solved for by taking a simple square root of `y^2`.
+
+----------------------------------------
+
+Shortest path between two lines?  So, here I'll propose part of the
+solution, then I'll work backwards to prove it.
+
+The direction vector of the solution path is the cross product of the
+two line direction vectors.  Why must this make sense?  Take two
+parallel lines, and twist them about an axis.  The axis you are
+twisting them about will be the shortest distance between then and
+also the cross product of the two lines.  Now, what if after twisting
+the lines, you tilt one of them?  Well, when you think about it,
+you've just changed which points is closest on one of the two lines.
+After adjusting the shortest path, you'll find that you also tilt it
+likewise so that it is still the cross product between the two lines.
+
+So, now you can setup the solution case.  Draw a line of the direction
+of the cross product from one point on one line to the other.  There
+will only be one place where you intersect with the other, the
+shortest distance.  Solve for that position, only a single variable to
+solve for.  Well, two if you include the scalar for the distance
+vector.
+
+Maybe a minimization function.

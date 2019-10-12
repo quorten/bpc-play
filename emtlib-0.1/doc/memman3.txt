@@ -1,0 +1,175 @@
+Memory Management!
+
+Constant sized dynamic allocation
+
+Growing continuous objects
+  Continuous allocation
+    Linear allocation
+    Exponential allocation
+
+Groups of objects
+  System block per object allocation
+  Slice group allocation (ideally, each group is a multiple of the page size)
+
+Big data
+  Continuous allocation
+  Segmented allocation
+  Opposite addressing allocation expansion (such as stack versus heap)
+  Constant-partitioned sectioning
+  Partition subdivision
+
+Heap management
+  Bucketed memory placement
+
+Reallocation
+  Serial reallocation
+  Multithreaded reallocation
+
+Memory alignment/allocation size
+  Tight alignment
+  Power-of-two alignment
+
+Data delimiting
+  End-of-data mark
+  Size header
+
+Arbitrary precision formats
+  Opaque library default format
+  Power-of-two bit header
+
+Required minimum allocation reserves
+  Use them!  Otherwise, your program may get caught helpless.
+
+Cache data
+Array-based functions
+
+Also make your program check for stack limits, heap limits, and detect
+hard drive swapping.  (Or at least leave that to a target open-source
+programmer, if it is not possible to do in your program.)
+
+For all of my concerns, I need only care about one arbitrary precision
+format: power-of-two bit header for unsigned integers.  All other
+kinds of numbers can be specified using a variant of that general
+pattern.  However, I am still troubled on memory allocation!  What is
+the most efficient way to allocate memory?  Is there such a thing as
+an efficient memory allocator that can perform well even under low
+memory conditions?  What is the maximum speed penalty that must be
+endured under low memory conditions?  Will an allocator that can
+handle segmented memory and defragment in parallel be the best for
+this task?  Was my triangular memory bucketing per available memory
+really a good idea?  Or should I leave any such pattern recognition to
+execution at run-time?
+
+Well, there is one thing that I know for sure will always hold true
+for any memory model: in-place writing whenever possible is the most
+effective technique to mitigate memory problems.  Just avoid memory
+allocation to avoid running out of memory.
+
+Well, perhaps it is a good idea to write a single dynamic morphing
+type that is a hybrid between a linked-list and a continuous array.
+Then depending on the usage characteristics, it can switch between the
+two.  When it is obvious that one type is beneficial over another, a
+programmer can specify such explicitly.  However, it still holds true
+that the structure of the program is necessarily governed by the
+structure of the data, and if the two don't match up, then the program
+won't work properly.  The traditional way to mitigate this problem
+when faced with it is to tell the user of the program to get a new one
+rather than try to use the existing one for an unintended task.  Maybe
+this is the only solution to this general class of problems: it is the
+user's fault for supplying data that the program was not intended to
+work with.
+
+Alright, so here's the grand finale conclusion: if you want your
+programs to be fast, you have to use less memory.
+
+Well, that's not the entire picture, but basically, the problems only
+manifest themselves when you try to use more than you have available.
+
+(NOTE computers can be thought of as an abstract way of providing
+computations, independent of time.  The fact that it takes time to
+perform computations a confounding variable, abeit a very important
+one.  It is important to be able to think from both sides of this
+issue: that computation time may either be a necessity or just a
+confounding variable that should not be relied on.)
+
+(Also note fundamentals of pattern recognition, data compression, and
+artificial intelligence.  Note how all the concepts tie together.  In
+general, an analytic computation can always be performed given only
+the data that needs to be analyzed, and caching the results of such
+computations is typically beneficial.  Therefore, programmers should
+realize that it is a necessity to reserve extra space for such
+computation results.  Otherwise, the computation has to be redone
+every time the analytic data is needed.)
+
+(Array-based functions are basically functions who take control over
+looping over a data set to be processed.  When functions are written
+this way, they can optimize bulk data processing that is not possible
+for an individual function to do.)
+
+Problem solved with memory allocation.  If you want to minimize
+reallocations to the largest possible extent, then you use exponential
+allocation.  This will save computations, at the expense of wasting
+memory.  If you want to save memory, you use tight alignment, at the
+expense of wasting computations for allocations.  If you want to save
+even more memory, then you use in-memory data compression, at an even
+larger expense of wasting computations.  Note, however, that main RAM
+is finite, cache memory is even smaller, and hard drive access is even
+slower.  Depending on the exact parameters for a specific system
+configuration, it may be economic to use in-memory data compression,
+since that would reduce the extremely costly act of accessing the hard
+drive and the CPU would be more than fast enough to decompress the
+data in the time that it would take to access uncompressed data from
+the hard drive.  Then again, it also may be more economic to write
+your program to store uncompressed data to the hard drive and keep the
+data out of RAM, seeking the hard drive instead.  Gosh, these
+per-system parameters and choosing the right optimizations is so
+complicated.  That's why its necessary to use on-client optimization
+computations.  Even if its not necessary, it sure gains a lot of power
+and saves a lot of time and money.
+
+So that's that: you need to have every algorithm on hand
+ahead-of-time, and choose which ones to use when you find out the
+target system's configuration.  You may even need to generate
+specially optimized binaries on the spot.  It may easily be the case
+that the only way to optimize for a target system is to either bring a
+compiliation environment with your application or generate for every
+possible system ahead-of-time.  Wow, there sure is a lot to say about
+memory allocation and computation speed.  I guess I /really/ need to
+get working on that automatic solver sometime soon.
+
+So conclusions are clear: if scaling between system capabilities is
+required, then scaling between management algorithms is also required.
+Abundant capacities obscure these problems, not fix them.
+
+(Also note virtual memory, which many novice programmers do not know
+is what the operating system actually does with their program.)
+
+Note that the reason for a bucketed heap is due to the natural pattern
+of exponential memory allocation with multiple variables involved.
+You first allocate two small variables, and they stay next to each
+other.  Then you reallocate the first variable to twice the size, and
+it has to get copied after the end of the second.  Then you do that
+again for the second, and it has to get copied past the end of the
+first.  You keep doing this, starting out allocating memory small, and
+what you will get is a bucketed memory heap.  Then when memory
+conditions get tight, you can signal this condition and start
+coalescing blocks tightly together in spite of bucket boundries to
+obtain more space.  This will take a lot of computations, but it will
+at least be possible to keep allocating more memory.  Then you will
+finally run out of memory capacity, so then it will be game over.
+(Note that experienced Tetris players may shed light on the most
+efficient alignment algorithm for dealing with fragmentation.)
+
+Disk drives are usually partitioned into a number of fixed-size
+sectors that file data spans across.  File data may sometimes get
+stored on non-contigous sectors, which may require the disk drive to
+perform extra seeking to fetch that data.  Operating systems typically
+economize finding free space on such disks by maintaining a bitmap
+cache of free blocks.
+
+So when designing the memory manager, do not try to use any magic
+algorithms!  Leave that to the target open-source programmer: they
+should tweak any and all such algorithms as needed.  In the case of
+end users who are not programmers, they will not be able to benefit by
+customizing software, so they will have to operate strictly in the
+default zones.

@@ -1,0 +1,285 @@
+
+	static HBRUSH hBrPat;
+	static HBITMAP hBmPat;
+	static HDC hDCMem; //For dragging
+	static HBITMAP hBmBack; //For dragging also
+		char patData[] = {(char)0x40, (char)0x00, (char)0x80, (char)0x00}; //0100 ... 1000
+		hBmPat = CreateBitmap(2, 2, 1, 1, &patData);
+		hBrPat = CreatePatternBrush(hBmPat);
+		DeleteObject(hBrPat);
+		DeleteObject(hBmPat);
+			{ //Setup the restore region
+				HDC hDC = GetDC(hwnd);
+				hDCMem = CreateCompatibleDC(hDC);
+				hBmBack = CreateCompatibleBitmap(hDC, DIVIDER_WIDTH, treeHeight);
+				SelectObject(hDCMem, hBmBack);
+				BitBlt(hDCMem, 0, 0, DIVIDER_WIDTH, treeHeight, hDC, treeWidth, 0, SRCCOPY);
+				ReleaseDC(hwnd, hDC);
+			}
+				static RECT rt = {0, 0, 0, 0};
+				treeDivXPos = LOWORD(lParam) - HALF_DIV_WIDTH;
+				HDC hDC = GetDC(hwnd);
+				BitBlt(hDC, rt.left, rt.top, rt.right - rt.left, rt.bottom - rt.top, hDCMem, 0, 0, SRCCOPY);
+				//MoveWindow(treeDivider, treeDivXPos, 0, DIVIDER_WIDTH, treeHeight, TRUE);
+				rt.left = treeDivXPos; rt.top = 0;
+				rt.right = treeDivXPos + DIVIDER_WIDTH; rt.bottom = treeHeight;
+				BitBlt(hDCMem, 0, 0, rt.right - rt.left, rt.bottom - rt.top, hDC, rt.left, rt.top, SRCCOPY);
+				SelectObject(hDC, hBrPat);
+				PatBlt(hDC, rt.left, rt.top, rt.right - rt.left, rt.bottom - rt.top, PATINVERT);
+				ReleaseDC(hwnd, hDC);
+			DeleteObject(hBmBack);
+			DeleteDC(hDCMem);
+			RedrawWindow(treeDivider, NULL, NULL, RDW_INVALIDATE | RDW_ERASE);
+
+//If in a kerning pair...
+//Forget kerning pairs for now
+for (unsigned i = 0; i < (unsigned)numkPairs; i++)
+{
+	if (textPos >= 2 && kernPairs[i].wFirst == buffer[textPos-2] &&
+						kernPairs[i].wSecond == buffer[textPos-1])
+	{
+		//Add kern amount
+		caretX += kernPairs[i].iKernAmount;
+		break;
+	}
+}
+---------------------------------------
+
+			RECT rt;
+			//Add the character
+			textSize++;
+			if (textSize == buffSize)
+			{
+				buffSize += 1000;
+				buffer = (char*)realloc(buffer, buffSize);
+			}
+			if (textPos != (textSize - 1))
+				memmove(buffer + textPos + 1, buffer + textPos, textSize - textPos);
+			else
+				buffer[textPos+1] = '\0';
+			buffer[textPos] = (char)wParam;
+			textPos++;
+			//Set the update rectangle
+			GetClientRect(hwnd, &rt);
+			rt.top = (int)caretY;
+			//Update the caret
+			if (spaceExtended == true)
+			{
+				//The caret was already set to zero
+				spaceExtended = false;
+				rt.top -= fontHeight;
+				goto updateText;
+			}
+			//Add last character width
+			if (fixedPitch == false)
+				caretX += cWidths[buffer[textPos-1]-0x20];
+			else
+				caretX += avgCharWidth;
+			//Correct all line beginning indices
+			for (unsigned i = caretLine + 1; i < numLines; i++)
+				lineStarts[i]++;
+			//Check to see if this will cause subsequent word wrapping
+			lineLens[caretLine] += cWidths[buffer[textPos-1]-0x20];
+			if (lineLens[caretLine] >= rt.right)
+			{
+				//Add to current line length
+				//If line is too long
+				//Go back until it is short enough
+				//Add extra to next line
+				//Repeat check on next line
+				unsigned curLine = caretLine;
+				float carryAmnt = 0;
+				unsigned numMovBack = 0;
+				while (lineLens[curLine] >= rt.right)
+				{
+					unsigned lineEndRef;
+					if (curLine == numLines - 1)
+						lineEndRef = textSize - 1;
+					else
+						lineEndRef = lineStarts[curLine+1] - 1;
+					unsigned breakPos = lineEndRef;
+					//Skip trailing spaces
+					while (breakPos != 0 && buffer[breakPos] == ' ')
+						breakPos--;
+					unsigned trailSpaces = lineEndRef - breakPos;
+					//Go back some words
+					while (lineLens[curLine] - carryAmnt >= rt.right)
+					{
+						while (breakPos != 0 && buffer[breakPos] != ' ')
+						{
+							carryAmnt += cWidths[buffer[breakPos]-0x20];
+							numMovBack++;
+							breakPos--;
+						}
+						carryAmnt += cWidths[0];
+						numMovBack++;
+						breakPos--;
+					}
+					lineLens[curLine] -= carryAmnt;
+					carryAmnt -= cWidths[0]; //Don't move over the end space
+					numMovBack--;
+					carryAmnt += cWidths[0] * trailSpaces;
+					numMovBack += trailSpaces;
+					curLine++;
+					if (curLine == numLines)
+						break;
+					lineLens[curLine] += carryAmnt;
+					lineStarts[curLine] -= numMovBack;
+					carryAmnt = 0;
+					numMovBack = 0;
+				}
+				if (curLine == numLines)
+				{
+					//Add a line
+					numLines++;
+					if (numLines % 100 == 0)
+					{
+						lineStarts = (unsigned*)realloc(lineStarts, sizeof(unsigned) * (numLines + 100));
+						lineLens = (float*)realloc(lineLens, sizeof(float) * (numLines + 100));
+					}
+					//Put carried text on this line
+					lineStarts[numLines-1] = textSize - numMovBack;
+					lineLens[numLines-1] = carryAmnt;
+				}
+			}
+			//If in a kerning pair...
+			//Forget kerning pairs for now because they don't affect my sreen DC
+			//Find forward breaking point
+			unsigned fwdBreak;
+			for (fwdBreak = textPos; buffer[fwdBreak] != '\0'; fwdBreak++)
+			{
+				if (buffer[fwdBreak] == ' ')
+					break;
+			}
+			//Find forward extent
+			float fwdExtent = 0;
+			for (unsigned i = textPos; i < fwdBreak; i++)
+				fwdExtent += cWidths[buffer[i]-0x20];
+			//If line is longer than window
+			if (caretX + fwdExtent >= rt.right)
+			{
+				if (buffer[textPos] != ' ')
+				{
+					//Save information for going back
+					atMidBrkPos = true;
+					prevLineX = caretX;
+				}
+				//Find breaking point
+				unsigned breakPos;
+				for (breakPos = textPos; breakPos != 0; breakPos--)
+				{
+					if (buffer[breakPos] == ' ')
+						break;
+				}
+				if (breakPos != 0)
+				{
+					breakPos++;
+					//Recalculate
+					caretX = 0;
+					for (unsigned i = breakPos; i < textPos; i++)
+					{
+						if (fixedPitch == false)
+							caretX += cWidths[buffer[i]-0x20];
+						else
+							caretX += avgCharWidth;
+						//Forget kerning pairs for now because they don't affect my sreen DC
+					}
+					if (buffer[textPos] != ' ')
+						prevLineX -= caretX;
+				}
+				caretY += fontHeight;
+				caretLine++;
+			}
+			//Update the window
+updateText:
+			InvalidateRect(hwnd, &rt, TRUE);
+			UpdateWindow(hwnd);
+---------------------------------------
+
+			if (atMidBrkPos == true)
+			{
+				RECT rt;
+				atMidBrkPos = false;
+				GetClientRect(hwnd, &rt);
+				if ((prevLineX + caretX) < rt.right)
+				{
+					if ((prevLineX + caretX + cWidths[0]) < rt.right)
+					{
+						//Go back
+						caretX += prevLineX;
+						caretY -= fontHeight;
+					}
+					else
+					{
+						caretX = 0;
+						spaceExtended = true;
+					}
+				}
+			}
+---------------------------------------
+
+			RECT rt;
+			//Add the character
+			textSize++;
+			if (textSize == buffSize)
+			{
+				buffSize += 1000;
+				buffer = (char*)realloc(buffer, buffSize);
+			}
+			if (textPos != (textSize - 1))
+				memmove(buffer + textPos + 1, buffer + textPos, textSize - textPos);
+			else
+				buffer[textPos+1] = '\0';
+			buffer[textPos] = (char)wParam;
+			textPos++;
+			//Update the line info
+			numLines++;
+			if (numLines % 100 == 0)
+			{
+				lineStarts = (unsigned*)realloc(lineStarts, sizeof(unsigned) * (numLines + 100));
+				lineLens = (float*)realloc(lineLens, sizeof(float) * (numLines + 100));
+			}
+			memmove(&(lineStarts[caretLine + 2]), &(lineStarts[caretLine + 1]), sizeof(unsigned) * (numLines - (caretLine + 1)));
+			memmove(&(lineLens[caretLine + 2]), &(lineLens[caretLine + 1]), sizeof(float) * (numLines - (caretLine + 1)));
+			caretLine++;
+			lineStarts[caretLine] = textPos - 1;
+			lineLens[caretLine] = 0;
+			//Correct all line beginning indices
+			for (unsigned i = caretLine + 1; i < numLines; i++)
+				lineStarts[i]++;
+			//Set the update rectangle
+			GetClientRect(hwnd, &rt);
+			rt.top = (int)caretY;
+			//Update the caret
+			caretX = 0;
+			caretY += fontHeight;
+			//Update the window
+			InvalidateRect(hwnd, &rt, TRUE);
+			UpdateWindow(hwnd);
+---------------------------------------
+
+			RECT rt;
+			//Subtract the character
+			if (textPos == 0)
+				break;
+			memmove(buffer + textPos - 1, buffer + textPos, textSize - textPos);
+			textSize--;
+			textPos--;
+			//Update the caret
+			//Subtract last character width
+			if (fixedPitch == false)
+				caretX += cWidths[buffer[textPos-1]-0x20];
+			else
+				caretX += avgCharWidth;
+			//If in a kerning pair...
+			//Forget kerning pairs for now because they don't affect my sreen DC
+			GetClientRect(hwnd, &rt);
+			//If caret position is negative
+			//Go to previous line
+			//Find its length
+			//If the space character exceeds the client width
+			//if (lastLine > (rt.right - 1) && buffer[textPos-1] == ' ')
+				//Set it to the very last pixel
+				caretX = (float)(rt.right - 1);
+---------------------------------------
+---------------------------------------

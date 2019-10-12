@@ -1,0 +1,10 @@
+touch "/home/hafm/user1/file1.txt"
+touch "/home/hafm/user2/file2.txt"
+touch "/home/hafm/user1/My Pictures/New Picture.jpg"
+touch "/home/hafm/user1/My Pictures/Thumbs.db"
+touch "/home/hafm/user1/My Pictures/desktop.ini"
+cp -p "/home/hafm/user1/info.txt" "/home/shared/not-related.txt"
+mv "/home/hafm/user1/holds.txt" "/home/guest/holds.txt"
+mv "/home/hafm/user1/prop1" "/home/hafm/user1/restricted/prop1"
+rm "/home/hafm/user1/Thumbs.db"
+touch /home/user1/notes.txt

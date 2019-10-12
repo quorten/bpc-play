@@ -1,0 +1,33 @@
+More Memory Management Techniques
+
+----------------------------------------------------------------------
+
+There are a few last ways to organize memory:
+
+Even-distributed variable slots
+Non-uniform memory allocation
+Triangular number interleaved variable slots
+
+Block memory allocation
+Segmented memory allocation
+Interleaved memory allocation
+
+First of all, memory can be allocated in just continuous blocks.  Then
+memory can be allocated as segmented blocks.  Last, memory can be
+allocated as interleaved on modulus boundries.
+
+For each of these ways, memory for a specific variable can be
+allocated as uniform in size to other variables or non-uniform in size
+to the other variables.  Triangular number interleaved variable slots
+is one way of non-uniform allocation.
+
+It is important to realize that continuous block memory allocation is
+an opposite of interleaved memory allocation and segmented memory
+allocation is a blend between the two.
+
+Non-uniform memory allocation can be advantagous when the relative
+magnitudes of variables are calculated ahead of time because there
+will be less reallocations involved for a specific computation.
+
+If variables are preallocated, then a problem may occur that some
+variables will need to wrap around and invade the preallocated cells.

@@ -1,0 +1,82 @@
+Slider Wave Editor README
+*************************
+
+Copyright (C) 2011, 2012, 2013 Andrew Makousky
+All rights reserved.
+See the end of this file for license conditions.
+
+Slider is an interactive program designed to help you synthesize sound
+effects by building them from harmonics and by combining multiple
+non-harmonic sine waves.
+
+For instructions on how to build Slider, see the file named INSTALL.
+The usual "./configure; make; make install" process should work for
+most systems.
+
+The file AUTHORS contains a list of code contributors to this project.
+For the list of translators, see the file TRANSLATORS.  Additional
+contributors of ideas and smaller changes are listed in the file
+THANKS.
+
+For a list of user visible changes, see the file NEWS.  "ChangeLog"
+contains a list of source code changes.  "COPYING" contains Slider's
+license: the Simplified BSD License.
+
+"autogen.sh" is used to generate files related to the build system.
+"aclocal.m4" is used by "configure" as a local list of macros used
+from other macro packages.  "config.h.in" is processed by "configure"
+to create a configuration header when building the project.
+"configure.ac" is the Autoconf source file that "configure" is
+generated from.
+
+"Makefile.am" is the Automake source file used to generate
+"Makefile.in".  "Makefile.in" is processed by "configure" to create
+the project makefile.
+
+"design.glade" and "design.gladep" are the Glade project files that
+were used to generate some of the source code.  These files are
+heavily out of date with the current code base.
+
+Here is a brief overview of the subdirectories:
+build-aux/      Auxiliary build tools for Autoconf, Automake, and
+                Libtool
+devcpp/         Project files and other sources for DevC++
+docs/           Help, reference, and research documentation
+etc/            Miscellaneous files of interest
+msvc/           Project files and other sources for MSVC
+old-plans/      Historic exhibit from Sound Studio 0.1 (old name of
+                Slider Wave Editor)
+packaging/      Files for building software packages for various
+                operating systems
+pixmaps/        Pixmaps (including SVG renders) for Slider
+po/             Localization files
+src/            Slider source code
+svgs/           Scalable Vector Graphics source images (including
+                platform-dependent image generations)
+
+License Condtions
+*****************
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+  * Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+
+  * Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in
+    the documentation and/or other materials provided with the
+    distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

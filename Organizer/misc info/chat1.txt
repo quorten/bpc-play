@@ -1,0 +1,81 @@
+-----------------------------*Online Chat*----------------------------
+
+Andrew logged in to online chat.
+
+Andrew: Hello
+
+Poke-E-Man: Hi.  How are you doing?
+
+Andrew: Good, well, sort of.  I run into a problem when writing a
+computer program.
+
+Poke-E-Man: What is it?
+
+Andrew: Well, I am writing a text editor module that is meant to have
+all the features plus more that the Windows basic text editor module
+has, but my word rewrapping algorithm doesn't quite work.  The reason
+why is because I want to take a shortcut for rewrapping when a new
+line character is detected in the input stream, but that shortcut also
+adds a bug unless I add a lot more code.  I am not sure if I should
+take the shortcut or not.
+
+Poke-E-Man: Well, sounds good, but I do not have very much background
+information in that subject.
+
+Andrew: Oh, well the problem is that I am affraid of making the code
+more complex over a bug that I could only identify the cause with a
+source level debugger.
+
+Poke-E-Man: Source level debuggers are used all the time in modern
+computer program development.  I don't think you should feel that bad
+over having to use it to identify the bug.
+
+Andrew: The point is that I would not know which parts of the source
+code caused the bug unless I used the debugger.  That makes it seem
+like I am dependent on the debugger to write the code, and I am not
+sure if Microsoft had to debug their code for the text editor module
+like that.
+
+Poke-E-Man: So you are concerned about making the code overly complex?
+
+Andrew: Yes, that is it.
+
+Poke-E-Man: What target computers are you planning on making this
+program for?
+
+Andrew: I am planning on being able to backport my program to Windows
+95 in regard to the Windows operating system.  I am also probably
+going to port my program to DOS and to GNU/Linux.  I might port my
+code to compact Mac class Macintoshes and the Apple II, but that is
+not the priority right now.
+
+Poke-E-Man: Windows 95 was in the transition to drastically faster
+processors.  I would expect Windows 95 computers to be running no
+earlier than a 486, but I do not have full experience with Windows.
+I'm a GNU power user, and I hardly ever touch proprietary operating
+systems.
+
+Andrew: Lucky you, I have to work with existing hardware.  I have
+concerns about converting the operating system from Windows to
+GNU/Linux, mostly vintage concerns but partially technical concerns.
+Anyways, I have to work with what I was already given, so this is why
+I have to go through extra work to redo work that was already done.
+
+Poke-E-Man: Sounds sad, but I guess the fact is that around that time,
+the free software movement had not quite risen to its high point of
+today.
+
+Andrew: Yep.  It also seems that even today, knowledge of free
+software, free as in freedom, has a very scarce prevalence.  I think
+it is because free software development does not nearly require as
+much big money making techniques as proprietary software development,
+not to mention that full time free software developers run off of
+lower budgets than there proprietary counterdevelopers.  Well, I guess
+thats as much help as I could get, so I'm going to leave now.
+
+Poke-E-Man: Good bye.
+
+Andrew logged out of online chat.
+
+Connection closed.
+--------------------*Thanks for using online chat!*-------------------

@@ -1,0 +1,4 @@
+touch ./battle
+touch ./fmtest1
+mv ./new-sums.txt ./old-sums.txt
+rm ./sums.txt

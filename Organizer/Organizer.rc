@@ -1,0 +1,200 @@
+#include <windows.h>
+#include "resource.h"
+
+MAIN_ICON ICON "resources\\Organizer.ico"
+
+1 VERSIONINFO
+FILEVERSION		1,0,0,0
+PRODUCTVERSION	0,1,0,0
+FILEFLAGSMASK	VS_FF_DEBUG | VS_FF_PRERELEASE
+FILEFLAGS		VS_FF_DEBUG | VS_FF_PRERELEASE
+FILEOS			VOS__WINDOWS32
+FILETYPE		VFT_APP
+FILESUBTYPE		VFT2_UNKNOWN
+{
+	BLOCK "StringFileInfo"
+	{
+		BLOCK "040904E4"
+		{
+			//VALUE "Comments"
+			VALUE "CompanyName", "Ehtex Hyphle"
+			VALUE "FileDescription", "Organizer"
+			VALUE "FileVersion", "1.0.0.0"
+			VALUE "InternalName", "Organizer"
+			VALUE "LegalCopyright", "Public Domain"
+			//VALUE "LegalTrademarks"
+			VALUE "OriginalFilename", "Organizer.exe"
+			VALUE "ProductName", "Organizer"
+			VALUE "ProductVersion", "1.0.0.0"
+		}
+	}
+	BLOCK "VarFileInfo"
+	{
+		VALUE "Translation", 0x0409, 1252
+	}
+}
+
+SPLASH_SCREEN BITMAP "resources\\splash.bmp"
+VERT_MARK ICON "resources\\vertmark.ico"
+HORZ_MARK ICON "resources\\horzmark.ico"
+CENT_MARK ICON "resources\\centmark.ico"
+U_ARROW CURSOR "resources\\up.cur"
+D_ARROW CURSOR "resources\\down.cur"
+L_ARROW CURSOR "resources\\left.cur"
+R_ARROW CURSOR "resources\\right.cur"
+UL_ARROW CURSOR "resources\\up-left.cur"
+UR_ARROW CURSOR "resources\\up-right.cur"
+DL_ARROW CURSOR "resources\\down-left.cur"
+DR_ARROW CURSOR "resources\\down-right.cur"
+V_ARROWS CURSOR "resources\\vertcenter.cur"
+H_ARROWS CURSOR "resources\\horzcenter.cur"
+CA_ARROWS CURSOR "resources\\center.cur"
+
+MAINMENU MENU
+{
+	POPUP "&File"
+	{
+		MENUITEM "&New\tCtrl+N", M_NEW
+		MENUITEM "&Open\tCtrl+O", M_OPEN
+		MENUITEM "&Save\tCtrl+S", M_SAVE
+		MENUITEM "Save &As...", M_SAVEAS
+		MENUITEM SEPARATOR
+		MENUITEM "E&xit\tAlt+F4", M_EXIT
+	}
+	POPUP "&Edit"
+	{
+		MENUITEM "&Undo\tCtrl+Z", M_UNDO
+		MENUITEM "R&edo\tCtrl+Y", M_REDO
+		MENUITEM SEPARATOR
+		MENUITEM "Cu&t\tCtrl+X", M_CUT
+		MENUITEM "&Copy\tCtrl+C", M_COPY
+		MENUITEM "&Paste\tCtrl+V", M_PASTE
+		MENUITEM "&Empty Clipboard", M_EMPTYCLIP
+		MENUITEM "&Delete\tDel", M_DELETE
+		MENUITEM "&Select All\tCtrl+A", M_SELECTALL
+		MENUITEM SEPARATOR
+		MENUITEM "&Find...\tCtrl+F", M_FIND
+		MENUITEM "Find &Next\tF3", M_FINDNEXT
+		MENUITEM "&Replace...\tCtrl+H", M_REPLACE
+		MENUITEM SEPARATOR
+		MENUITEM "F&ont...", M_FONT
+	}
+	POPUP "&View"
+	{
+		MENUITEM "&Data...\tCtrl+D", M_DATA
+		MENUITEM "&Metadata...\tCtrl+M", M_METADATA
+		MENUITEM SEPARATOR
+		MENUITEM "&Status Bar", M_STATBAR, CHECKED
+		MENUITEM "&Tool Bar", M_TOOLBAR, CHECKED
+		MENUITEM "&Tree\tCtrl+K", M_TREE, CHECKED
+		MENUITEM "Li&near Graph\tCtrl+L", M_LINGRAPH, CHECKED
+		MENUITEM SEPARATOR
+		MENUITEM "Sp&lit", M_SPLIT
+	}
+	POPUP "E&ntry"
+	{
+		MENUITEM "Add &File\tCtrl+I", M_ADDFILE
+		MENUITEM "Add &Group\tCtrl+G", M_ADDGROUP
+		MENUITEM "Make Group &Hierarchical\tCtrl+R", M_MAKEGROUPH
+		MENUITEM SEPARATOR
+		MENUITEM "Move &Up\tCtrl+U", M_ENTMOVUP
+		MENUITEM "Move &Down\tCtrl+J", M_ENTMOVD
+		MENUITEM "Filter &Mode...", M_FILTERMODE
+	}
+	POPUP "&Help"
+	{
+		MENUITEM "&About Organizer", M_ABOUT, HELP
+	}
+}
+
+ACCTABLE ACCELERATORS
+{
+	"N", M_NEW, VIRTKEY, CONTROL
+	"O", M_OPEN, VIRTKEY, CONTROL
+	"S", M_SAVE, VIRTKEY, CONTROL
+	VK_BACK, M_UNDO, VIRTKEY, ALT
+	"Z", M_UNDO, VIRTKEY, CONTROL
+	"Y", M_REDO, VIRTKEY, CONTROL
+	VK_DELETE, M_CUT, VIRTKEY, SHIFT
+	"X", M_CUT, VIRTKEY, CONTROL
+	VK_INSERT, M_COPY, VIRTKEY, CONTROL
+	"C", M_COPY, VIRTKEY, CONTROL
+	VK_INSERT, M_PASTE, VIRTKEY, SHIFT
+	"V", M_PASTE, VIRTKEY, CONTROL
+	"A", M_SELECTALL, VIRTKEY, CONTROL
+	"F", M_FIND, VIRTKEY, CONTROL
+	VK_F3, M_FINDNEXT, VIRTKEY
+	"H", M_REPLACE, VIRTKEY, CONTROL
+	"D", M_DATA, VIRTKEY, CONTROL
+	"M", M_METADATA, VIRTKEY, CONTROL
+	"K", M_TREE, VIRTKEY, CONTROL
+	"L", M_LINGRAPH, VIRTKEY, CONTROL
+	"I", M_ADDFILE, VIRTKEY, CONTROL
+	"G", M_ADDGROUP, VIRTKEY, CONTROL
+	"R", M_MAKEGROUPH, VIRTKEY, CONTROL
+	"U", M_ENTMOVUP, VIRTKEY, CONTROL
+	"J", M_ENTMOVD, VIRTKEY, CONTROL
+	VK_TAB, K_SWITCHPANES, VIRTKEY, CONTROL
+}
+
+SHRTCMENUS MENU
+{
+	POPUP "Text Edit"
+	{
+		MENUITEM "&Undo", M_UNDO
+		MENUITEM "R&edo", M_REDO
+		MENUITEM SEPARATOR
+		MENUITEM "Cu&t", M_CUT
+		MENUITEM "&Copy", M_COPY
+		MENUITEM "&Paste", M_PASTE
+		MENUITEM "&Delete", M_DELETE
+		MENUITEM SEPARATOR
+		MENUITEM "&Select All", M_SELECTALL
+	}
+}
+
+STRINGTABLE
+{
+	M_NEW			"Creates a new file."
+	M_OPEN			"Opens an existing file."
+	M_SAVE			"Saves the active file."
+	M_SAVEAS		"Save the active file with a new name."
+	M_EXIT			"Exits the application."
+	M_UNDO			"Undoes the last edit operation."
+	M_REDO			"Redoes the last edit operation."
+	M_CUT			"Cuts the selection and puts it on the clipboard."
+	M_COPY			"Copies the selection and puts it on the clipboard."
+	M_PASTE			"Inserts the contents of the clipboard."
+	M_EMPTYCLIP		"Clears all contents from the clipboard."
+	M_DELETE		"Erases the selection."
+	M_SELECTALL		"Selects everything in the current data section."
+	M_FIND			"Finds the specified text in the current data section."
+	M_FINDNEXT		"Repeats the last find."
+	M_REPLACE		"Replaces specific text with different text."
+	M_FONT			"Changes the font used to display text in the current data section."
+	M_DATA			"Opens another application to edit the data."
+	M_METADATA		"Opens another application to edit the metadata."
+	M_STATBAR		"Shows or hides the status bar."
+	M_TOOLBAR		"Shows or hides the toolbar."
+	M_TREE			"Shows or hides the tree-view window."
+	M_LINGRAPH		"Shows or hides the linear graph window."
+	M_SPLIT			"Changes the position of the split between two panes."
+	M_ADDFILE		"Adds a file to the database."
+	M_ADDGROUP		"Adds a group to the database."
+	M_MAKEGROUPH	"Marks a group as hierarchical."
+	M_ENTMOVUP		"Moves an entry in the tree-view up."
+	M_ENTMOVD		"Moves an entry in the tree-view down."
+	M_FILTERMODE	"Configures the rules used to display the entries in the tree-view."
+	M_ABOUT			"Displays program information, version number, and copyright."
+	/* Toolbar strings */
+	T_NEW	"New"
+	T_OPEN	"Open"
+	T_SAVE	"Save"
+	T_CUT	"Cut"
+	T_COPY	"Copy"
+	T_PASTE	"Paste"
+	T_UNDO	"Undo"
+	T_REDO	"Redo"
+}
+
+#include "about.dlg"

@@ -1,0 +1,48 @@
+File Formats
+
+Introduction
+----------------------------------------------------------------------
+
+Data was historically stored directly as binary data in files.  Easy
+as that.  No exceptions, no hassle, no file format conversions.  But
+these days, data is increasingly becoming stored in a so-called "human
+readable" file format, such as XML.  In reality, however, only some
+humans can read the data in such files, and in some cases, the XML
+data is not meant to be directly edited by humans!  Such is the case
+for MathML.
+
+However, human readable file formats, or parsed file formats, do have
+their historical connections too.  Over time, there became a set of
+well known syntaxes used in parsed file formats.  These syntaxes have
+a modern day wide-spread acceptance and are often used in conventional
+computer programs.
+
+Binary file formats still are used throughout modern day computer
+programs also.  However, because of the simplicity of binary file
+formats, most of this document will be allocated to explaining parsed
+file formats.
+
+File Format Structures
+----------------------------------------------------------------------
+
+Binary file formats are usually divided up into two simple sections: a
+fixed length header section and a variable length data section that
+follows.  Even though there are some variations, binary files are
+nonetheless fairly easy to process.  Converting to different file
+formats can be programmed in a fairly modular fashion.
+
+On the other hand, "human readable" file formats may need to be
+parsed.  File format conversions with these files require more
+complicated processing because of the need to parse the file.
+However, because that there are now syntaxes that have an established
+position, implementing support for those sytaxes should circumvent the
+majority of programming problems associated with making a custom
+implementation.
+
+File Parsers
+----------------------------------------------------------------------
+
+It is important that all the file format processors in this project
+have a similar implementation structure.  In order to ensure that,
+there will be standards enforced that facilitate the efficiency of the
+parsers that are included with the core infrastructure.

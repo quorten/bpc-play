@@ -1,0 +1,88 @@
+Arbitrary Precision Numbers and Hardware
+****************************************
+
+Working with very big numbers can sometimes get very confusing.  What
+are the implications of pointers versus numbers when working with
+arbitrary precision?  Can pointers be reasonably represented as
+arbitrary precision numbers?  Is it possible to have a huge arbitrary
+precision number that almost meets the limits of a given computers
+hardware?
+
+Here's some clarifying definitions.  A binary Gray number can always
+be stored more compactly than storing as many bits as the number
+indicates.  In other words, a memory address is always more compact
+than the actual memory itself.  That makes sense.  This means that for
+the purposes of working with a single, large number, you can work with
+such a number than is larger than the size of the necessary pointers.
+Because the pointers are so compact, there shouldn't be a problem with
+allocating space for them.  In fact, their size is the base 2
+logarithm of the maximum amount of memory that you need to work with.
+
+So pointers are no problem.  They will barely take up any space
+compared to the data at hand that is being worked with.  If you have a
+number that is almost as big as your hard drive, you won't need a
+second hard drive to store the pointer to the end of the number,
+because the pointer is so compact.
+
+Now here's a modern problem: what do you do if you need to reference
+more memory in a computer than its CPU can directly address?  In the
+past, hardware designers solved this problem by using segmented memory
+to reference more memory than the CPU could directly address.  Writing
+applications that made use of segmented memory in order to extend
+their memory reach was extremely painful.  In modern times, hardware
+designers have since learned from the past.  Thus, rather than using
+segmentation, hardware designers instead extend the CPU's memory
+addressing capabilities directly.  This way, software does not have to
+work with a segmented memory model.
+
+This may be a good solution for applications that demand lots of
+memory, but it turns out that their are other implications this
+choice: programs that do not need to work with such large address
+spaces will not run natively on the extended system.  Such programs
+must first be recompiled to use larger pointers before they can run
+natively.  When modern PCs switched from x86 to x86-64, this was
+indeed a problem for software that acted as a shared library or a
+plugin.  Even though 32-bit applications could still run without
+problems, shared libraries and plugins had to be recompiled for them
+to interoperate in the modern system.  If only the fundamental pointer
+type didn't have to change, there wouldn't be any problems porting to
+the newer systems.
+
+Here's a possible solution: rather than defining the fundamental
+pointer type to be of a fixed size, the fundamental pointer type is
+specified in an arbitray precision notation.  Then the hardware
+processes this arbitrary precision notation directly.  When the
+hardware processes the pointers, it first checks the limits of the
+size header of the pointer.  If the pointer size is within the limits
+that the hardware supports, it would then be packed into the native
+pointer size that the hardware supports.  The hardware memory
+management unit could then proceed to perform virtual memory
+computations in the native pointer size.  The actual size of the
+native pointers would be abstracted away from the software.
+Memory-demanding software would still check the capacity of the system
+before running, as is always necessary with such software, while
+software that is not memory demanding would not have to be bothered
+with such details.
+
+Note that an arbitrary precision number header in front of the actual
+number will cause the number to need more space to be stored.  If this
+header was stored in front of every such number, there could be
+substantial efficiency losses.  Thus, the hardware would also need to
+support other forms of specifying precision such as arrays of
+fixed-length numbers preceded by a precision header or a
+pointer-precision setting instruction.  I think the second mechanism
+is more graceful than the first.
+
+At a higher level, it might even be possible to design a hardware
+architecture that doesn't have a practical maximum limit for flat
+memory addresses.  Daisy-chaining, microcode loops for pointer
+processing, and other hardware tricks could be used to give a computer
+more memory without technical limits.  There would of course still be
+practical limits on how much memory could be put in a system.
+
+Economics are a huge factor of most decisions.  Although hardware
+support for arbitrary precision pointers and numbers is a good idea,
+because x86-64 is already an established architecture, it could easily
+be the case that 64-bit pointers will continue to be recognized as the
+standard for quite some time, until another transition is forced upon
+everyone.

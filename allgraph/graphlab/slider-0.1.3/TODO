@@ -1,0 +1,27 @@
+* Slider needs better adjustment controls based on real-world common
+  usage patterns.
+
+* Slider needs desktop integration with its project files.
+
+* The new icons need to be incorporated into the user interface.
+
+* The display needs to indicate the current scale.
+
+* Make the user manual look a little nicer.
+
+* The user needs to be able to choose the colors of the wave display
+  area.
+
+* The user needs to be able to adjust or disable the AGC safety
+  clipping factor for audio waveform output.
+
+* Finish the Spanish installer strings.
+
+* Add a console interface.
+
+* Make Slider usable to people who may be visually impaired or blind.
+
+* Improve the "Normalize Amplitudes" calculation.
+
+* For fun: how to cut out every single piece of source code until the
+  absolute basics are reached.

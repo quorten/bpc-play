@@ -1,0 +1,51 @@
+Parser programs go pretty far back in the history of computer
+programming.  However, most novice programmers are unaware of proper
+techniques necessary to write parser programs, mostly because they are
+unaware of the Unix philosophy.
+
+Therefore, I will give important advice on how to write parser
+programs better, but the information I give does not substitute fully
+understanding the Unix philosophy.
+
+First of all, you should realize that programming languages such a C
+and C++ are not very well adept for writing parser programs.  You
+should definitely consider using a parser generator such as Bison
+(along with Flex).  If you do intend to write a parser program in
+C/C++, then it is imperative that you always write the parser code in
+a separate source code file, since it is probably going to be very
+large compared to other program code that achieves a different task of
+the same complexity.
+
+When writing a parser program in C/C++, you should be aware of a
+programming paradigm known as automata programming, which views the
+computer as a finite state machine.  When you write a program
+according to an automata programming paradigm, you write the parser
+engine code as a single loop and a series of persistent state
+variables on the outside of the loop scope.  On the inside of the loop
+scope, you test the conditions of the state variables and the current
+file position to perform program actions and change the state
+variables as necessary.
+
+However, you might find that at first, automata programming can get
+difficult and confusing as a novice writing a parser program.  You may
+find it easier (and also may find it makes your code easier to read)
+if you write the parser program as a series of nested for-loops and
+helper macros.  However, you must make sure to always check the
+for-loop conditions of all the parent loops inside of the child loop,
+or else your parser code might crash on syntax errors.
+
+And last, every good parser has at least sufficient, though not
+necessarily good, error handling capabilities.  Your code should be
+tracking the file position so that the place of syntax errors can be
+reported to the user.  Upon discovery of syntax errors, your parser
+code should assign a pointer to a string that describes the syntax
+error, then exit the parser code.  This should make for good error
+reporting infrastructure.
+
+Due to the fact that writing parsers in C/C++ or similar programming
+languages is much more difficult than using a parser generator, any
+parser that you do try to write without a parser generator will be
+substantially impaired in capabilities compared to an equivalent
+parser written using a parser generator.  It is for this reason that
+you are strongly recommended to avoid writing parsers in languages
+like C/C++, unless you absolutely cannot avoid it.

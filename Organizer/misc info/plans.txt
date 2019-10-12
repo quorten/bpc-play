@@ -1,0 +1,115 @@
+---File System Organizer file format---
+Data:
+Statistics
+History
+Importance
+
+<organizer version="1.1" purpose="File system cataloging by metadata">
+<entry id="Root" type="hierarchical_group" members="this that here there">
+	<history>This was to start a more organized file system.</history>
+	<importance percent="100">Without it, this would be nothing.</importance>
+</entry>
+
+<entry id="README_txt" type="file">
+	<statistics filename="README.txt" dateCreated="" dateModified="" size="" diskSize="" keywords=""/>
+	<history>This was to start a more organized file system.</history>
+	<importance percent="100">Without it, this would be nothing.</importance>
+</entry>
+</organizer>
+
+---Second style format---
+
+See testorg.txt
+
+----------------------------------------------------------------------
+
+---Source Code Organizer file format---
+Root, files, outputs
+Data:
+
+---------------------------------------
+Errors in PSDK:
+PolyTextOut: Setting the erasing rectangle will not work as expected
+MapViewOfFile: FILE_MAP_EXECUTE also needs FILE_MAP_WRITE for writing
+GetTextExtentPoint32: extentthe
+Raster, Vector, TrueType, and OpenType Fonts: datathere
+KERNINGPAIR: unitsthat
+String Widths and Heights: ca use
+GetTextExtentExPoint: extentthe
+CHARFORMAT2 Structure: crBackColor: To generate a , use the macro.
+About National Language Support: stringsrepresenting, informationformatted
+---------------------------------------
+If not in the middle of a word
+If beyond the end of a line
+Go back to find breaking position
+Zero xpos and add newline
+Add up length of wrapped word
+Otherwise
+Find forward extent
+If total extent is longer than the line
+Go back to find breaking position
+Zero xpos and add newline
+Add up length of wrapped word
+Save unzeroed horizontal extent
+
+If a space added breaks a word
+If part before break without space plus previous extent is less than the line
+Move cursor back
+If adding the space makes the line longer than the word
+Zero xpos
+Zero extent save variable
+
+If a space is added again
+Treat as individual -- done by above code
+
+it anyways. Now for another chance for you weirdos out there: blah blah blah blah blah d d
+
+---------------------------------------
+Final text editing features
+Word breaking at really long words
+Tab display and wrapping
+Selecting/editing
+No word wrapping
+Optimized fixed pitch font code
+
+Text displaying features
+Double buffer
+---------------------------------------
+Module-based design for the text editor
+Major facilities:
+Initializing
+Displaying
+  Scrolling
+Inserting
+Moving
+Resizing
+Font changes
+Major contraints:
+Wrapping
+Fonts
+Major structures:
+Text buffer
+Line indices
+Line lengths
+Leading caret space
+Empty space on end of line
+Font face
+  Font properties
+Caret position in text stream
+Caret position on sreen
+Scroll info
+Window size
+---------------------------------------
+House Search List
+Hoyle deck of cards
+King's old crown
+Jingle bell
+Java CD
+---------------------------------------
+List of bugs so far:
+Region highlighting does not work
+Scroll bar pop on an off needs accomodation
+Truncated line display does not work
+Double and triple clicking does not work
+
+That is not okay.  What is the generality that links that?  "Do not break to the next line unless there is no room left on the current line."  Also, another bug found: word wrapping is unable to discount the width of spaces at the end of the line.  Perhaps this is really all one bug in the same.

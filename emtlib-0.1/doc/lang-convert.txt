@@ -1,0 +1,948 @@
+Source-To-Source Translations on Popular Programming Languages
+**************************************************************
+
+  A HOWTO on the subtle differences between strikingly similar
+  programming languages.
+
+  This document is in Public Domain.
+
+What does it take to convert a program from C++ to ANSI C?
+
+* Convert all C++ coments (// ...^J) to ANSI C comments (/* ... */).
+
+* Make a enumeration definition for the `bool' type:
+  typedef enum { false, true } bool;
+
+* Make sure that varaible declarations only happen at the beginning of
+  a scope.
+  /* For example, do this: */
+  {
+    int x1 = 3;
+    int x2 = 4;
+    printf("%i", x1);
+  }
+  // but not this:
+  {
+    int x1 = 3;
+    printf("%i", x1);
+    int x2 = 4;
+  }
+
+* Do not use any default parameter values for functions.
+  // Don't do this:
+  int myfunc(int parm1, int parm2, UPINFO parm3 = USER_DOES_NOT_KNOW);
+  /* Do this instead: */
+  int myfunc(int parm1, int parm2, UPINFO parm3);
+  /* and make sure to check that all function calls call with all
+     three parameters, adding USER_DOES_NOT_KNOW for any missing third
+     parameters.  */
+
+* Rename all overloaded functions to have unique names.
+  // Don't do this:
+  bool iszero(float number) { return number == 0.0f; }
+  bool iszero(float number, float epsilon)
+  { return fabsf(number) <= epsilon; }
+  bool iszero(int number) { return number == 0; }
+  /* Do this instead: */
+  typedef enum { false, true } bool;
+  bool iszerof(float number) { return number == 0.0f; }
+  bool iszerofe(float number, float epsilon)
+  { return fabsf(number) <= epsilon; }
+  bool iszeroi(int number) { return number == 0; }
+
+* Convert all references (a.k.a. "smart pointers") to pointers using
+  the right notation for constant-address pointers.
+  // Don't do this:
+  void mutate(int &input) { input = 4; }
+  /* Do this: */
+  void mutate(int * const input) { *input = 4; }
+
+* Make sure all function parameters have names.
+  // Dont do this:
+  int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine,
+                     int nShowCmd) { ... }
+  /* Do this instead: */
+  int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+                     LPSTR lpCmdLine, int nShowCmd) { .. }
+
+* Replace C++ `for' loop constructs with ANSI C `for' loops.  That is,
+  variables cannot be declared in the first statement of the `for'
+  loop header.
+  // Don't do this:
+  for (int i = 0; i < userEntries.len; i++) { ... }
+  /* Do this instead: */
+  {
+    int i;
+    for (i = 0; i < userEntries.len; i++) { ... }
+  }
+
+* Replace the C++ stream calls with C stream calls.
+  // Don't do this:
+  std::cout << "Hello world!" << std::endl;
+  // and end up generating 600 KB of code...
+  /* Do this instead: */
+  printf("Hello world!\n");
+  /* Or even better, this: */
+  puts("Hello World");
+
+* Replace C++ strings with GLib GString.
+
+* Replace C++ STL calls with GLib calls.
+
+* Replace C++ dynamic memory allocation with C dynamic memory
+  allocation.
+  // Don't do this:
+  char *buffer = new char[250];
+  char *largerBuffer = new char[300];
+  for (int i = 0; i < 250; i++)
+    largerBuffer[i] = buffer[i];
+  delete []buffer;
+  buffer = largerBuffer;
+  delete []largerBuffer;
+  /* Do this instead: */
+  char *buffer = (char *)xmalloc(sizeof(char) * 250);
+  buffer = (char *)xrealloc(buffer, sizeof(char) * 300);
+  xfree(buffer);
+  /* Define xmalloc() and friends if necessary to be versions of
+     malloc() and friends that terminate the program if memory
+     allocation fails.  See your C library documentation for more
+     details about this. */
+
+* Replace C++ casts with C casts.
+  // Don't do this:
+  MyClass1 var1 = static_cast<MyClass1>(inputClass);
+  MyClass1 var2 = dynamic_cast<MyClass1>(inputClass);
+  int *rawData = reinterpret_cast<int *>(&inputClass);
+  /* Do this instead: */
+  MyClass1 var1 = (MyClass1)inputClass;
+  /* Note that converting the C++ dynamic type system to C in
+     non-trivial, though definitely possible by using GObject
+     programming techniques.  */
+
+* Replace classes with structures, global variables, and associated
+  functions.
+
+** There are three main ways to implement object-oriented programming
+   in C: vanilla C-structure-based objects, GObject objects, and
+   Ghostscript objects.
+  // Don't do this:
+  class MyClass : public BaseClass
+  {
+  public:
+    MyClass(int ctorArg) { field1 = ctorArg; }
+    ~MyClass() { ... }
+  private:
+    int field1;
+    void HelperFunc() { ... }
+  };
+  /* Do this instead: (Simple vanilla C-structure-based objects) */
+  struct MyClass_tag
+  {
+    BaseClass base;
+    /* private */
+    int field1;
+  };
+  typedef struct MyClass_tag MyClass;
+  void MyClassInit(MyClass *this, int ctorArg)
+  { this->field1 = ctorArg; }
+  void MyClassDestroy(MyClass *this) { ... }
+  static void HelperFunc() { ... }
+
+* Make sure your code is still thread safe, if it was previously
+  thread safe.  Watch out for global variables that might be modified
+  in a non-deterministic way, and protect them with mutexes if
+  necessary.
+
+* Replace operator overloads with function calls.
+  // Don't do this:
+  using std::string;
+  string myString = string("blah ");
+  string piece = string("append");
+  myString += piece;
+  /* Do this instead: */
+  GString *myString = g_string_new("blah ");
+  GString *piece = g_string_new("append");
+  g_string_append_len(myString, piece->str, piece->len);
+
+* Use static variables and static functions as necessary for
+  encapsulation.
+
+* Replace namespaces with prefixed names and macros to hide the name
+  prefixes (if necessary).
+  // Don't do this:
+  namespace AriaMaestosa { class MainFrame; ... }
+  using AriaMaesota::MainFrame;
+  /* Do this instead: */
+  typedef struct AriaMaestosa_MainFrame;
+  #define MainFrame AriaMaestota_MainFrame
+
+* Replace template classes and structures with macro equivalents.
+  // Don't do this:
+  template <typename T> class vector { private: T *val_array; ... };
+  /* Do this instead: */
+  #define EA_TYPE(typename) \
+    struct typename##_array_tag \
+    { \
+      typename *d; \
+      unsigned len; \
+    }; \
+    typedef struct typename##_array_tag typename_##array;
+
+* Most importantly, make sure your converted program is clean and
+  human readable.  After all, that should be the primary benefit of
+  manual conversion, shouldn't it?
+
+Are there other considerations you should take during the conversion?
+
+Yes!  Chances are that if you are converting a simple program from C++
+to ANSI C, you want to be able to target older platforms.  On older
+platforms, 80 column terminals were highly prevalent on the computers
+that software developers used, although there were home computers that
+by default only supported 40 column display.  Therefore, you want to
+make sure your lines of code are wrapped to 80 columns.  If you don't,
+then older software might have problems processing your program if it
+encounters any lines that are longer than 80 columns.
+
+You should make sure you have a newline at the end of the file.
+
+Proper C use of `const' keyword.  `const' keyword parsing in C is
+different from that in C++.  The `const' keyword may not be used to
+initialize the size of static-sized arrays.  Rather, you should use a
+`#define' for that.  `const' indicates that a variable may not be
+changed unless you cast a non-const pointer to it.  Some compilers
+will not allow that, though.  The value is still allocated stack space
+by the C compiler and treated like any other variable; its value is
+not copied throughout the program by the compiler to eliminate runtime
+memory allocation.  The `const' qualifier just causes the compiler to
+do a few extra checks on the variable.
+
+Proper C use of `enum' keyword: enum ENUMNAME { alias1, alias2 };
+
+Do not declare the enumeration class name after the alias listing.  If
+you are typedefing, then the name at the end better be the name of the
+`typedef', not the `enum'.
+
+Taking older platforms into consideration, you probably will have to
+actually test your program to see if source-level optimization is
+necessary.
+
+Also, older processers had relatively small hardware stacks, typically
+limited to 256 bytes.  Depending on the compiler you may use, it may
+be necessary to convert certain recursive functions to dynamic memory
+allocating functions to avoid stack overflows.
+
+Are there other translation options?
+
+Well, this is a yes and no answer.  The original method for compiling
+C++ code was to use Cfront.  However, Cfront only works with a very
+old and incomplete dialect of C++.  Very few modern solutions exist.
+Edison Design Group C++ frontend is one modern C++ frontend; however,
+it is very expensive and is typically only bought for embedding in
+other compilers, such as Comeau C/C++.  There is also one very elusive
+C++ to C compiler that intentionally works with a subset of the C++
+language called Lightweight C++ (lwc), written by Mitchell N. Charity
+<www.vendian.org/mncharity>.  It appears that the only way to obtain
+the source tarball for this translator is to E-mail Mitchell Charity
+directly.
+
+Why do some programmers type spaces before comment indicators?
+
+A long time ago, some compilers or compiler front-ends, such as Cfront
+(the first C++ compiler), could not parse comment syntax correctly.
+Therefore, this habit was a common safeguard against bad compilers.
+
+Why do some programmers always type spaces around operators?
+
+There are certain combinations of operators and tokens that the
+compiler may recognize in a way that a novice would not intend.
+However, by typing spaces around all operators, operator boundries are
+distinct and undisputed.
+
+Why do some programmers type the pointer asterisk right next to the
+variable name?
+
+This is for syntatic reasons on how the character is interpreted.
+Also, when working on other people's software, you should make extra
+effort to tell if a variable is a pointer or not.  Thus, it helps to
+think of the pointer asterisk as part of the variable name so that you
+don't forget.
+
+What does it take to convert a program from ANSI C to pre-standard C?
+
+Why did you have to ask this question?  I though pre-ANSI C was no
+man's land!  Okay, alright, here's the details if you really want to
+know.
+
+* First, pre-standard C doesn't support prototype declarations, so
+  you'll have to convert your function prototypes and definitions to
+  the form of the old way.
+  /* This is the ANSI C way: */
+    /* Declarations */
+    int myfunc1(void);
+    char myfunc2(int arg);
+    /* Definitions */
+    int myfunc1(void) { ... }
+    char myfunc2(int arg1, char arg2) { ... }
+  /* This is the old way: */
+    /* Declarations: */
+    int myfunc1();
+    char myfunc2();
+    /* Definitions */
+    int myfunc1() { ... }
+    char myfunc2(arg1, arg2)
+      int arg1;
+      char arg2;
+    { ... }
+
+* Second, pre-standard C does not have a standardized standard C
+  library.  This should be obvious by the fact that it is
+  "pre-standard C."  Thus, you'll have to make compensations for
+  whatever standard C library functions are lacking on your target
+  platform.
+
+* Third, you should consult the "The C Programming Language, 2nd
+  Edition" book by Brian W. Kerninghan and Dennis M. Ritchie for the
+  definitive list of the rest of the differences.
+
+What does it take to convert a C++ program to a Java program?
+
+Did you really have to ask that?  Fine, I'll tell you all I know.
+
+* Change the `bool' type qualifier to `boolean' and `long long' to
+  `long', and whatever other conversions you have to make in order to
+  get your types to fit within the Java mold.  Obviously high
+  performance C++ programs cannot be converted to Java because they
+  depend on high performance computing hardware, which by definition
+  cannot be platform independent.
+
+* Eliminate all unsigned integers and replace them with signed
+  integers. If you use shifting, use `>>>' to preserve logical shift
+  right behavior for unsigned integers.
+
+* Restructure the code to eliminate explicit pointers.  Pointers can
+  still be programmed by declaring an object as a Java array with only
+  one element.
+  // Don't do this:
+  void procMethod(int *pointer, ComplexObj *pointer2)
+  {
+    *pointer = 3;
+    pointer2->id = 4;
+  }
+  void headMethod()
+  {
+    int valueVar;
+    ComplexObj obj;
+    procMethod(&valueVar, &complexObj);
+  }
+  // Do this:
+  private void procMethod(int[] rougePointer, ComplexObj pointer2)
+  {
+    rougePointer[0] = 3;
+    pointer2.id = 4;
+  }
+  public void headMethod()
+  {
+    int[] valueVar = new int[1];
+    ComplexObj obj = new ComplexObj();
+    procMethod(valueVar, complexObj);
+    // valueVar[0] is now 3.
+  }
+  // Note that some kinds of C++ code may require heavy restructuring
+  // into a far more trashy format that demands the Java garbage
+  // collector where the equivalent C++ code didn't even require
+  // the heap manager, as the data was stored entirely on the stack.
+
+* Change the array syntax and notation.
+  // Don't do this:
+  int myArray[3][4]; // 3 rows by 4 columns on the stack
+  int otherArray[] = { 1, 2, 3 }; // initialized array
+  string moreCore[3] = { "one", "two", "three" }; // initialized array
+                                                  // with size specifier
+  int *heapArray = new int[4 * 5]; // Better to dynamically allocate
+               // using single-dimensional syntax rather than
+               // multidimensional syntax.
+  delete []heapArray;
+  // Do this:
+  int[][] myArray = new int[3][4]; // Java doesn't allow access to the stack
+                                   // like C++ does
+  int[] otherArray = { 1, 2, 3 };
+  String[] moreCore = { "one", "two", "three" };
+  int[] heapArray = new int[3];
+  // no delete: Java doesn't allow explicit memory freeing like C++ does.
+
+* Strings.  All strings are classes in Java, i.e. no C strings that
+  are just raw character arrays with a null terminating character
+  (value zero).  Operator overloading is different in Java.  `==' does
+  not get overloaded for strings, so to compare strings, you've got to
+  use the member functions `equals()' or `compareTo()'.  You cannot
+  use the `[]' operator for Java strings, you've got to use the
+  `charAt()' method.  Use `length()' rather than `size()'.  Read the
+  reference documentation for both Java and C++ for full details on
+  the translation.
+
+* Java functions cannot have default parameters.  Search upward for
+  "USER_DOES_NOT_KNOW" to see an example from the C++ to C conversion
+  section.  The C++ to C conversion is just as applicable for Java.
+
+* Change the class declaration syntax.  Use the `super' keyword to
+  send parameters to a base class's constructor rather than the C++
+  convention of calling the base constructor explicitly by calling the
+  base class in the member initializers.
+  // Don't do this:
+  class MyClass : public BaseClass
+  {
+  private:
+    int field1;
+  public:
+    MyClass(int arg1, int arg2) : BaseClass(arg1), field1(arg2)
+    { ... }
+    ~MyClass() { ... }
+  };
+  // Do this:
+  class MyClass extends BaseClass
+  {
+    private int field1;
+    public MyClass(int arg1, int arg2)
+    { super(arg1); field1 = arg2; ... }
+
+    // What?  No destructors in Java?!  Ugh, the serious weakness of
+    // "garbage collection" languages, unfinalized classes from trash
+    // being left around.  Wait, there's a solution for this:
+    public void close() { ... }
+
+    // As for finalize(), don't use it.  Of course you are going to
+    // have to extensively rework your C++ program to explicitly call
+    // close() where the C++ compiler was able to call the destructor
+    // automatically.  Yes, it sure is unfortunate that Java uses a
+    // garbage collector that creates so many more problems with
+    // serious memory leaks...
+  }
+
+* Eliminate multiple inheritance.  This could be hard, but one option
+  to consider is converting some of the multiple inheritance classes
+  to Java interfaces, if possible.
+  // Don't do this:
+  class MyClass : public BaseClass, public QGLWidget { ... };
+  // Do this:
+  class MyClass extends BaseClass implements QGLWidget { ... }
+
+* Make sure that there is only one class per source file, and that the
+  name of the file always takes the form ClassName.java.  Move any and
+  all contents from the C++ header files (*.h) into the Java files,
+  which will start out by being the C++ implementation files (`*.cpp'
+  or the like).  The only exception to this rule is if a C++ class can
+  be translated to a Java private class.  Then it can be in the same
+  source file, although Java style guidelines strongly discourage
+  this.  Luckily, this isn't done very often in C++ either, though.
+
+* Change C/C++ standard library usage to the Java standard library
+  equivalents.
+
+* The Java compiler does not need explicit declarations of the classes
+  that a source file uses through the typical C++ convention of
+  `#include "ClassName.h"'.  Rather, it will attempt to search for
+  class files at compile time.  Thus, all include statements for
+  headers may be eliminated.
+  // Don't do this:
+  #include <string>
+  #include "MyClass.h"
+  std::string mystring;
+  MyClass object;
+  // Do this:
+  ...
+  java.lang.String mystring;
+  MyClass object;
+
+* Convert C++ namespaces to Java packages.
+  Example 1:
+
+  // Don't do this:
+  #include <gtkmm/window.h>
+  Gtk::Window window;
+  // Do this:
+  javax.swing.JFrame frame;
+
+  Example 2:
+
+  // Don't do this:
+  #include <gtkmm/window.h>
+  using namespace Gtk;
+  Window window;
+  // Do this:
+  import javax.swing.JFrame;
+  ...
+  JFrame frame;
+
+  Example 3:
+  // Don't do this:
+  namespace AriaMaestosa {
+  class MainFrame { ... };
+  } // END namespace AriaMaestosa
+  // Do this:
+  // In file MainFrame.java
+  package net.sourceforge.ariamaestosa
+  class MainFrame { ... }
+
+* Convert C++ templates to Java Generics.  Beware, though, that Java
+  requires Generics to use non-primitive types, so your C++ code may
+  become less efficient when performing this conversion to Java.
+  // Don't do this:
+  template <typename T, typename A> class vector
+  { private: T *val_array; ... };
+  // Do this:
+  public class vector<T, A>
+  { private T[] val_array; ... }
+
+* Abstract classes.  In Java, you need to declare an abstract class
+  with the `abstract' keyword when it contains abstract functions.
+  The `abstract' keyword is used to indicate that a function is
+  abstract.
+  // Don't do this:
+  class MyClass
+  {
+    MyClass() { ... }
+    ~MyClass() { ... }
+    virtual void abstractFunc() = 0;
+  };
+  // Do this:
+  public abstract class MyClass
+  {
+    public MyClass() { ... }
+    public void close() { ... }
+    abstract void abstractFunc();
+  }
+
+* Java does not support polymorphism for member functions like C++
+  does with the `virtual' keyword.  Only "abstract" methods are
+  supported.
+  // Don't do this in Java, remove all `virtual' functions.
+  #include <iostream>
+  using namespace std;
+  class BaseClass
+  {
+    BaseClass();
+    virtual ~BaseClass();
+    void getInfoHere();
+    virtual void getInfoThere();
+  };
+  class MyClass : public BaseClass
+  {
+    MyClass();
+    virtual ~MyClass();
+    void getInfoHere();
+    virtual void getInfoThere();
+  };
+  int main()
+  {
+    BaseClass *ctest = new MyClass();
+    // Gets info of BaseClass, call's the member function of the
+    // pointer type, known as "early binding."
+    ctest->getInfoHere();
+    // Gets the info of MyClass, call's the member function of the
+    // object being pointed to, known as "late binding."
+    ctest->getInfoThere();
+
+    // The destructors were declared as virtual to make sure that
+    // the objects get cleaned up properly when they get destroyed.
+    // For performance reasons, you should only declare destructors
+    // to be virtual if you are using polymorphism, and for safety
+    // reasons, you should always declare destructors to be virtual
+    // if you are using polymorphism.
+    return 0;
+  }
+
+* Java does not have an official preprocessor.  Any C++ code that uses
+  the preprocessor for things like stringification of variable names
+  for debugging is going to have to get rewritten without a
+  preprocessor for it to be "Java-style."  This can of course prove to
+  be impractical for sophisticated projects.
+
+What does it take to convert a C++ program to a Python program?
+
+You have got to stop asking me these questions.  Do you want a good
+piece of advice?  Okay, for those who want to know, it is generally a
+better idea to approach a programming problem using multiple
+programming languages rather than a single programming language.
+Whenever you need to solve a small problem, you choose the best
+programming language for the job.  Then when you need to combine
+multiple pieces of code that you have written, you use language
+wrappers or inter-process communication to get the system to work
+together.
+
+That being said, you have two choices for this problem: either use
+inter-process communication with the Python program or in the case
+that you wrote your program in C (and maybe C++), you can use a Python
+wrapper.
+
+One last option in the case of no others is to use source to source
+translators to get your source code from the source language to a
+compiliable form in the target language.  It might not be quite human
+readable if the conversion was too drastic, but it will work.  Really,
+you should only take this path if you need to do a language downgrade,
+such as convert from C++03 to C++99 or from C++ to C.  (In fact, the
+original C++ compiler, Cfront, translated C++ to C to compile C++
+programs.)  Perhaps the only important reason for doing language
+downgrades is to get proof-of-concept programs running on older
+systems.
+
+But as it turns out, it is often easier to translate trivial, bengign,
+snippets of source code to a different programming language to
+incorporate them into a larger program.  Since there won't be major
+performance losses in this case, here's how you do it... just kidding!
+It would be too easy if I just told you the answer, you'll have to
+figure it out yourself.
+
+* Remove type declarations from variables.
+
+* Change `static' declared variables within classes/functions to
+  `global' declared variables.
+
+* Change C++ class declarations to Python class declarations.
+  // Don't do this:
+  class MyClass : public BaseClass
+  {
+    int myField;
+    int otherField;
+    MyClass(int arg) : myField(arg), otherField(3) { ... }
+  };
+  # Do this:
+  class MyClass(BaseClass):
+    def __init__(self, arg)
+      self.myField = arg
+      self.otherField = 3
+      ...
+
+* Convert C++ standard library calls to Python standard library calls.
+
+And that's all I'm telling you for now.
+
+What does it take to convert C to Emacs Lisp?
+
+Well, this is tricky, since mainstream Emacs Lisp programming
+necessarily demands features that are in built into Emacs but not C.
+I recommend that you acutally learn Emacs Lisp.  If you never
+programmed in a Lisp programming language before, read the
+_Introduction to Emacs Lisp_ that comes with Emacs.  I must warn you,
+though, it fails to introduce a few key Lisp concepts, although it
+teaches you everything you need to know for programming.
+
+Besides that, here's how to translate between what the languages have
+in common.
+
+* `{ statement1; statement2; }' -> `(progn (statement1) (statement2))'
+
+* `x + y' -> `(+ x y)'
+
+* `int myfunc(int x, int y) { statements }' ->
+  `(defun myfunc (x y) "DOCSTRING (optional)" statements)'
+  Pass by value is the default, and most values in Lisp are pointers
+  to their respective objects.
+
+What, did I hear "convert MIT Scheme to Emacs Lisp?"  Oh, come on,
+stop, I'm not listening anymore.
+
+What does it take to convert C to assembly language?
+
+Please, just use a compiler, and that will solve all your problems.
+If you need your program to be faster, hand optimize the assembler
+output.
+
+What does it take to convert from Java to C++?
+
+Didn't I already tell you how to convert from C++ to Java?  Why do I
+have to tell how to convert from Java to C++?  Okay, fine, Java is
+different enough from C++ for the reverse conversion to not be
+identical to the forwards conversion.
+
+* Perform as many previously specified conversions in reverse as
+  possible.
+
+* Eliminate for-each loops.  If cross-compiler support is not a
+  concern for you, you can use C++11 for-each loops where Java
+  for-each loops were previously used.  Otherwise, you should either
+  define a macro for for-each loops like Qt does or replace them with
+  iterator for loops.
+  // Don't do this:
+  ArrayList<Integer> array = new ArrayList<Integer>();
+  for (Integer i : array) System.out.printf("%d\n", i);
+  // Do this instead:
+  vector<int> array;
+  for (int i = 0; i < array.size(); i++) cout << array[i] << endl;
+  // Or this instead:
+  for (vector<int>::const_interator iter = array.begin();
+       iter != array.end(); iter++)
+    cout << *iter << endl;
+  // Of course you can also use the C printf() function if you
+  // prefer it instead of the C++ iostream classes.
+
+* Change all occurances of `public' keywords to be colon headers
+  within the class declarations.
+  // Don't do this:
+  class MyClass
+  {
+    private int field1;
+    private int field2;
+    public MyClass() { ... }
+  }
+  // Do this:
+  class MyClass
+  {
+  private:
+    int field1;
+    int field2;
+  public:
+    MyClass() { ... }
+  };
+
+* Write a C++ class declaration header file for each Java class file
+  and separate the function code into an implementation file.
+  Example:
+  // Filename: MyClass.h
+  #ifndef MYCLASS_H
+  #define MYClASS_H
+
+  class MyClass
+  {
+  private:
+    int info;
+  public:
+    MyClass();
+    ~MyClass();
+    bool getInfo();
+  };
+
+  #endif /* not MYCLASS_H */
+
+  // Filename: MyClass.cpp
+  #include <iostream>
+  #include "MyClass.h"
+  using namespace std;
+
+  MyClass::MyClass()
+  {
+    cout << "Class initialized" << endl;
+    info = 3;
+  }
+  bool MyClass::getInfo()
+  {
+    cout << "The info is " << info << "." << endl;
+    info++;
+    if (info < 10)
+      return true;
+    else
+      return false;
+  }
+  MyClass::~MyClass()
+  {
+    cout << "Destroying MyClass.\n";
+  }
+
+* In C++, there is no such thing as wrapper classes.  You'll have to
+  use other C/C++ functions to achieve the same effect as calling a
+  method of a wrapper class.  This also means there's no performance
+  issues with autoboxing and autounboxing.
+
+* Eliminate interfaces.  You may be able to change interfaces to be
+  multiple inheritance classes.  Registering callback functions is
+  also a common C/C++ substitute for implementing Java interfaces.
+  Multiple inhertiance is seldom used.  Callback functions are
+  achieved through "function pointers," which are non-trivial to
+  write:
+
+  Example 1:
+
+  // C/C++ callback example
+  int otherFunc(int x, int y, int z)
+  { return x + y * z; }
+  int main()
+  {
+    int (*myfunc)(int, int, int);
+    myfunc = (int (*)(int, int, int))otherFunc;
+    return myfunc(3, 4, 5);
+  }
+
+  This is just an example of a function pointer.  For callbacks, the
+  user would call a function that passes the function pointer into
+  your library, which would then get bound as the above simple example
+  did.
+
+  Of course, that was a simple case: the default "calling convention"
+  was assumed in that function pointer.  For a non-default calling
+  convention, the code would be as follows:
+
+  Example 2:
+
+  // C/C++ function pointers to functions of a non-default calling
+  // convention.
+  void (APIENTRY * pglCopyTexSubImage3DEXT)(GLenum, GLint, GLint,
+        GLint, GLint, GLint, GLint, GLsizei, GLsizei) = NULL;
+  pglCopyTexSubImage3DEXT = (void (APIENTRY *)(GLenum, GLint, GLint,
+        GLint, GLint, GLint, GLint, GLsizei, GLsizei))
+        wglGetProcAddress("glCopyTexSubImage3DEXT");
+
+  That was ugly.  This can all be made simpler by using typedefs,
+  which is the generally accepted method for working with function
+  pointers.
+
+  Example 3:
+
+  typedef void (APIENTRY * PFNGLCOPYTEXSUBIMAGE3DEXTPROC)(GLenum,
+       GLint, GLint, GLint, GLint, GLint, GLint, GLsizei, GLsizei);
+  PFNGLCOPYTEXTSUBIMAGE3DEXTPROC pglCopyTexSubImage3DEXT = NULL;
+  pglCopyTexSubImage3DEXT =
+    (PFNGLCOPYTEXSUBIMAGE3DEXTPROC)wglGetProcAddress("glCopyTexSubImage3DEXT");
+
+  Those of course were not callback examples, just function pointer
+  examples.  It is necessary to cast the function pointer returned
+  from `wglGetProcAddress()' because the return value is just a
+  generic pointer.  Thus, you need to cast to avoid errors in C++.
+
+* Pointers.  Java uses pointers, but does not provide explicit pointer
+  notation at the programming language level.  In Java, objects and
+  arrays are always referred to by pointers, whereas primitive data is
+  always referred to by values.  In C/C++, arrays and pointers are
+  analogues for each other.  Although it is of course possible to do
+  straight line conversion from Java to C++ by using pointers to heap
+  allocated objects everywhere, it can sometimes make more sense to
+  allocate an object on the stack and work with its value directly.
+  // Don't do this:
+  private void procFunc(OtherClass otherObj)
+  {
+    int newVal = otherObj.result;
+    if (newVal > 0 && newVal < 10)
+      store = newVal;
+  }
+  public StarSpawner headFunc(int param)
+  {
+    OtherClass otherObj = new otherObj(param);
+    otherObj.compute();
+    procFunc(otherObj);
+    return new StarSpawner(store);
+    // otherObj is no longer usable beyond this point.
+  }
+  // Do this:
+  void procFunc(OtherClass *otherObj)
+  {
+    int newVal = otherObj->result;
+    if (newVal > 0 && newVal < 10)
+      store = newVal;
+  }
+  StarSpawner *headFunc(int param)
+  {
+    OtherClass otherObj(param);
+    otherObj.compute();
+    procFunc(&otherObj);
+    return new StarSpawner(store);
+    // otherObj is cleaned up by the C++ compiler as soon as the
+    // function exits and otherObj becomes unreachable.
+  }
+
+* A few notes on pointers for Java programmers.  When working with
+  pointers, `(*obj).member' can be written as `obj->member', a
+  syntactic sugar derived from C.  The reason why you can't write
+  *obj.member is because the member-of `.' operator has a higher
+  precedence than the dereference `*' operator, so that statement
+  would evaluate to `*(obj.member)', which is invalid since `obj' is a
+  pointer.  `&' is the address-of operator, which is used when you
+  have a value (variable declared without `*') and you need the
+  variable's address to assign to a pointer.
+
+* One more thing on pointers!  In C++, you can define function
+  parameters to be of a class type that aren't pointers.  If you do,
+  when you pass an object to such a function, the function will get
+  its own copy of the object, calling the class's copy constructor as
+  necessary.  Usually you don't want to have this behavior for
+  performance reasons.
+
+* Dynamic memory allocation in Java is copied from dynamic memory
+  allocation in C++ with virtually no modifications, other than the
+  fact that Java attempts to conceal the concept of pointers from the
+  programmer.  The most notable difference is that C++ by default does
+  not have garbage collection.  Conservative garbage collection is
+  possible through libgc, but the generally accepted C++ programming
+  practice is to code in explicit frees when memory is no longer
+  required.  More sophisticated applications use a middle layer memory
+  manager where the free requests are sent to before the application
+  frees memory using C++ runtime calls.  In any case, C++ programmers
+  must always specify when objects are no longer needed in some sort
+  of way.  This shouldn't be too new for Java programmers, though, as
+  Java does not provide any safeguards against file objects that are
+  not explicitly closed.
+  // Don't do this:
+  private void procFunc()
+  {
+    Integer work = new Integer(3);
+    // The garbage collector will take care of freeing the memory
+    // when the application starts to run out of memory.
+  }
+  // Do this:
+  void procFunc()
+  {
+    int *work = new int(3);
+    delete work;
+    // Some applications will make calls against an application-level
+    // memory manager rather than calling `new' and `delete' directly.
+  }
+
+* In C/C++, dynamic amounts of memory can be allocated on the stack.
+  The performance advantage is that the stack does not get slowed down
+  due to memory fragmentation like the heap does, because objects are
+  always added and removed from the "top" of the stack, not the
+  "middle" or the "bottom."  (Logical top, not physical top, of
+  course.)  Like any stack allocations, these allocations are
+  automatically freed when a function returns.
+  // In C++:
+  int *array = alloca(sizeof(int) * num_objs);
+
+* Always allocate huge objects, like images, waveform audio, 3D
+  models, or the like, on the heap, not the stack, even if you know an
+  object's size in advance.  The reason why is because a process image
+  generally gets a larger heap virtual address space than stack
+  virtual address space, and heap allocation failures can be handled
+  gracefully, unlike stack allocation failures, where there is very
+  little that can be done about stack overflows other than the
+  operating system terminating the faulting program.  Of course it's
+  possible to write platform-dependent programs that check for
+  remaining stack space during function calls and stack memory
+  allocation, it's just that such kind of code is rarely written for
+  the reasons mentioned above.
+
+* C++ has different operator overloading syntax than Java.  Yes, I
+  already covered this for C++ -> Java, but the issue is different for
+  Java -> C++.  C++ can overload just about any operator, but operator
+  overloading for string classes does not overload as many cases as a
+  Java programmer would expect.  Some similar effects can be achieved
+  by using "string streams" rather than just plain strings.
+  // Don't do this:
+  String newString = "string " + 3 + " string";
+  String otherString = "init";
+  otherString += " but wait!";
+  // Do this:
+  #include <sstream>
+  using namespace std;
+  ...
+  ostringstream newString;
+  newString << "string " << 3 << " string";
+  newString.str() // This is the C++ string object you want.
+  string otherString = "init";
+  otherString += " but wait"; // This works fine with C++ strings.
+
+And that's all I'm going to tell you for now.  Sure, you might be able
+to squeeze more information out of me by asking the right questions,
+but I've had enough questions for now and I'm not going to answer any
+more of these silly language conversion questions until later.
+
+Wait, I discovered something in expanding this document.  You can use
+Wikipedia as your one-stop shop for programming language conversion
+cheat sheets.  Know a feature in one programming language but don't
+know how it is done in another?  Just look up a Wikipedia article, and
+you will get a listing on how to convert that construct to almost as
+many other programming languages as there exists.
+
+<http://en.wikipedia.org/wiki/Category:Programming_language_comparisons>
+
+And yes, if you have a particular question in one programming language
+or API, you can do a web search to find the answer on stack
+overflow-based website, provided that you are asking a question on a
+popular technology.  Otherwise, you are going to have to find the
+answer from the more direct sources.

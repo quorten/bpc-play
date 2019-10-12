@@ -1,0 +1,4 @@
+?package(slider):needs="X11" section="Applications/Sound"\
+  title="Slider Wave Editor" command="/usr/bin/slider"\
+  description="Build sound waves from component parts"\
+  icon="/usr/share/slider/pixmaps/icon32.png"

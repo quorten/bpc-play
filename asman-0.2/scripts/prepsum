@@ -1,0 +1,15 @@
+#! /bin/sh
+# Prepare a checksum file by calling the checksum program once for
+# each file.  This script is mostly only useful on Windows where
+# command line length limits may be obtrusive.
+
+SUMFUNC=sha256sum
+find ${1} -not -type d -print0 | \
+  dq-escape.sed | nltrans | \
+  sed -e 's/^/"/g' -e 's/$/"/g' | \
+  awk 'BEGIN { print "#! /bin/sh"; print "NL=\"\n\"" }
+       { print "'${SUMFUNC}'", $0 }' | sh
+# > sumgo.sh
+# chmod +x sumgo.sh
+# ./sumgo.sh
+# echo "Pre-setup is complete.  Now run ./sumgo.sh."

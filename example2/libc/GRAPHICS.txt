@@ -1,0 +1,384 @@
+Graphics?  Graphics is not a feature of the traditional standard C
+library, that's in some other library.  And there has never quite been
+a standard API for graphics over the decades.  Nevertheless, there has
+been a standard series of concepts in order of increasing complexity
+on the subject of graphics.  The story is as follows.
+
+0. Storage tubes anyone???  Very old and esoteric.  This is a type of
+   vector scan CRT with memory in the CRT display phosphors itself.
+   In modern terms, it has the following API:
+
+    * GetPixel()
+    * PutPixel()
+    * ClearScreen()
+
+1. Direct control over a raster scan of the target monitor.  This is
+   the lowest-level of modern-style hardware, most obscure, and was
+   hardly ever used directly by software.
+
+2. Video card framebuffer memory region.  Virtually all computers ever
+   created have used dedicated video card hardware to perform a raster
+   scan of a framebuffer memory.
+
+   Typically, there are functions to control the framebuffer size in
+   pixels and the pixel format.  These are hardware and operating
+   system specific.  Horizontal fields, vertical fields, bottom-up,
+   top-down, zig-zag (???).  I've never heard of any computer hardware
+   that used a zig-zag scale, but it is conceivably possible.
+
+   Padding, spacing, stride, planes, gamma, make sure you master all
+   of that to work with framebuffers.
+
+   Please note: As a special extension due to our profession's past
+   experience of many thousands of programmers being unaware of the
+   concept of gamma-coded image samples, we also support our special
+   extension of linear light intensity framebuffers with hardware
+   gamma-coding.  The way it should have been done!  Why was it done
+   any other way in the early days of computers?  Alas, a linear
+   framebuffer would require 16 bits per pixel, rather than only 8
+   bits per pixel, to get reasonable color performance.  Clearly, it
+   is cheaper and more visually stunning to start selling 8-bit
+   gamma-coded image sample framebuffers, then go back and fix up all
+   the software later, when the more modern technology is more
+   powerful.
+
+    * SetFramebuffer(width, height, pixel_format)
+
+3. Low-level hardware graphics acceleration functions.  When these are
+   not available, they can be performed in software directly on the
+   framebuffer memory.
+
+    * Bit-block transfer
+    * Bitmap font rasterization, both fixed-pitch and variable-pitch,
+      with character wrapping
+    * One-pixel sprites
+    * Block sprites, i.e. important to render a text caret
+    * Pattern filling, i.e. bit-block transfer with scaling by
+      repeating
+    * Bitmap scrolling (wrap-around, clear, and sub-regions too)
+    * Pattern filling with scrolling on pattern origin
+    * Bitmap sprites
+    * Animated sprites
+    * Bitmap scaling
+        1. Nearest neighbor
+	2. Ordered dither, gamma-correct monochrome
+        3. Error diffusion, gamma-correct monochrome
+        4. Ordered dither, gamma-incorrect color
+        5. Error diffusion, gamma-incorrect color
+        6. Linear, gamma-incorrect color
+        7. Quadratic, gamma-incorrect color
+        8. Cubic, gamma-incorrect color
+        9. Ordered dither, gamma-correct color
+        10. Error diffusion, gamma-correct color
+        11. Linear, gamma-correct color
+        12. Quadratic, gamma-correct color
+        13. Cubic, gamma-correct color
+        14. FFT reconstruction, Lanczos window, gamma-correct color
+    * Bitmap rotating
+    * Matrix affine bitmap transform
+    * Matrix perspective bitmap transform
+
+    * Gamma-incorrect transparency!
+
+   Advanced systems support these functions with extended off-screen
+   video memory, and also with the main system RAM.
+
+4. Hardware accelerated 2D vector graphics rasterization.
+
+   Here is the core concept.  All vector graphics rasterization is
+   based off of generating bitmap regions based off of the vector
+   graphics instructions, and then proceeding to fill those regions.
+   Filling the inside of solid shapes is straightforward by this
+   means, of course.  What about line stroke styles?  This simply
+   comes down to generating a region that corresponds to the outside
+   of the line stroke that contains thickness and style, and then
+   proceeding to fill that region.  Essentially, styled line strokes
+   are "compiled" to a simple vector region before rendering.
+
+   Please note: I must admit that the previous core concept as
+   outlined is a rather modern one.  Region-filling algorithms for all
+   stroke lines is expensive but necessary when working with very high
+   resolution rendering targets such as laser printers.  More
+   appropriate for low-end 'online" computer graphics display is a
+   "lite" version that uses a modified Bressenham's line plotting
+   algorithm to effectively render multiple parallel lines teamed
+   together to effect rasterizing a thicker line when needed.  In
+   practice, on low-resolution displays, one-pixel thick lines are the
+   only lines ever rendered most of the time.
+
+    * Plot one-pixel thick line
+    * Plot one-pixel thick circle arc
+    * Plot one-pixel thick ellipse arc
+    * Plot one-pixel thick quadratic Bezier curve
+    * Plot one-pixel thick cubic Bezier curve
+        * Simplest implementation: Use De Casteljau's algorithm to
+          subdivide it until can be be reasonably approximated using
+          quadratic Bezier curves, then plot those in a pixel-perfect
+          manner.  However, this won't be a pixel-perfect cubic Bezier
+          curve plot.
+    * Even-odd scan-fill a one-pixel thick region boundary
+    * More advanced: non-zero scan-fill a one-pixel thick region
+      boundary.  Requires a contour vector plot to be stored rather
+      than a simple monochrome pixel plot.
+    * "Vertex buffer objects" or the like
+    * Matrix transformations (both affine and perspective) on vertex
+      buffer objects
+    * Grouping
+    * "Display lists", lists of display commands
+
+    * Higher-level primitives:
+    * Rectangle
+    * Rounded rectangle
+    * Polygons
+    * Stars
+    * Diagram connector
+    * Complex shape, custom styled fill and stroke
+
+    * Gamma-incorrect linear color blending gradients!
+    * Dashed lines, stroke start, mid, and end markers!
+    * Text on paths!
+    * Word art!
+    * Variable-width stroke line!
+    * Arbitrary objects on paths!
+    * Mesh deformation!
+    * Inverse deformation!
+    * Curve fitting and path simplification!
+    * Gamma-incorrect anti-aliased lines!
+
+    * Gamma-incorrect linear gradient meshes!
+
+5. Hardware-accelerated 3D graphics transform and lighting.  The
+   existing 2D graphics primitive functions make it very easy to
+   implement 3D graphics in software.  Nevertheless,
+   hardware-accelerated 3D graphics transform and lighting became
+   popular simply because the basics of 3D graphics is not a moving
+   target.
+
+   Up until now, all computations could be performed using only
+   integer and fixed-point arithmetic.  But now, because floating
+   point arithmetic is a _de facto standard_ with 3D graphics, that
+   too must be supported for all vector graphics operations.  Floating
+   point raster graphics is a higher level of advancement.
+
+   Also, for starters, this means a fixed-function pipeline for
+   graphics rendering.
+
+   Please note: Previously, we could have done texture fills by means
+   of a matrix transformed bit-block transfer with region masking, but
+   that method is rather inefficient because we plot and throw away
+   fragments that we will never need.  More efficient is to walk only
+   the pixels in the region, and compute backwards to determine which
+   fragments should be plotted.
+
+   JJJ TODO: Please review: efficiency improvements with region
+   clipped bit-block transfers.  Also, computation on RLE compressed
+   regions may be worth supporting too.
+
+    * Efficient texture fill
+    * Floating point vector graphics coordinate arithmetic
+    * 3D text!
+
+6. 3D graphics programmable function pipeline, fragment/pixel shaders,
+   and vertex shaders.  General-purpose computation can be performed
+   and run on the GPU hardware.
+
+   Unfortuantely, as I must point out, programmable function pipelines
+   and shaders are no longer a high-level graphics API, but a new
+   low-level graphics API upon which ohter high-level APIs can be
+   built.  Therefore, my graphics implementation demo stops here.
+
+7. OpenCL, general-purpose parallel compute on the GPU.  This is no
+   longer discussion of graphics API primitives, but merely a
+   modernized low-level framework upon which other higher-level
+   frameworks are built.
+
+8. Vulkan, even more generalized combination of modern OpenGL and
+   OpenCL.  Command queues, message passing, and so on and so on.
+   Again, this is no longer a discussion of graphics API primitives,
+   but merely a modernized low-level framework upon which other
+   higher-level frameworks are built.
+
+----------------------------------------
+
+date: 2019-06-14
+
+So, upon this discussion, one thing that has become clear is that it
+is pretty simple to write your own 2D and basic 3D graphics API.
+Matter of fact, that's why Shawn Haugreaves has wrote Allegro to full
+fruition so many years ago.  So, what is the problem that I am trying
+to point out with my own version of this?  Why am I going about
+writing this?  The main things I wanted to do about this is make the
+implementation more fitted to a layered implementation of increasing
+complexity, rather than the "all-at-once" approach that the times of
+old have provided.  This, of course, is crucial from not only an
+educational standpoint, but also from the standpoint of setting up and
+running very basic hardware at the low-level, albeit with a more
+modern approach of most of the lowest-level software being written in
+C, and only a small amount of low-level code is written in assembly
+language.
+
+Also, another major ongoing problem with graphics APIs and graphics
+software is that of incompatible APIs.  Sure, you can have your basic
+software-based implementation written and running, but how do you get
+any useful graphics software running on it?  You need to either
+rewrite the useful software with the new API, or write an API
+abstraction layer to port the software over.
+
+The ideal basic API is that of a "mini-GL" or "Glide" API.  A
+minimalistic API, but one that is designed to be as close as possible
+toward being compatible with one of the more mainstream APIs.  This
+makes porting existing graphics software as easy as possible.
+
+So, what are the most important graphics APIs?
+
+* Quickdraw
+* PostScript
+* Windows GDI
+* SVGAlib
+* X11
+* OpenGL
+* Glide
+* DirectDraw
+* Direct3D
+* PDF
+* SDL
+
+You absolutely must provide compatibility with these graphics APIs as
+much as possible.  After that comes the layout engines, game engines,
+and so on.
+
+But, come on!  Hasn't Mesa 3D already done most of this?
+
+Okay, fine.  If I do nothing else with my own implementation, I will
+simply declare it to be both in the public domain, Unlicense, and
+under Expat MIT license.  That should be good enough, right?  Just use
+Git branching, you can check out whichever release branch suits you
+best.  Make it real simple like that.
+
+Most important thing about this being modern style.  Unix is written
+in C at the lowest-level, so this other low-level software is also
+written in C.
+
+Want to run on 8-bit systems?  Start out by compiling to a 16-bit
+interpreter in order to keep the code compressed well under the memory
+constraints of your older computer.  Then you can write "host inline
+assembler" for the critical tight inner loops that need to perform as
+quickly as possible.
+
+N.B. This means that JIT compilers will also be just as efficient as
+the "native" compiler.  They just target to the bytecode and jump
+execution to that.
+
+Best bet is to also include 32-bit instructions in the byte code as
+jumping to full inline assembler for those paths may be more efficient
+than a series of 16-bit bytecode instructions.
+
+So you were wondering about implementing a C compiler?  Easy, start
+with targeting your architecture-independent bytecode, and write
+interpreters for that in assembly language.  On 8-bit architectures,
+performance is standard.  Only on the more modern architectures is
+compiling to native faster and cheaper.  Why not write your own
+assemblers as you only support a small handful of architectures?
+
+* 6502
+* Z80
+* x86
+* m68k
+* PPC
+* MIPS
+* ARM
+* x86-64
+
+Heck, if we write all our own code, we can profile on a more modern
+computer and automatically flag which parts of our code are those
+tight inner loops.  Then we can annotate and amend our byte code
+interpreter instruction set with special instructions for those
+operations, which then shell out to inline assembler functions on the
+target computer.
+
+Simply count the number of times a function is called over particular
+runtime periods.
+
+----------
+
+Yeah, and also what I was saying, about supported bit width modes.
+Again, I reiterate, because this is important!  I can pretty
+confidently say the list is limited as follows:
+
+1, 2, 4, 8, 10, 12, 14, 15, 16, 24, 32, 48, 64, 128
+
+These bit widths were historically popular but have become rather odd
+in modern times.
+
+6, 36
+
+And these bit widths are pretty much only used for cryptography:
+
+256, 512, 1024, 2048, 4096, 8192
+
+----------------------------------------
+
+Graphical user interfaces!
+
+Layout Metrics:
+
+* Absolute pixel positioning
+* Physical distance (scaled by PPI, etc.)
+* Dialog units (scaled by font size)
+
+User interface widgets:
+
+* Styling bitmaps: icons, window decoration, etc.
+* Windows
+* Pull-down menus
+* Buttons
+* Text edit controls
+* Dialogs
+
+And then graphical user interfaces have a whole bunch more special
+buttons and controls that have become somewhat standard!  And standard
+dialogs, of the like of commdlg32.lib.
+
+Then the next level up in sophistication is flexible, automatic
+resizing container and box-style layouts, of Qt fame.  Who exactly was
+the first to promote this style?
+
+Anyways, it marks the difference between Java AWT and Java Swing GUI
+in Java-land.
+
+Then we have full "desktop environments" that are defined to be a
+suite of applications all designed by a consistent metaphor.  Alas,
+the chosen suite has its limits.  Most computer users have only ever
+used a small number of applications outside of the core suite within
+the 5-year generational period, after which the computing platform
+would become obsolete and they would "reboot" their desktop with
+all-new software, determined at the time of the computer's
+manufacture.
+
+Only after the advent of smartphone operating systems have the average
+non-technical computer user experiment with installing a much wider
+repertoire of software.  However, this is typically bounded by an even
+shorter lifetime, that of 2 years, before the discontinuity at the
+"reboot" happens, and none of the old stuff is brought forward.
+Multiply that by a billion smartphone users.
+
+Otherwise, in modern times, the main means to access a large
+repertoire of software is by web browser.  Then all modern software is
+written by the means of a web app.
+
+----------------------------------------
+
+date: 2019-06-14
+
+So, all that being said, to be honest, the modern mass market computer
+user doesn't really need much out of a computer.  It's perfectly fine
+if you write totally your own operating system from scratch, and it
+appears to have a useful range of features and functions preinstalled.
+Non-technical computer users won't care to install any additional
+software.  It's just that the core modern requirement is that modern
+computer users want some semblance of access to their favorite online
+services.
+
+All in all, a modern computer user doesn't really need much more out
+of a computer than you would get in comparison to an old-style game
+console platform.

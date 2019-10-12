@@ -1,0 +1,60 @@
+How to do error handling with emtlib
+
+Generally, in C programming, error handling is performed by manually
+checking the return values of functions or writing into the code some
+other explicit validity check.  This kind of error-handling
+programming could be viewed as causing code clutter, obfuscating the
+intent of the code from the actual function of the code.  On the other
+hand, it is essential to the programmer's mind to ask the "What if
+..." questions for everything, and perhaps this kind of programming
+does a good job making that explicit.  Nevertheless, programmer's are
+not perfect at asking the "What if ..." questions, and sometimes they
+fail to program that into the code.
+
+Also, a similar issue can happen with cleanup code: when a programmer
+is writing an extremely small program, the program may branch across
+two paths, both of which need to execute common cleanup code later on.
+However, because the program is so small, a programmer may be tempted
+to just copy a measely one line of cleanup code between the two paths.
+Unfortunately, all programs are bound to expand, and when that program
+does expand, the programmer runs the risk of forgetting to copy the
+cleanup code between the two parts of the program.  This problem is
+easy to fix: by analyzing the structure of a C program, along with the
+structure of the assembly language compiled from a C program, a
+function can be separated into common initialization routines at the
+top and common cleanup routines at the bottom.  Rather than ever
+typing "return" throughout the function's body, the programmer will
+set the return value in a local variable then use "goto" to go to the
+end of the function.  All cleanup code is located (or automatically
+installed) at the end of the function, and this code will always get
+executed before the function returns.  This technique can of course be
+scaled down to just scopes within a function, and also scaled up to an
+entire program.  However, when scaling this up to the entire program,
+chances are that it will be even more necessary to automate this
+process, not simply because programmers may forget to do it but also
+because new programmers to a project may not yet be experienced enough
+with a project to know to do that.
+
+Even though a C++ compiler can help with automating some of these
+things, it is not "one true solution" to this problem.  C++, as a
+language, has a few problems of its own.  One such is that it is an
+uneasy cross between a high-level automation tool (the C++ compiler)
+and a low-level language (the language's and compiler's lack of
+garbage collection mechanisms until C++0x).
+
+Here's how the system works: generally, programmers program in plain
+C, and then they run automation tools on top of their output.  If they
+violate the mandated coding conventions, the tool will indicate that
+to the programmer, and offer to automatically fix their error.  So by
+this way, programmers could, if they wanted to, cleanly separate error
+handling from their main logic code, and run a tool on their code to
+put it in.  However, such a development method is risky, because this
+method of programming wrongly assumes that target users of the code
+package will have such tools available.  If they however don't have
+such tools available, they will try to compile the C code as is, and
+will be against the extremely dangerous situation of running a
+sophisticated program without any error-handling mechanisms in it.
+Because such an end-situation is far worse than the alternatives, it
+is thus better to have the error-handling code directly in the code
+that programmers work with.  Even this discussion was one of manual
+error handling!

@@ -1,0 +1,54 @@
+Rules for more natural parser format
+----------------------------------------------------------------------
+
+Even though there are many wide spread hypertext formats out there and
+other text-based configuration formats, those were designed for
+specific purposes that are not quite consistent with the purposes I
+need.  Therefore, it is a good idea to use a simple and more natural
+format for my data storage.
+
+The other parser syntaxes are good, its just that they are oriented
+toward storing program variables in files.  In my case, the data is
+not program variables, but it is meant to be more like what you would
+type in a plain text file if you did not have a specialized program to
+help you.
+
+Here are the rules:
+
+* Generally, tabs can substitute spaces but newlines cannot substitute
+  spaces.
+
+* The data is stored in a plain text file with a '.txt' extension.
+
+* At the beginning of the file, there may be some header information.
+
+* Entries are denoted by having a blank line before them, the text of
+  the entry, a line of dashes 70 columns wide, and then a blank line
+  following.  There must be no trailing spaces in this construct.
+
+* Attributes are specified by having the name on a separate line with
+  no leading spaces, a colon following with no spaces between the
+  colon and last non-whitespace character, a single space after the
+  colon, and then the value following.
+
+* Attributes can be single line, multiline, or verbatim.
+
+* Single line attributes cannot have trailing whitespace.
+
+* Multiline attributes must have a leading space on each line they are
+  broken across and should not have trailing spaces.  Multiline
+  attributes have whitespace varriance unified on reading.
+
+* Verbatim attributes must have a blank line before the attribute
+  name, the attribute name must be on a line of its own and there
+  should be no whitespace after the colon, and then all information up
+  to the next attribute name with a blank line before it or to the end
+  of the entry is part of the verbatim entry.
+
+* Attributes can also be grouped with subheaders.  A subheader has a
+  blank line before it, an asterisk as the first character on the
+  line, a space after that, the heading name, a space following that,
+  and an asterisk at the end of the line.  There should not be any
+  trailing spaces following this.
+
+Now you may look at the organizer sample file for an example.

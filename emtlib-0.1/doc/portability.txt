@@ -1,0 +1,43 @@
+Architecture Independence
+
+Often times, a program may be created that is fairly simple, and could
+be used on a different operating system, except for the fact that the
+two operating systems have incompatible APIs.  Realistically, this
+should not be acceptable, because the job of porting the program to
+the other platform is fairly simple, but for proprietary reasons, it
+often is.
+
+Platform independence can only be truly achieved using intelligent
+computing technology.  However, this program core is designed to be a
+traditional approach to solving a common problem, so that branch of
+technology will not be incorporated in this solution.
+
+Do you still question the previous conjecture?  If not, then you can
+skip this paragraph.  Otherwise, you should read this detailed proof.
+First of all, in order for a program to run on a system, it must be
+binary compatible with that system.  How can a human make a program
+compatible for a system in the absence of knowledge of such a system's
+existence?  They can't, obviously.  Even if the system were binary
+compatible with one of the already made programs, how could the
+programs know how to adapt to such a system with a completely
+different API?  There would be no possible way without intelligent
+computing, because it would not be possible to create a program that
+covers every potential possibility AND manages to fit in the
+requirements of a real-world system.  Therefore, there is no possible
+way to use traditional programming technologies to do something that a
+programmer, and therefore their program, has absolutely no idea about.
+
+It is important to note that free software has already drastically
+facilitated the problem of platform dependence.  However, the
+important differentiation between the already established approach and
+this approach is that this approach is meant to cover low profile and
+obsolete devices too, not just modern computers.  This, of course,
+requires that the program is able to regress back to simpler
+approaches for achieving its application.
+
+Not all applications can be simplified.  It is regarded that those
+applications need not be used with this infrastructure because the
+greatest strength of this infrastructure would be unused.  However,
+most applications can be simplified to some degree.  Even though
+simplification will result in the loss of some features, it is assumed
+to be acceptable to have something rather than nothing.

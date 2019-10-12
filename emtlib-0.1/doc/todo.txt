@@ -1,0 +1,87 @@
+Things that must be done for my emtlib:
+
+* Add compatibility with GLib.
+
+* Add a parser library.
+
+* Add a computer graphics library.
+
+* Add a `substr()' function.
+
+* Complete the code translator.
+
+* Complete a memory leak and/or garbage collector analyzer.
+
+* Promote/advertise other necessary open-source libraries to be used
+  in conjunction with my library: expat, libgc, pthreads.
+
+* Create a string-substitution mechanism that avoids malloc.
+
+* Create a safe shared memory pool for quasi-dynamic memory
+  allocations.
+
+* Create a substring-avoiding character-substitution mechanism.
+
+Document balanced recursive processing: utilization of a job queue.
+
+Document recursion without the hardware stack.
+
+Document how to write parsers in C and give examples.
+
+Write the hybrid list structure.
+
+Document how to optimize serving requests.
+
+In documentation, never write FIXME or TODO within the middle of the
+reading.  Write what needs to be done as a separate document.
+
+In code, avoid leaving in commented out code within the code.  It
+makes readers feel uneasy about the code's reliability.
+
+The way to get started programming is to write programs that are
+useful to you as a programmer.  Start by building a pile of bricks and
+useful programming primitives.  Then build your applications off of
+those primitives.
+
+It turns out that object-oriented programming isn't the most powerful
+programming tool.  Structures and arrays are by far the most powerful
+tool.  In fact, that is why those two elements are endemic to the C
+programming language.
+
+Integer types are not unlimited in size.  I should document the limits
+on various types and how they apply to string buffers.
+
+Document how to use hooks and goto as a safe cleanup mechanism.
+
+Write about PC-style programming versus programming for earlier
+computers.  RAM versus streams.
+
+When you shrink a buffer in place, you can parse it forwards.  When
+you expand a buffer in place, you parse it backwards.
+
+If you cannot expand a buffer in place, it will be more efficient to
+convert and copy the buffer to the destination memory address.
+
+In a single-tasking environment, you're program can lock the rest of
+the available RAM for its own use, and rather than first calculating
+the size of buffers, then allocating that size, you can count,
+allocate, and compute all at the same time.  When your program runs
+out of memory, then it fails and deallocates the memory of the
+computation in progress.  On a big computer, you can do just fine by
+allocating pages of memory at a time, each time allocating another
+page that is continuous in the virtual address space.  The operating
+system will use the MMU built-into the CPU to handle page management.
+Note page faults, invalid page faults, and how the operating system
+handles them.
+
+Is there a generalized way to specify a function that can either
+modify a buffer in place, copy and convert a buffer, or send it
+through a stream pipeline?
+
+Write about encoding efficiency calculations.
+
+Write about data continuation mechanisms.
+
+Write an introduction to automata programming.
+
+Write about how to calculate the big O of a function.

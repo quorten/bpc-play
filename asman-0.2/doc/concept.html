@@ -1,0 +1,505 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>Conceptual Background</title>
+</head>
+<body>
+<h2>1 Introduction &mdash; Where do you stand?</h2>
+
+<p>The concept of backup is straightforward: create a copy of your
+data so that you have a backup in case the original goes down!  But
+when it comes to setting up a backup technology, you'll quickly
+realize that in order to understand which backup technology to use,
+you'll need to understand the nature of yourself and of your system.
+As it turns out, there many backup technologies that are simply not
+right for you.  Some technologies, designed for backup on older
+systems, no longer make sense on the popular, widespread, and economic
+systems available today.  Others are designed for modern systems, but
+only for the biggest of the big.  Thus, you'll need to understand the
+full spectrum of users and uses, both past and present, in order to
+make an informed decision.</p>
+
+<h3>1.1 History of storage and backup</h3>
+
+<p>Looking at snapshots of computers throughout history is very
+telling about where we are with computers today.  For each specific
+computer we analyze here, we look at where its data comes from, what
+it stores, and how its data (or <em>the</em> data, for that matter) is
+backed up.</p>
+
+<p>
+<strong>Computer:</strong> Abacus/Pocket calculator<br />
+<strong>External data:</strong> Manual input by human operator<br />
+<strong>Internal data:</strong> Only temporary working set data<br />
+<strong>Backup style:</strong> None, you just copy out the result of
+  the computation to the sheet of paper you are using to solve your
+  problem
+</p>
+
+<p>
+<strong>Computer</strong>: Punched card tabulator<br />
+<strong>External data:</strong> Programs are hand-wired, data read
+  from punched cards<br />
+<strong>Internal data:</strong> Only temporary working set data<br />
+<strong>Backup style</strong>: None, you just pick up the printed
+  results of the computation
+</p>
+
+<p>
+<strong>Computer:</strong> Minicomputer with 2 MB hard disk
+  drive<br />
+<strong>External data:</strong> Read from any of a variety of sources:
+  teletype terminal, serial cable, electronic sensors, paper tape,
+  magnetic tape, even another computer<br />
+<strong>Internal data:</strong> Programs, text files, large arrays of
+  numbers ("binary data")<br />
+<strong>Backup style:</strong> Copy the entire hard disk drive's
+  contents to a magnetic tape.  Multiple different tapes are
+  maintained in a library to save different images from different
+  backup runs.  This made sense because 1) the entire hard disk
+  drive's contents could be read in a very short amount of time, 2)
+  the disk stored so little data that most of it would have ended up
+  being changed under normal use, and 3) files would be regularly
+  deleted from disk when they are no longer relevant to the current
+  project at hand.
+</p>
+
+<p>
+<strong>Computer:</strong> Early PC microcomputer<br />
+<strong>External data:</strong> Same as minicomputer<br />
+<strong>Internal data:</strong> Only temporary working set data<br />
+<strong>Backup style:</strong> Create a copy of an existing paper
+  tape, magnetic tape, or floppy disk
+</p>
+
+<p>
+<strong>Computer:</strong> Television with video cassette
+  recorder<br />
+<strong>External data:</strong> Broadcast, video input source, or
+  video cassette tape<br />
+<strong>Internal data:</strong> Only temporary working set data<br />
+<strong>Backup style:</strong> None, the entire procedure was
+  forbidden on the grounds of potential copyright infringement.  Only
+  highly authorized users possessed devices that featured copying the
+  contents from one tape to another.
+</p>
+
+<p>
+<strong>Computer:</strong> Desktop computer of 2000-2010s<br />
+<strong>External data:</strong> Same as minicompter<br />
+<strong>Internal data:</strong> Programs, text files, graphics, sound,
+  movies, physically accurate models of objects, databases, archives
+  of old files that might be potentially useful, and more<br />
+<strong>Backup style:</strong> For most users, copy to an external
+  hard drive or to another computer.  Backups must always be
+  incremental, because it now takes an unwieldly amount of time to
+  copy off an entire disk's contents.  For the biggest of the big,
+  data is eventually copied to expensive enterprise-class magnetic
+  tapes.
+</p>
+
+<p>There are two important trends to observe from these snapshots of
+history.</p>
+
+<ol>
+<li>The less storage space computers have, the more the available
+storage space is economized to working set data only.</li>
+
+<li>Growth in available storage space corresponds to growth in viable
+applications.</li>
+</ol>
+
+<h3>1.2 Archival vs. working set data</h3>
+
+<p>Modern computers, with their abundant storage space, are very
+useful for storing archival data.  If you are not an absolute
+minimalist, you probably take advantage of the large storage space
+that modern computers offer so that you can store old files that could
+possibly be of use to you.  If this is the case, then you can roughly
+cut your data into two classes: working set data and archival
+data.</p>
+
+<p>Asman was originally created to manage archival data rather than
+working set data.  Most other backup systems take the opposite route,
+being designed to first manage working set data and second archival
+data.  The Unix `tar', `cpio', and `dump' commands are excellent
+examples.</p>
+
+<p>A key difference between the use patterns of working set data and
+archival data is that working set data tends to change much more
+frequently in its entirety than archival data.  The most common and
+important changes that happen in working set data are file creations,
+modifications, and deletions.  Archival data, in comparison, tends to
+experience a lot of additions and rearranging of files but not many
+modifications and deletions.  Thus, for example, re-copying all files
+to create a backup is reasonably efficient for working set data, but
+for archival data, only the changes should be applied to existing
+backup copies.  Due to the sheer volume of archival data, re-copying
+all of the data would take a prohibitive amount of time.</p>
+
+<p>Here are some tips you should consider if you store archival
+data:</p>
+
+<ul>
+<li>If you store only your working set of data in a computer, chances
+are that you will not need very much storage space.</li>
+
+<li>Should you find yourself using a very large amount of disk space,
+chances are that most of the space consumed is due to archival data.
+If not, you'd very obviously know otherwise.</li>
+
+<li>If you are out of disk space, you should proceed by deleting files
+that are not of use for your immediate project at hand.
+
+<li>For most people, backing up their working set is probably more
+important than backing up archival data, as this was the traditional
+use for backup.  As a matter of fact, most people probably don't need
+archival data.</li>
+
+<li>Manual procedures for backing up working set data are easily
+manageable: just add the step of backing up your data as a regular
+task in your workflow.</li>
+
+<li>Suppose you have a lot of data, but want to downgrade to having
+less data?  No archival data, no exceptions!  Only working set data
+are to be stored on your system.</li>
+
+<li>How far back in time does the working set for the current project
+at hand stretch?  For traditional computer uses, such as typesetting,
+business computing, and simulation, this means only the data needed
+for your current document, your current computation, or your current
+simulation.  Everything else is moot and is a candidate for deletion.
+So for most moderners, their working set probably only stretches back
+in time for 1-6 months.  A year would likely be too long.</li>
+</ul>
+
+<h4>1.2.1 Managing your working set</h4>
+
+<p>The space used to store your working set data is
+your <em>workspace</em>, naturally.  The working set always has
+priority over the archival set, so the working set must always be
+sufficiently sized first.  A size <em>limit</em> should be ideally
+set, so if things get out of hand, you won't have all your archival
+data get wiped out by accident.  Should you need a larger working set,
+you can manually increase the quota later.  If the working set is not
+at full quota, archival may take up the unused space.</p>
+
+<p>Remember, the archival space is always on an abundance basis, when
+storage is abundant and you have extra to spare, you should utilize
+all the space you can.  But when you're out, you're out.  No time for
+nonsense.  Archival no longer makes sense.  Now if archival truly is
+mandatory, then under these definitions, it's part of your working
+set!</p>
+
+<p>Consider this hypothetical on backing up your working set.  You're
+working on a free time project, then you must be suddenly interrupted
+to work on something more important.  What should you do?  You need to
+keep backing up your data.  "But," you say, "I should wait until I'm
+finished before backing up, because then my dataset will be much more
+compact.  If I backup now, I'll be wasting space, and I don't need to
+backup right now, right?"</p>
+
+<p>Wrong.</p>
+
+<p>You need to always make sure you have sufficient space to backup
+your WORKING SET.  It's like at a moment's notice, your progress so
+far is frozen in place by an unexpected blast of dry ice, permanantly
+preserved, because, at a moment's notice, catastrophic failure could
+also destroy all your working set data.  If it's been taking THIS long
+for you to finish the project, all the more better for you to save
+your working set where you are currently at!  And you should always
+allocate sufficient space to backup your working set, because this is
+traditionally the ONLY data that was backed up, NOT archival data.</p>
+
+<p>Naturally, this brings up the point.  You may be working on
+serveral different "projects" concurrently, and for each one, you need
+a separate working set domain with a separate quota.  One big giant
+workspace probably doesn't do it for most people.  Of course, perhaps
+a problem with contemporary operating systems is that disk quotas may
+be provided on only a per-user basis, and users might not be able to
+use the operating system to help them with nested disk quotas, instead
+having to rely on user applications to perform the task
+sub-optimally.</p>
+
+<p>Yet the previous point brings up another point.  How many
+concurrent projects are you working on?  How many are you willing to
+let sit idle for how much time?  If a project is not done, you still
+need a workspace for the project in progress.  For lots of concurrent
+projects, the total workspace size will be very large.  The only ways
+to eliminate the workspace for the project in progress are to
+either <strong>finish</strong> the project or <strong>cancel</strong>
+it.
+
+<p>"But I feel bad to declare it canceled."  Sure, but how bad do you
+feel to have an enormous workspace?  Too many concurrent projects, in
+unwieldly proportions?  So, figure out your concurrency limit and do
+not exceed it.  Of course, you can always change it, but make sure you
+are fully aware of the implications of greater concurrency: Each task
+gets less average attention from you and takes overall longer to
+complete.</p>
+
+<h4>1.2.2 To archive or not to archive?</h4>
+
+<p>Although you can archive all data should you feel so inclined, as a
+practical matter, it is not strictly necessary to archive <em>all</em>
+data.  The first question to ask is "Do you really care about the
+data?"  If you could care less about saving it, then you don't need to
+backup a copy in your personal archives.  Additionally, some data may
+already have sufficient redundancy outside of your personal archives,
+so it may not make sense to provide additional redundancy in your
+personal archives.  Here are some tips in regard to these
+considerations:</p>
+
+<ul>
+<li>Do not backup proprietary data that you do not own.  You do not
+have permission to make copies of the data available <em>to other
+people</em>, although you may make as many personal copies as you
+like.  It is the sole responsibility of the proprietor to maintain
+backup copies, and they incur the full penalty of the irreversible
+loss of the data.  Should you want to save proprietary data, you
+should take your own notes, which you hold the copyright to, and back
+those up.</li>
+
+<li>You don't need to backup downloaded files.  Presumably, there will
+be spare copies elsewhere in the world, but if you really care about
+the data, you can back it up at your choosing.</li>
+
+<li>You don't need to backup mass communications, that is, identical
+communications sent to 20 or more people.  If you have the interest of
+preserving the history, go ahead.  If it is for historians of the
+future, you only need to take a random sample.  If you don't care at
+all, go ahead, get rid of all of it.</li>
+
+<li>Do backup communications that only occurred between you and a
+small handful of other people.</li>
+
+<li>Do backup data for which you are the only one who has a copy.  Do
+backup data that does not have very much external redundancy.</li>
+
+<li>Do backup data for critical systems that serve several people.
+This way, if all else fails, you can come in with your copy to save
+the day.</li>
+</ul>
+
+<h3>1.3 Data magnitudes</h3>
+
+<p>Data in modern computers can be separated into different "storage
+classes," roughly corresponding to how traditional the data is.  Under
+my definitions, measure of traditionality hinges on the amount of
+storage space that the data takes up, so naturally, your data is keyed
+into magnitude storage classes.  Data from a smaller magnitude class
+corresponds to much more <em>data value</em> than the same amount of
+data in a larger magnitude class.  For example, thousands of typed
+stories could be stored in the digital space needed to store just one
+movie!  I'm pretty sure that most people would consider it more
+important to save 1000 typed stories than to save only one movie.</p>
+
+<p>Here is a non-comprehensive listing of storage classes, from
+largest to smallest, along with recommendations on how to decimate the
+data:</p>
+
+<ul>
+<li>Virtual machine hard disk images &mdash; Got important data hidden
+inside a virtual machine hard disk image?  My recommendation would be
+to extract it to a file in the filesystem that contains the disk
+image, and delete the disk image!  If the disk image has an operating
+system on it, that can easily be regenerated from the OS installer
+source data, so the OS installation in the virtual machine need not be
+saved.</li>
+
+<li>Video game art assets &mdash; Uninstall the game if you are not
+going to be using it in the very near future.  You can always
+reinstall it later.</li>
+
+<li>Movies and video files &mdash; Consider converting a movie into a
+picture book with graphics and text interleaved.  This will save you
+on a lot of disk space, yet still allow you to keep the essence of the
+movie/video.</li>
+
+<li>3D models &mdash; Simplify the geometry, or failing that, convert
+the model to design document with text and pictures.  Or just do
+without.  Again, computers have done without this data in the
+past.</li>
+
+<li>Raster images &mdash; Decrease the resolution and color count.
+This is the only way to save space.  Failing that, delete the image.
+Traditionally, photographic images aren't stored on computers for
+long-term use.</li>
+
+<li>Vector images &mdash; Decrease the level of detail.  Failing that,
+delete the image.  Traditionally, rendering vector graphics is
+computationally expensive, so throwing away fine details is okay.
+Failing that, people have done without vector graphics on even older
+computers.</li>
+
+<li>Documents &mdash; Convert documents to plain text files.  Sure,
+you'll have to throw away the images, or convert them to ASCII art,
+but again, people have done without high resolution imagery on
+computers in the past.</li>
+
+<li>Text &mdash; You're already at the lowest possible level.  Your
+only other option is to delete!  I know, it's harsh and results in
+total data loss, but you have no other option.  This includes all
+kinds of text: unformatted text, formatted text, software source code,
+game demo files (compact list of instructions, a.k.a. software source
+code = text!).</li>
+</ul>
+
+<h3>1.4 Systems theory</h3>
+
+<p>One thing to keep in mind is that your collection of data is a
+system.  Oragnisms are systems too, and systems, just like organisms,
+can grow, shrink, or die.  Presumably your data system has been
+already created; otherwise, you wouldn't be here.  Can your system
+really shrink and die?  Maybe.  Shrinking and end of life has been
+observed with many systems, but not all, so it could happen.  This is
+not to think of the worst, but to remember it is still a
+possibility.</p>
+
+<p>Data system growth is easy to manage at an abstract level.  When
+there's more data in the system, just add larger and more
+sophisticated indexing and organization schemes to deal with it.  In
+other words, add more data to deal with more data.  Shrinking, on the
+other hand, is more difficult: You can't add more data to get by with
+less data, that would defeat the purpose!</p>
+
+<p>So, the answer to dealing with less data is archive system pruning.
+Shrinking working space is as easy as cleaning up a project when you
+are done working on it, so the difficult part rests on managing the
+archive space.  The first thing to remember is that none of the
+archive system is strictly necessary, so you can just prune the data
+at random.  Of course, a strategy to perform this process will produce
+better results.</p>
+
+<p>The solution is simple.  You want to prune the data the takes up
+the greatest amount of space but contributes the least useful
+information to your system.  Take a look at my previously-given
+storage classes definitions.  What data is this likely to be?  Yep,
+that's right: big, modern media files.  Start by deleting those first.
+Ideally, you would down-convert the media to a more compact format,
+but failing that, delete.  Also, you want to delete the oldest files,
+as that is farest away from your "working set", and the most
+archival-style data you can chuck.</p>
+
+<p>So, in default pruning mode, you first scan the data, break it up
+into storage classes, select the largest storage class, and delete
+files in order from oldest (preferably least recently used, with reads
+included as "use") to newest until you've freed up enough space.  Then
+you keep doing this with progressively smaller storage classes.  Note
+that you can consider deleting files from large subdirectories before
+considering small subdirectories.</p>
+
+<p>Wait, we have an argument between old versus big.  How do you
+decide between the two?  What if you have a big new file?  Default
+rule: Assume all archival data within a large storage class is
+strictly less necessary than that of a smaller storage class, so you
+delete the big new file before the small old files.</p>
+
+<p>Wait, a problem with this system is that eventually when storage
+space runs out, all large scale data will be wiped out, and only small
+scale data will remain.  Is that what you really want?  Yes, just one
+large scale data file corresponds to an immeasurable amount of small
+scale data, so unless you think you know better, this is probably what
+you want, since it corresponds to the least amount of actual data
+loss.  The whole idea of deleting the big files first is a bit of a
+systems deconstruction theory.  If you are a traditionalist computer
+user, you would strip down to text files at last, then start deleting
+the text files when nothing else works to free up space.</p>
+
+<p>Another pruning method is for the user to put together a data
+importance priority list.  Files and subdirectories near the top of
+the list are considered most important, and those near the bottom of
+the list are considered as first candidates for deletion.</p>
+
+<p>Now, there is more than one way to delete a file or directory when
+it is time.  One way is <em>total decimation</em>, where all contents
+of the file or directory are completely deleted before moving on to
+deleting the next up the list.  Another way is <em>partial
+decimation</em>, where only the big stuff out of one directory is
+deleted (or only part of a file is deleted) before moving on to
+deleting the next up the list.  Last, there is atomic deletion, which
+is <em>total decimation</em> that occurs atomically.  A traditional
+file delete is an example of total decimation.  Here, the assumption
+is the software and user are not capable of handling a partially
+deleted file at a later date.</p>
+
+<p>A general idea that is likely to be useful for shrinking your data
+system is deevolution, winding backwards to how things were like at
+the beginning.  On a holistic level, you can't turn back the clock and
+make today how it was yesterday, even though you can do so with
+archive data in the computer, so don't try to do this.  So, whatever
+you have now that you didn't have at the beginning, get rid of it.
+Say in the beginning, you had only what you've collected the week
+before that day.  To deevolve your current data system to be like the
+original data system, you would delete everything outside the time
+range of one week before today.</p>
+
+<p>Ultimately, when all else fails, systems just suffer catastrophic
+and total destruction.  All data are lost.  If it can't be
+regenerated, then things can never go back to how they were in the
+past.  If there must be a system, only a new beginning can be started,
+from the ground up.  If you had to start all over, what would you
+do?</p>
+
+<p>Think about software development lifecycles, for example.  It's
+actually really easy to write programs from scratch.  In the initial
+stages, most of your time (and money) is spend on technical work,
+adding new code.  Nothing in the way of management, so <em>work</em>,
+as in technical work, tends to get done really, really quickly.
+Overall, the system seems complete and working in the initial stages.
+Then as things scale up, the amount of work that one person can do is
+exceeded, so you cannot maintain your personal data anymore.  Here's a
+lesson from business.  Companies can decimate and go out of business.
+So can the viability of your personal collection of data.  And someone
+else who comes in your place will be able to rebuild something similar
+to what you've built in basically no time and money at all.  So you
+have to ask yourself, are you realistically going to build a company
+over your data?  If not, then the future is that things will start all
+over, building up from the bottom.</p>
+
+<p>If you ever wonder about open-source software projects out there,
+starting from scratch, isn't that a waste when there are existing
+projects to build off of?  Well, now that you know the way software is
+developed, incomplete isn't all that bad, what matters is that there
+are people willing to work on it, and the genesis technical work isn't
+all that hard.  Really, but is this even so when most other people in
+the workforce don't do software development technical work?  Business
+matters, remember that.</p>
+
+<h2>2 Building a backup plan</h2>
+
+<p>Start by identifying your working set data.  Everything else not
+identified is your archival data.  Next, you need
+to <em>partition</em> your data by storage class.  It's likely that
+projects correlate to storage classes.  For example, on one hand, you
+might be working on a multimedia video (large working set space),
+while on the other hand, you might be typing a book (small working set
+space).</p>
+
+<p>How should size the storage classes in relation to each other?  For
+this, you first ask the question in isolation.  Looking at text alone,
+how much characters of text do you need to store?  2 million?  4
+million?  Verify that limit can be satisfied.  Then move on to the
+next storage class, say raster images.  How many raster images of 6
+megapixel resolution do you need to store?  10,000?  20,000?  Verify
+that limit can be satisfied.  Oops!  Out of disk space!  Well if you
+can't even satisfy the requirements for your current project at hand,
+you better expand your storage capacity!</p>
+
+<p>Project-oriented organization works well for archival data, and the
+projects are naturally chronologically ordered.  For non-functional
+computer data, at least.  For functional software tools, there is
+likely to be reusability, so they should be ordered by a different
+manner.</p>
+
+<p>Once you've got the data classification done, you need to select
+the proper backup technology to use.  For the working set data, you
+can use any of a large variety of classical and modern backup
+technologies.  For your personal archival data, there is only one true
+solution: Asman!  So, why don't you get started learning how to use
+the technologies?</p>
+
+</body>
+</html>
