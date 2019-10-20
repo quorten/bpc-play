@@ -1,0 +1,156 @@
+Array and memory block functions
+================================
+
+Yes, a good topic to discuss.  While we're in the midst of defining
+expandable arrays.
+
+Some obvious required primitive is that of array indexing and memory
+block functions.  For the sake of generality, not only do these need
+to be defined on a minimal element size of one byte, but they also
+need to be defined for bits too.  Most notably, bit-wise arrays and
+matrices are used for computer graphics.  But, since we want to be
+mathematical and fully general, we must think in more abstract terms.
+
+* Compute the address of an array element, without bounds checking.
+
+* Compute the address of an array element, with bounds checking.
+
+* Read an element at an address.
+
+* Write an element to an address.
+
+* Block-wise memory copy a continuous range of elements to
+  non-overlapping destination.
+
+* Block-wise memory copy a continuous range of elements to an a
+  overlapping destination.
+
+That's all there is to it!
+
+So, that being said... we have multiple different types of memory
+addresses.  Essentially, the fully general case of address computation
+is that of _address translation_.  The address types must match to be
+used wtih the corresponding functions for read, write, and block-wise
+copy.
+
+Two elements of addresses:
+
+* Element size: bit, byte, 2 bits, 2 bytes, etc.
+
+* Base address: zero, array base address.
+
+Typically, read, write, and memory block copy primitives are defined
+to only operate on "base zero" addresses, so functions that work with
+array objects will receive the base address as a variable and use it
+to compute the base zero address to perform actual operations.
+
+Now, a special case to handle.  Suppose you want to write code to
+operate on bits, but your memory is only addressed by bytes.  How do
+you do this?  Sure, you could write pack and unpack functions, but
+what if you are using this in a loop?  For example, you are plotting a
+line and single-stepping.  You'd like to be more efficient if you
+could.
+
+So... this is a case of buffered reads and writes.  You must fetch a
+large block even when you only operate on a small amount of memory, so
+why not keep it around until you know you do not need it?  Here are
+the additional primitives for buffered reads and writes.
+
+* Read an element at an address, with buffer context.
+
+* Write an element to an address, with buffer context, write-back
+  caching.
+
+* Write an element to an address, with buffer context, write-through
+  caching.
+
+* Write an element to an address, with buffer context, default cache
+  policy.
+
+* Flush cached data in buffer context.
+
+The simplest case of caching assumes locality caching, look ahead a
+maximum of one block.  Also note that a "dirty bit" in the cache is
+optional, if omitted the cache is always assumed to be dirty when
+flushing.  LRU arbitrary block caching is also particularly
+useful... think about the compiler algorithms for register management,
+which variables are cached in registers at what times.
+
+This also brings up...  in the case of segmented addresses, as are
+typical with block-based memory addressing, it often makes sense to
+define special iterator functions.  It's more efficient to single-step
+a blocked address than it is to continuously compute the segmented
+address from the linear address.  The code prefers to use the linear
+address for logical computations, but the segmented address is
+required to access memory.  Most importantly, iterators reduce the
+need to perform extra computations to check that we are still on the
+same block when we access the same address multiple times.  **But**,
+please note that there is no efficiency difference when we only access
+each address once between steps.  Every time we step, we have to check
+if we're on the same block.  However, if blocks are not power-of-two
+sizes, then there are still gains to be made.
+
+* Increment buffer context address, transparently write and read on
+  boundaries.
+
+* Decrement buffer context address, transparently write and read on
+  boundaries.
+
+* Read element at current buffer context address.
+
+* Write element at current buffer context address, write-back caching.
+
+* Write element at current buffer context address, write-through
+  caching.
+
+* Write element at current buffer context address, default cache
+  policy.
+
+----------
+
+Another interesting case that must also be discussed here.  Normally,
+when multiple integer fields are packed together into a single data
+structure, they are aligned to, at the very least, bit boundaries.
+However, it's possible to pack data even tigher than bit boundaries.
+The key is to understand that bit-wise data is, in fact, a type of
+expanded integer notation.
+
+```
+/* Assume little-endian.  */
+struct packed_str
+{
+  uint16 a;
+  uint8 b;
+  uint32 c;
+  uint8 d;
+};
+
+uint64 packed_int =
+  (uint64)a +
+  2**(16) * b +
+  2**(16+8) * c +
+  2**(16+8+32) * d;
+```
+
+Multiplying by a power of two is the same as shifting by the given
+number of bits.  Now, this is easily extendable to the case of
+integers where the maximum values are not a power-of-two minus one.
+
+```
+/* 0 <= a < 17 */
+/* 0 <= b < 120 */
+/* 0 <= c < 49 */
+/* 0 <= d < 14641 */
+
+uint64 packed_int =
+  (uint64)a +
+  17 * b +
+  17*120 * c +
+  17*120*49 * d;
+```
+
+Although this does save space, it is hardly ever used in practice
+because it is computationally expensive.  To extract a field, you must
+perform division and modulo-division operations.  The tradeoff is
+hardly ever worth it for most applications.  Multi-word arithmetic on
+larger data types is especially expensive.
