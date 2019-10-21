@@ -36,6 +36,112 @@ enum ImgIOMode_tag
 	IMGIO_NUL, /* NUL is same as /dev/null */
 	IMGIO_ZERO, /* /dev/zero */
 	IMGIO_CON, /* console */
+	IMGIO_MEM, /* memory, system RAM */
+	IMGIO_TFTP4, /* TFTP stream over UDPv4 socket */
+	IMGIO_HTTP4, /* HTTP stream over TCPv4 socket */
+	IMGIO_TFTP6, /* TFTP stream over UDPv6 socket */
+	IMGIO_HTTP6, /* HTTP stream over TCPv6 socket */
+	IMGIO_SZHEAD = 32, /* read/write a size header */
+	IMGIO_MAGPKT = 64, /* read/write magic packet */
+	/* Output only: Execute after copy to file or memory, or reboot
+	   after copy to disk.  */
+	/* Unless... as an extension, if we specify the target system
+	   type, we can sometimes have a special instruction to run code
+	   or reboot the system that we can send, i.e. if entering to a
+	   monitor program on the destination.  Ah, writing a bootloader
+	   is great guidance for learning what features a monitor program
+	   must include.  Compute checksums in monitor program?  Not only
+	   great for checking for manual entry operator error, but plugs
+	   right into a bootloader.  */
+	IMGIO_BOOT = 128,
+	/* Input only, bi-directional communication link: Send a "ready"
+	   magic packet on initialization.  */
+	/* IMG_RDYPKT = 256 out of range!!!, */
+	/* Decode/encode hexidecimal, read additional bootloader
+	   instructions (flags) from magic packet, disk block offset to
+	   start copying data input and output size, block padding,
+	   checksum verification, duplex communication options for packet
+	   retransmit, show bootloading status on screen, framebuffer
+	   write, virtual keyboard via framebuffer and pointing device,
+	   SLIP, PPP, DHCP, ... */
+	/* Whoah, let's try to tone this thing down.  The virtual keyboard
+	   and input from console?  That's a bit too much.  That's not a
+	   bootloader, that's a front panel control switch or monitor
+	   program.  Okay, okay, cut, carry on.  If a bootloader fails to
+	   bring up one program, it brings up an alternate program, such
+	   as a front panel control switch, monitor, high-level language,
+	   and so on.  */
+	/* What about bootloader menus?  You can have a menu, you can have
+	   a prompt to type the name of a disk image to load...  Okay, I
+	   think we need to scope this out.  Bootloader menus and status
+	   screens, that is something of the more advanced and more modern
+	   bootloaders that may be kind of more like a monitor program,
+	   and they are something different.  Essentially, for menus, what
+	   you're doing is you are loading (booting) a non-bootloader
+	   program, that does its stuff, and then when you return, you
+	   execute a bootloader.  Status screens?  Well, that is
+	   definitely an advanced feature of bootloaders.
+
+	   If it has a menu, it is a Boot Manager, not a Boot Loader.
+
+	   Seriously, when I started out writing my disk imaging program,
+	   it had very little in the way of reporting back status.  And
+	   that is completely fine, it didn't need to be comprehensive in
+	   that regard, that was the responsibility of other supplementary
+	   programs.  What I would like to say is that if you have a
+	   bootloader with status messages, what you technically have two
+	   concurrent programs and the bootloader is simply passing
+	   messages to the optional status program.
+
+	   Okay, that's a great idea, I like it.  Here is the way I'll put
+	   it.  The bootloader status is defined as internal state, but
+	   such state that is stored in a well-defined structure.  Then
+	   you have cooperative multitasking so that the status program
+	   can gain access to the bootloader status variables, update its
+	   displays, and do all that other stuff.  You can then choose
+	   what status program you want to link against, or none at all.
+	   Or, you can even do this.  Via function pointers, you can
+	   bootload a new status program, then run that via the main
+	   bootloading process.  */
+
+	/* Important!  We need to keep a record of sectors in error from
+	   our copies.  Either store up until the end or do an encoded
+	   transfer copy.  */
+
+	/* Yeah, you're right.  When you think about it, pre-emptive
+	   multitasking would be the ideal for the status program, but
+	   failing that, cooperative multitasking is your best bet.  It
+	   works fine via subroutine calls in this paradigm because the
+	   bootloader must be the first process to start, and the
+	   bootloader terminates the status program when loading is
+	   finished, just before transferring control to the new code.  */
+
+	/* I really agree about the external status program thing... once
+	   I started adding status code text strings in here, I looked at
+	   the code and thought this is getting too complicated.  Also, we
+	   do need a such thing as a "bootloader compiler" to generate a
+	   stripped down bootloader including only the code necessary for
+	   the selected variables.  It's definitely nice to have code that
+	   can prpovide all options on hand for you, but for sure, I don't
+	   need all options all the time.  I much better like the idea of
+	   loading a new bootloader with additional logic if you need
+	   something else, rather than defining one single mega
+	   super-stage bootloader that you call back into for subsequent
+	   boot stages and use a coded boot script to control.
+
+	   Go modular.  Define abstract functions and use variables to
+	   control how to link it all together.  Force function inlining
+	   where there is only one caller.  Common stages for modules:
+	   Configure, initialize, execute.  Module types: input, output,
+	   convert.  */
+
+	/* We do, of course, have compile-time and runtime options since
+	   we do allow plugging in user interface front-ends to select
+	   options beyond compile-time.  Okay... well the main point of
+	   this is if you want a disk image copying utility, rather than a
+	   bootloader.  But I digress.  That's the added layer of
+	   complexity when you design a disk image utility to also double
+	   as a bootloader.  */
 };
 typedef enum ImgIOMode_tag ImgIOMode;
 
@@ -47,6 +153,44 @@ struct CHSAddr_tag
 	unsigned char sector;
 };
 typedef struct CHSAddr_tag CHSAddr;
+
+/* Source or destination IPv4 address, port number, and filename.  */
+struct IPv4Src_tag
+{
+	unsigned long ip;
+	unsigned short port;
+	char *filename;
+};
+typedef struct IPv4Src_tag IPv4Src;
+
+/* Source or destination IPv6 address, port number, and filename.  */
+struct IPv6Src_tag
+{
+	unsigned char ip[16];
+	unsigned short port;
+	char *filename;
+};
+typedef struct IPv6Src_tag IPv6Src;
+
+/* Options in common with either a source or a destination.  */
+struct SrcOpt_tag
+{
+	unsigned char mode;
+	union
+	{
+		unsigned char num; /* Device ID number */
+		char* filename;
+		IPv4Src *ipv4src; /* IPv4 address, port, file */
+		IPv6Src *ipv6src; /* IPv6 address, port, file */
+	} id;
+	unsigned long size;
+	CHSAddr dsize;
+	union
+	{
+		CHSAddr addr;
+		FILE* fp;
+	} work;
+};
 
 /* Multiply and divide by power-of-two by shifting.  This fast
    implementation divide by power of two by shifting is only accurate
