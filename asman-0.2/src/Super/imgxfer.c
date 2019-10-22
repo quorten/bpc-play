@@ -290,7 +290,7 @@ int main(int argc, char* argv[])
 	}
 
 	/* Initialize input devices and variables.  */
-	if (in_mode == IMGIO_FLOPPY || in_mode == IMGIO_FDISK)
+	if (/* in_mode == IMGIO_FLOPPY || */ in_mode == IMGIO_FDISK)
 	{
 		result = get_dsize(in_id, &in_dsize);
 		if (result != 0)
@@ -303,7 +303,7 @@ int main(int argc, char* argv[])
 		in_size = MUL_512(compute_lba_size(&in_dsize));
 	}
 	/* Initialize output devices and variables.  */
-	if (out_mode == IMGIO_FLOPPY || out_mode == IMGIO_FDISK)
+	if (/* out_mode == IMGIO_FLOPPY || */ out_mode == IMGIO_FDISK)
 	{
 		result = get_dsize(out_id, &out_dsize);
 		if (result != 0)
@@ -328,6 +328,7 @@ int main(int argc, char* argv[])
 
 	for (i = 0; i < in_size; i += buffer_size)
 	{
+		unsigned long read_size = buffer_size;
 		/* Bad sector flagging */
 		j = 0;
 		while (j < buffer_size)
@@ -337,25 +338,29 @@ int main(int argc, char* argv[])
 			buffer[j++] = 'D';
 			buffer[j++] = ' ';
 		}
+		/* Check if we have a non-divisible block size at the
+		   end.  */
+		if (i + buffer_size > in_size)
+			read_size = in_size - i;
 
 		/* Actual read/write operation */
 		switch (in_mode)
 		{
 		case IMGIO_FILE:
-			fread(buffer, 512, DIV_512(buffer_size), in_fp);
+			fread(buffer, 512, DIV_512(read_size), in_fp);
 			break;
 		case IMGIO_FLOPPY:
-			/* result = absread(in_id, DIV_512(buffer_size), DIV_512(i), buffer);
+			result = absread(in_id, DIV_512(read_size), DIV_512(i), buffer);
 			if (result != 0)
 				fprintf(stderr, "Error on disk input: %d\n", result);
-			break; */
+			break;
 		case IMGIO_FDISK:
-			result = disk_bufop(2, &in_daddr, &in_dsize, DIV_512(buffer_size), buffer);
+			result = disk_bufop(2, &in_daddr, &in_dsize, DIV_512(read_size), buffer);
 			if (result != 0)
 				fprintf(stderr, "Error on disk input: %d\n", result);
 			break;
 		case IMGIO_COM:
-			for (j = 0; j < buffer_size; j++)
+			for (j = 0; j < read_size; j++)
 			{
 				result = bioscom(2, 0, in_id);
 				buffer[j] = (unsigned char)result;
@@ -366,10 +371,10 @@ int main(int argc, char* argv[])
 			break;
 		case IMGIO_NUL:
 		case IMGIO_ZERO:
-			memset(buffer, 0, buffer_size);
+			memset(buffer, 0, read_size);
 			break;
 		case IMGIO_CON:
-			for (j = 0; j < buffer_size; j++)
+			for (j = 0; j < read_size; j++)
 			{
 				result = getchar();
 				buffer[j] = (unsigned char)result;
@@ -379,26 +384,26 @@ int main(int argc, char* argv[])
 		switch (out_mode)
 		{
 		case IMGIO_FILE:
-			fwrite(buffer, 512, DIV_512(buffer_size), out_fp);
+			fwrite(buffer, 512, DIV_512(read_size), out_fp);
 			break;
 		case IMGIO_FLOPPY:
-			/* result = abswrite(out_id, DIV_512(buffer_size), DIV_512(i), buffer);
+			result = abswrite(out_id, DIV_512(read_size), DIV_512(i), buffer);
 			if (result != 0)
 				fprintf(stderr, "Error on disk output: %d\n", result);
-			break; */
+			break;
 		case IMGIO_FDISK:
-			result = disk_bufop(3, &out_daddr, &out_dsize, DIV_512(buffer_size), buffer);
+			result = disk_bufop(3, &out_daddr, &out_dsize, DIV_512(read_size), buffer);
 			if (result != 0)
 				fprintf(stderr, "Error on disk output: %d\n", result);
 			break;
 		case IMGIO_COM:
-			for (j = 0; j < buffer_size; j++)
+			for (j = 0; j < read_size; j++)
 			{
 				result = bioscom(1, buffer[j], out_id);
 			}
 			break;
 		case IMGIO_LPT:
-			for (j = 0; j < buffer_size; j++)
+			for (j = 0; j < read_size; j++)
 			{
 				result = biosprint(0, buffer[j], out_id);
 			}
@@ -407,7 +412,7 @@ int main(int argc, char* argv[])
 		case IMGIO_ZERO:
 			break;
 		case IMGIO_CON:
-			for (j = 0; j < buffer_size; j++)
+			for (j = 0; j < read_size; j++)
 				result = putchar(buffer[j]);
 			break;
 		}
