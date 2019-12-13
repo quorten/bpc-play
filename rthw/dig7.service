@@ -1,0 +1,6 @@
+[Unit]
+Description=Run the 7-segment demo
+[Service]
+ExecStart=/home/pi/src/rthw/dig7
+[Install]
+WantedBy=multi-user.target

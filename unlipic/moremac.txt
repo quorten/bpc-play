@@ -1,0 +1,160 @@
+Yet another macro language!  Very similar to the previous ones.
+
+Commas and parentheses are whitespace, macros get fixed number of
+inputs, return symbol (i.e. "text") output.  Eager expansion rather
+than lazy expansion, except when defining macro bodies.
+
+Macro language:
+
+.macro NAME ARG1 ARG2 ARG3 ...
+.begin
+.define NAME VALUE
+.equ NAME VALUE
+.undef NAME
+.paste TOKEN1 TOKEN2
+
+.def TOKEN1 ; defined
+.ndef TOKEN1 ; not defined
+
+.not VAL
+.and VAL1 VAL2
+.or VAL1 VAL2
+.eq VAL1 VAL2
+.neq VAL1 VAL2
+.gt VAL1 VAL2
+.lt VAL1 VAL2
+.gte VAL1 VAL2
+.lte VAL1 VAL2
+
+.bnot VAL1
+.band VAL1 VAL2
+.bor VAL1 VAL2
+.bxor VAL1 VAL2
+.shl VAL1 VAL2
+.shr VAL1 VAL2
+.neg TOKEN
+.inc TOKEN
+.dec TOKEN
+.add VAL1 VAL2
+.sub VAL1 VAL2
+.mul VAL1 VAL2
+.div VAL1 VAL2
+.mod VAL1 VAL2
+
+.ldb VAL ADDR ; load byte
+.stb VAL ADDR
+.ldw VAL ADDR ; load 16-bit word
+.stw VAL ADDR
+.ldl VAL ADDR ; load 32-bit word
+.stl VAL ADDR
+.call ADDR
+.native ; Define a "native" macro, short-hand for .macro .call
+
+.ubase ; user free space base address
+.ulim ; user free space limit address, possibly user-adjustable
+
+.if CONDITION
+.elif CONDITION
+.else
+.endif
+.end
+
+Looping via tail recursion, cause we want to discourage it overall in
+a simple macro language, of course!
+
+Defines are global, so we don't need to implement scoping, that means
+less code for the macro engine.  Likewise, we don't implement name
+trees, less code though at the expense of performance in the simplest
+engines, but possible is better than impossibly complicated.  Use
+token pasting instead.  We also do not provide `.eval' for the same
+reason.
+
+Okay, okay, enough of this nonsense.  We can literally write out
+memory bytes and then jump to a custom machine code subroutine to
+execute a macro.  There, fate is sealed with a host-generated compiler
+for complex macros.  Obviously, load and store required a defined
+memory model, maybe even more macros for a symbolic base address and
+limit.
+
+Okay, let's rehash the key point.  MINIMAL CODE!!!!  Okay?
+
+Yes, but this does seem to be a higher-level implementation of an
+Apple II Monitor + BASIC interpreter.  Or I should just say different
+syntax, but same idea.
+
+Anyways... machine code assembler is defined as follows:
+
+Machine source code -> macros per instruction -> hex byte codes ->
+machine code
+
+But must come in only simple macro format, otherwise you need an
+operator translator in front.  For example, instead of:
+
+1 + 1
+
+You translate to (one of the following):
+
++ 1 1
++(1, 1)
+add(1, 1)
+add 1, 1
+
+Examples of most important translations for assembly language, "name
+mangling" is used:
+
+add ax, *bx -> add_indir2_reg ax, bx
+add ax, [bx] -> add_indir2_reg ax, bx
+add ax, bx[0] -> add_indir2_reg ax, bx
+add ax, bx[3] -> add_indir2_reg_imm ax, bx, 3
+add ax, bx[3+cx] -> add_indir2_reg_imm_reg ax, bx, 3, cx
+add ax, [bx+3+cx] -> add_indir2_reg_imm_reg ax, bx, 3, cx
+add ax, bx[3+cx*2] -> add_indir2_reg_imm_reg_stride ax, bx, 3, cx, 2
+
+And after the name mangling, your macro bodies do all the magic in
+translating to hex byte codes, which can then be sent via a pipe
+interface to a "binary monitor" program to write to memory.
+
+Obviously, this is going to be slower than a more straight-line
+implementation, but at least it is comprehensible for a novice
+compiler developer.
+
+The point, more important than anything else, is to make something
+that is clearly comprehensible to compiler novices, and this satisfies
+that goal.  At the same time, without being "unnecessarily esoteric"
+by using uncommon syntax as is the case with Lisp and Forth.
+Elimination of varargs is the primary simplifying assumption.
+
+What's the difference between a macro engine and a programming
+language?  A programming language only processes valid syntax in the
+language, anything else is an error.  A macro engine just passes
+through its input by default, and only processes and converts
+recognized syntax.
+
+Actually, a macro engine is a pretty good idea over a programming
+language.  Suppose you just want to write literal text into memory
+from boot.  With a few redirect commands, there you go, you get this
+function for free from a macro engine.  But a programming language,
+well you're going to need to write a program for that matter.
+Obviously not as good as having a line-based text editor, but better
+than nothing.  You can edit the current line, but to edit previous
+lines you need to use memory move macros.
+
+And issuing a pipe command line to run.  Wow, you've pretty much got
+it all then, everything you can do in memory without a filesystem.
+
+----------
+
+Okay, okay, UPDATE!!!  In so far that Forth is the substrate of
+PostScript, I must support it, so that means I might as well think a
+few steps ahead to be able to implement it in an elegant and
+code-saving manner.  And if I must have Forth in the system anyways,
+OpenFirmware is not too much of a jump either.
+
+I must support PostScript, of course, because I must support graphical
+user interfaces, complete with a printing interface, and PostScript is
+one of the best default printing driver, besides bitmap image output.
+
+I guess, that being said, surely I need to also have support for Lisp.
+So, nonetheless, even though those are "esoteric" languages, they must
+be somehow  supported anyways because  they are the substrate  of some
+very important niche applications in modern computing.

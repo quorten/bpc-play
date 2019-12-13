@@ -22,8 +22,49 @@ mathematical and fully general, we must think in more abstract terms.
 * Block-wise memory copy a continuous range of elements to
   non-overlapping destination.
 
+    * Copy a full, aligned block.
+
+    * Copy a partial, unaligned block.
+
+    * Copy first unaligned block.
+
+    * Copy last unaligned block.
+
 * Block-wise memory copy a continuous range of elements to an a
   overlapping destination.
+
+    * If unaligned block copies are supported, this is fairly
+      straightforward:
+
+        * Block-wise unaligned copy starting from beginning.
+
+        * Block-wise unaligned copy starting from end.
+
+    * However, if unaligned block copies are not supported, this is
+      tougher.  The easiest way to implement is to restrict the block
+      size to the distance being moved.  Perhaps a more efficient
+      method would be to use shifting and rotating on blocks so that
+      we can write aligned blocks in the middle, and only need to
+      write partial blocks at the beginning and end.
+
+        * Copy blocks with shifting.
+
+            * Block shift in zeros, discard overflow.
+
+            * Block shift in undefined garbage, discard overflow.
+
+            * Use partial block copy to shift in partial block.
+
+            * Block rotate.
+
+            * "Arithmetic shift right" has only one practical use
+              case.
+
+* Blocks can be defined hierarchically... For example, single bits,
+  8-bit byte blocks, 2-byte blocks, 4-byte blocks, 8-byte blocks,
+  4096-byte blocks.  In this case, the sub-operand block types are
+  recursively used at the beginning and end of unaligned top-level,
+  but straight-through copies are used in the middle.
 
 That's all there is to it!
 
@@ -154,3 +195,24 @@ because it is computationally expensive.  To extract a field, you must
 perform division and modulo-division operations.  The tradeoff is
 hardly ever worth it for most applications.  Multi-word arithmetic on
 larger data types is especially expensive.
+
+----------------------------------------
+
+Applications
+============
+
+What are all the applications where block-wise caching memory
+functions are used?
+
+* `memcpy()`, of course!
+
+* `bitblt()`
+
+* Filesystem routines
+
+* Disk caching
+
+* Virtual memory routines
+
+Suffice it to say, **a lot** of similar problems can be solved from
+essentially the same code base, if it is written carefully.
