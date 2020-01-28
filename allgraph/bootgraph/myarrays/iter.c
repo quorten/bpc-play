@@ -21,23 +21,46 @@ typedef struct int_array_piter_tag int_array_piter;
 
 /* Abstract methods.  */
 
+/* PLEASE NOTE: Not all specific instantiation classes need to
+   implement all of these abstract methods.  For some data structures,
+   implementing the method may come at a considerable performance
+   penalty.  In order to discourage some types of programming patterns
+   when using particular data structures, you may opt to design your
+   structure so that it explicitly does not implement the slow
+   operations in a base class, and then provide a derived class that
+   does implement the slow methods.  */
+
 /* Special methods to access object, GET and SET methods.  Not just
    literal access to an object address, but to also provide encoding
    and decoding as may be necessary with packed pixels, for example.
    Especially we need separate "read" and "write" methods for the sake
    of caches, and with pixels, we might only care to write without
    first reading.  */
+/* N.B. For complex data, we should implement the ability to get a
+   pointer and use a lock/unlock protocol.  Otherwise we copy the
+   whole object unnecessarily.  In this case, if the primary object is
+   literal data, we can get a pointer to the object rather than
+   copying the object in full.  */
 #define APITER_GET_OBJ(iter) (iter.data->d[iter.idx])
-#define APITER_SET_OBJ(iter, val) iter.data->d[iter.idx] = val;
+#define APITER_SET_OBJ(iter, val) iter.data->d[iter.idx] = val
+#define APITER_GET_POBJ(iter) (iter.data->d + iter.idx)
+#define APITER_RDLOCK_OBJ(iter)
+#define APITER_WRLOCK_OBJ(iter)
+#define APITER_UNLOCK_OBJ(iter)
+/* But otherwise, if you really know what you are doing and are
+   confident that your code has no programming errors, you can use
+   SET_DIRTY directly without the lock/unlock discipline.  Or you
+   could do other complex things with this set of primitives.  */
+#define APITER_SET_DIRTY(iter)
 
-#define APITER_FIRST(iter) iter.idx = 0;
-#define APITER_LAST(iter) iter.idx = iter.data->len - 1;
-#define APITER_NTH(iter, n) iter.idx = n;
-#define APITER_NTH_REV(iter, n) iter.idx = iter.data->len - 1 - n;
-#define APITER_NEXT(iter) iter.idx++;
-#define APITER_PREV(iter) iter.idx--;
-#define APITER_NEXT_N(iter, n) iter.idx += n;
-#define APITER_PREV_N(iter, n) iter.idx -= n;
+#define APITER_FIRST(iter) iter.idx = 0
+#define APITER_LAST(iter) iter.idx = iter.data->len - 1
+#define APITER_NTH(iter, n) iter.idx = n
+#define APITER_NTH_REV(iter, n) iter.idx = iter.data->len - 1 - n
+#define APITER_NEXT(iter) iter.idx++
+#define APITER_PREV(iter) iter.idx--
+#define APITER_NEXT_N(iter, n) iter.idx += n
+#define APITER_PREV_N(iter, n) iter.idx -= n
 
 #define APITER_IS_FIRST(iter) (iter.idx == 0)
 #define APITER_IS_LAST(iter) (iter.idx == iter.data->len - 1)
@@ -70,8 +93,38 @@ typedef struct int_array_piter_tag int_array_piter;
 #define APITER_INSERT_AFTER(iter)
 #define APITER_DELETE(iter)
 
-/* TODO: Auto-increment, auto-decrement access.  So you can emulate a
-   stream in full.  */
+/* Auto-increment, auto-decrement access.  So you can emulate a stream
+   in full.  N.B. Normally with auto-increment/decrement, we copy the
+   data rather than read/write in place.  Because if we did, then it
+   would make more sense to use the multiple-routine approach.  */
+#define APITER_GET_OBJ_NEXT(iter, result) \
+  result = APITER_GET_OBJ(iter); \
+  APITER_NEXT(iter);  
+#define APITER_SET_OBJ_NEXT(iter, val) \
+  APITER_SET_OBJ(iter, val); \
+  APITER_NEXT(iter);
+#define APITER_GET_OBJ_PREV(iter, result) \
+  result = APITER_GET_OBJ(iter); \
+  APITER_PREV(iter);  
+#define APITER_SET_OBJ_PREV(iter, val) \
+  APITER_SET_OBJ(iter, val); \
+  APITER_PREV(iter);
+
+/* TODO: Error handling on NEXT/PREV.  What if there isn't one
+   available?  Three options, either do an undefined action that will
+   generally not result in erroneous behavior
+   (incrementing/decrementing index without bounds checking), silently
+   fail, or return an error.  If you return an error C-style, silently
+   fail is the same as return an error but you ignore the error return
+   value.  */
+
+/* NOTE: Not only is this an iterator, but in fact it is a full
+   programmatic memory access interface.  You can implement any kind
+   of caching possible behind this interface.  Locality, Sequential
+   access, random access, etc.
+
+   You can also implement an interface to a pipe through this, and
+   insert your coroutine switching in there.  */
 
 /*
 
