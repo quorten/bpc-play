@@ -14,7 +14,7 @@ if [ $# -eq 2 ]; then
 fi
 
 if [ $# -eq 1 ]; then
-  ls --time-style="+%F %T %z" -l $1 | awk '{ print "GIT_AUTHOR_DATE=\""$6" "$7" "$8"\" GIT_COMMITTER_DATE=\""$6" "$7" "$8"\" git add \""$9"\" && GIT_AUTHOR_DATE=\""$6" "$7" "$8"\" GIT_COMMITTER_DATE=\""$6" "$7" "$8"\" git commit -m \"Save file.\" \""$9"\"" }'
+  ls --time-style="+%F %T %z" -l "$1" | awk '{ print "GIT_AUTHOR_DATE=\""$6" "$7" "$8"\" GIT_COMMITTER_DATE=\""$6" "$7" "$8"\" git add \"'"$1"'\" && GIT_AUTHOR_DATE=\""$6" "$7" "$8"\" GIT_COMMITTER_DATE=\""$6" "$7" "$8"\" git commit -m \"Save file.\" \"'"$1"'\"" }'
   exit
 fi
 
