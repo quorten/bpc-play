@@ -100,7 +100,7 @@ typedef abidx_ar3 AMTri_bridx;
 struct Eqs_brvec_tag
 {
   abvec v; /* "left" side of vector equation */
-  abnum right;
+  abnum offset; /* "right" side of vector equation */
 };
 typedef struct Eqs_brvec_tag Eqs_brvec;
 

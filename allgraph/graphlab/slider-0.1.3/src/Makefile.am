@@ -44,6 +44,7 @@ slider_SOURCES = \
 	support.c support.h \
 	interface.c interface.h \
 	callbacks.c callbacks.h \
+	ivecmath.c ivecmath.h \
 	gawrapper.h
 
 slider_LDADD = $(PACKAGE_LIBS) $(INTLLIBS)

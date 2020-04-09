@@ -44,6 +44,8 @@ DAMAGE.  */
 #include "interface.h"
 #include "support.h"
 
+#include "ivecmath.h"
+
 /** Keeps track of whether the user has unsaved changes in the current
     file.  */
 gboolean file_modified = TRUE;
@@ -325,14 +327,60 @@ wavrnd_expose (GtkWidget * widget, GdkEventExpose * event, gpointer user_data)
       /* Render point on line.  */
       pp.x = p1.x + op.x * v1.x / v1_length_2;
       pp.y = p1.y + op.x * v1.y / v1_length_2;
+      /* Alternate method, use perpendicular, works just as well.
+	 (See later discussion for subtracting.)  */
+      /* pp.x = p3.x - op.y * vt.x / v1_length_2;
+      pp.y = p3.y - op.y * vt.y / v1_length_2; */
       gdk_draw_line (widget->window, wr_gc, p3.x, p3.y, pp.x, pp.y);
-      /* pt_rect.x = pp.x - 5;
-      pt_rect.y = pp.y - 5;
-      pt_rect.width = 10;
-      pt_rect.height = 10;
-      gdk_draw_rectangle
-	(widget->window, wr_gc, TRUE,
-	 pt_rect.x, pt_rect.y, pt_rect.width, pt_rect.height); */
+      {
+	/* Use our spiffy new subroutines to compute perpendiculars
+	   and solutions.  */
+	IVPoint2D_i32 n_p1 = {{ p1.x, p1.y }};
+	IVVec2D_i32 n_p3 = {{ p3.x, p3.y }};
+	IVVec2D_i32 n_v1 = {{ v1.x, v1.y }};
+	IVVec2D_i32 n_v2 = {{ v2.x, v2.y }};
+	IVVec2D_i32 n_vt = {{ -v1.y, v1.x }};
+	IVVec2D_i32 n_v3 = {{ v3.x, v3.y }};
+	IVRay_v2i32 n_plane = { n_vt, n_p1 };
+	IVVec2D_i32 n_pp;
+
+	iv_proj3_v2i32_Ray_v2i32(&n_pp, &n_p3, &n_plane);
+	pt_rect.x = n_pp.d[IX] - 5;
+	pt_rect.y = n_pp.d[IY] - 5;
+	pt_rect.width = 10;
+	pt_rect.height = 10;
+	gdk_draw_rectangle
+	  (widget->window, wr_gc, TRUE,
+	  pt_rect.x, pt_rect.y, pt_rect.width, pt_rect.height);
+
+	iv_isect3_Ray_v2i32(&n_pp, &n_v3, &n_plane);
+
+	if (n_pp.d[IX] != IVINT32_MIN) {
+	  pt_rect.x = n_pp.d[IX] - 5;
+	  pt_rect.y = n_pp.d[IY] - 5;
+	  pt_rect.width = 10;
+	  pt_rect.height = 10;
+	  gdk_draw_rectangle
+	    (widget->window, wr_gc, TRUE,
+	     pt_rect.x, pt_rect.y, pt_rect.width, pt_rect.height);
+	}
+
+	/* pt_rect.x = n_p3.d[IX] - 5;
+	pt_rect.y = n_p3.d[IY] - 5;
+	pt_rect.width = 10;
+	pt_rect.height = 10;
+	gdk_draw_rectangle
+	  (widget->window, wr_gc, TRUE,
+	   pt_rect.x, pt_rect.y, pt_rect.width, pt_rect.height); */
+
+        /* pt_rect.x = n_p1.d[IX] + n_v2.d[IX] - 5;
+	pt_rect.y = n_p1.d[IY] + n_v2.d[IY] - 5;
+	pt_rect.width = 10;
+	pt_rect.height = 10;
+	gdk_draw_rectangle
+	  (widget->window, wr_gc, TRUE,
+	   pt_rect.x, pt_rect.y, pt_rect.width, pt_rect.height); */
+      }
       /* Compute other point on perpendicular.  */
       /* pc.x = pp.x + op.y * vt.x / vt_length_2;
       pc.y = pp.y + op.y * vt.y / vt_length_2;
@@ -398,10 +446,10 @@ wavrnd_expose (GtkWidget * widget, GdkEventExpose * event, gpointer user_data)
       /* If the scaling constant is negative, that means we're facing
 	 the wrong direction, so don't bother drawing the
 	 solution.  */
-      if (sfac >= 0)
+      /* if (sfac >= 0)
 	gdk_draw_rectangle
 	  (widget->window, wr_gc, TRUE,
-	   pt_rect.x, pt_rect.y, pt_rect.width, pt_rect.height);
+	   pt_rect.x, pt_rect.y, pt_rect.width, pt_rect.height); */
     }
 
     // u + v == parallelogram

@@ -80,11 +80,11 @@ am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am__slider_SOURCES_DIST = binreloc.c binreloc.h main.c doxygen.h \
 	support.c support.h interface.c interface.h callbacks.c \
-	callbacks.h gawrapper.h app.rc
+	callbacks.h ivecmath.c ivecmath.h gawrapper.h app.rc
 am__objects_1 =
 am_slider_OBJECTS = binreloc.$(OBJEXT) main.$(OBJEXT) \
 	support.$(OBJEXT) interface.$(OBJEXT) callbacks.$(OBJEXT) \
-	$(am__objects_1)
+	ivecmath.$(OBJEXT) $(am__objects_1)
 slider_OBJECTS = $(am_slider_OBJECTS)
 am__DEPENDENCIES_1 =
 slider_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
@@ -232,7 +232,7 @@ INCLUDES = \
 
 slider_SOURCES = binreloc.c binreloc.h main.c doxygen.h support.c \
 	support.h interface.c interface.h callbacks.c callbacks.h \
-	gawrapper.h $(am__append_1)
+	ivecmath.c ivecmath.h gawrapper.h $(am__append_1)
 slider_LDADD = $(PACKAGE_LIBS) $(INTLLIBS) $(am__append_2)
 all: all-am
 
@@ -318,6 +318,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/binreloc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/callbacks.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/interface.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ivecmath.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/support.Po@am__quote@
 
