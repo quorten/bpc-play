@@ -242,7 +242,7 @@ IVint32 iv_dist2_v2i32_Eqs_v2q16i32(IVVec2D_i32 *a, IVEqs_v2i32 *b)
    L_rel_P = L - P;
    dot_product(L_rel_P, A) / magnitude(A);
 */
-IVint32 iv_dist2_v2i32_Ray_v2i32(IVVec2D_i32 *a, IVRay_v2i32 *b)
+IVint32 iv_dist2_v2i32_NRay_v2i32(IVVec2D_i32 *a, IVNRay_v2i32 *b)
 {
   IVVec2D_i32 l_rel_p;
   iv_sub3_v2i32(&l_rel_p, a, &b->p0);
@@ -269,8 +269,8 @@ IVint32 iv_dist2_v2i32_Ray_v2i32(IVVec2D_i32 *a, IVRay_v2i32 *b)
 
    L - A * (dot_product(L, A) - d) / dot_product(A, A)
 */
-IVVec2D_i32 *iv_proj3_v2i32_Eqs_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b,
-				      IVEqs_v2i32 *c)
+IVPoint2D_i32 *iv_proj3_p2i32_Eqs_v2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b,
+					IVEqs_v2i32 *c)
 {
   IVVec2D_i32 t;
   /* TODO VERIFY PRECISION: offset is only 32 bits? */
@@ -294,8 +294,8 @@ IVVec2D_i32 *iv_proj3_v2i32_Eqs_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b,
    L_rel_P = L - P;
    L - A * dot_product(L_rel_P, A) / dot_product(A, A);
 */
-IVVec2D_i32 *iv_proj3_v2i32_Ray_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b,
-				      IVRay_v2i32 *c)
+IVPoint2D_i32 *iv_proj3_p2i32_NLine_v2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b,
+					  IVNLine_v2i32 *c)
 {
   IVVec2D_i32 l_rel_p;
   IVVec2D_i32 t;
@@ -325,8 +325,9 @@ IVVec2D_i32 *iv_proj3_v2i32_Ray_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b,
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.
 */
-IVVec2D_i32 *iv_bisect3_Eqs_v2i32(IVVec2D_i32 *a, IVRay_v2i32 *b,
-				  IVEqs_v2i32 *c)
+IVPoint2D_i32 *iv_isect3_InLine_Eqs_v2i32(IVPoint2D_i32 *a,
+					  IVInLine_v2i32 *b,
+					  IVEqs_v2i32 *c)
 {
   IVVec2D_i32 t;
   IVint64 d;
@@ -362,8 +363,9 @@ IVVec2D_i32 *iv_bisect3_Eqs_v2i32(IVVec2D_i32 *a, IVRay_v2i32 *b,
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.
 */
-IVVec2D_i32 *iv_bisect3_Ray_v2i32(IVVec2D_i32 *a, IVRay_v2i32 *b,
-				  IVRay_v2i32 *c)
+IVPoint2D_i32 *iv_isect3_InLine_NLine_v2i32(IVPoint2D_i32 *a,
+					    IVInLine_v2i32 *b,
+					    IVNLine_v2i32 *c)
 {
   IVVec2D_i32 l_rel_p;
   IVVec2D_i32 t;
@@ -403,8 +405,8 @@ IVVec2D_i32 *iv_bisect3_Ray_v2i32(IVVec2D_i32 *a, IVRay_v2i32 *b,
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.
 */
-IVVec2D_i32 *iv_isect3_Eqs_v2i32(IVVec2D_i32 *a, IVRay_v2i32 *b,
-				 IVEqs_v2i32 *c)
+IVPoint2D_i32 *iv_isect3_Ray_Eqs_v2i32(IVPoint2D_i32 *a, IVRay_v2i32 *b,
+				       IVEqs_v2i32 *c)
 {
   IVVec2D_i32 t;
   IVint64 n, d;
@@ -450,8 +452,8 @@ IVVec2D_i32 *iv_isect3_Eqs_v2i32(IVVec2D_i32 *a, IVRay_v2i32 *b,
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.
 */
-IVVec2D_i32 *iv_isect3_Ray_v2i32(IVVec2D_i32 *a, IVRay_v2i32 *b,
-				 IVRay_v2i32 *c)
+IVPoint2D_i32 *iv_isect3_Ray_NLine_v2i32(IVPoint2D_i32 *a, IVRay_v2i32 *b,
+					 IVNLine_v2i32 *c)
 {
   IVVec2D_i32 l_rel_p;
   IVVec2D_i32 t;
@@ -480,7 +482,7 @@ IVVec2D_i32 *iv_isect3_Ray_v2i32(IVVec2D_i32 *a, IVRay_v2i32 *b,
 
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.  */
-IVVec2D_i32 *iv_solve2_s2_Eqs_v2i32(IVVec2D_i32 *a, IVSys2_Eqs_v2i32 *b)
+IVPoint2D_i32 *iv_solve2_s2_Eqs_v2i32(IVPoint2D_i32 *a, IVSys2_Eqs_v2i32 *b)
 {
   IVVec2D_i32 *v0 = &b->d[0].v;
   IVRay_v2i32 ray;
@@ -492,14 +494,16 @@ IVVec2D_i32 *iv_solve2_s2_Eqs_v2i32(IVVec2D_i32 *a, IVSys2_Eqs_v2i32 *b)
   ray.v.d[IX] = -v0->d[IY];
   ray.v.d[IY] = v0->d[IX];
   /* Now intersect the ray with the plane (line in 2D).  */
-  return iv_bisect3_Eqs_v2i32(a, &ray, &b->d[0]);
+  return iv_isect3_InLine_Eqs_v2i32(a, &ray, &b->d[0]);
 }
 
-/* Solve a system of two ray-format linear equations.
+/* Solve a system of two "surface-normal" perpendicular vector linear
+   equations.
 
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.  */
-IVVec2D_i32 *iv_solve2_s2_Ray_v2i32(IVVec2D_i32 *a, IVSys2_Ray_v2i32 *b)
+IVPoint2D_i32 *iv_solve2_s2_NLine_v2i32(IVPoint2D_i32 *a,
+					IVSys2_NLine_v2i32 *b)
 {
   IVVec2D_i32 *v0 = &b->d[0].v;
   IVRay_v2i32 ray;
@@ -508,5 +512,5 @@ IVVec2D_i32 *iv_solve2_s2_Ray_v2i32(IVVec2D_i32 *a, IVSys2_Ray_v2i32 *b)
   ray.v.d[IX] = -v0->d[IY];
   ray.v.d[IY] = v0->d[IX];
   /* Now intersect the ray with the plane (line in 2D).  */
-  return iv_bisect3_Ray_v2i32(a, &ray, &b->d[1]);
+  return iv_isect3_InLine_NLine_v2i32(a, &ray, &b->d[1]);
 }

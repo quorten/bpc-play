@@ -336,15 +336,16 @@ wavrnd_expose (GtkWidget * widget, GdkEventExpose * event, gpointer user_data)
 	/* Use our spiffy new subroutines to compute perpendiculars
 	   and solutions.  */
 	IVPoint2D_i32 n_p1 = {{ p1.x, p1.y }};
-	IVVec2D_i32 n_p3 = {{ p3.x, p3.y }};
+	IVPoint2D_i32 n_p3 = {{ p3.x, p3.y }};
 	IVVec2D_i32 n_v1 = {{ v1.x, v1.y }};
 	IVVec2D_i32 n_v2 = {{ v2.x, v2.y }};
 	IVVec2D_i32 n_vt = {{ -v1.y, v1.x }};
 	IVVec2D_i32 n_v3 = {{ v3.x, v3.y }};
-	IVRay_v2i32 n_plane = { n_vt, n_p1 };
-	IVVec2D_i32 n_pp;
+	IVNLine_v2i32 n_plane = { n_vt, n_p1 };
+	IVRay_v2i32 n_v3_ray = { n_v3, n_p3 };
+	IVPoint2D_i32 n_pp;
 
-	iv_proj3_v2i32_Ray_v2i32(&n_pp, &n_p3, &n_plane);
+	iv_proj3_p2i32_NLine_v2i32(&n_pp, &n_p3, &n_plane);
 	pt_rect.x = n_pp.d[IX] - 5;
 	pt_rect.y = n_pp.d[IY] - 5;
 	pt_rect.width = 10;
@@ -353,7 +354,7 @@ wavrnd_expose (GtkWidget * widget, GdkEventExpose * event, gpointer user_data)
 	  (widget->window, wr_gc, TRUE,
 	  pt_rect.x, pt_rect.y, pt_rect.width, pt_rect.height);
 
-	iv_isect3_Ray_v2i32(&n_pp, &n_v3, &n_plane);
+	iv_isect3_Ray_NLine_v2i32(&n_pp, &n_v3_ray, &n_plane);
 
 	if (n_pp.d[IX] != IVINT32_MIN) {
 	  pt_rect.x = n_pp.d[IX] - 5;
