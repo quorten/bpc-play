@@ -8,6 +8,13 @@
 
 #include "ivecmath.h"
 
+IVVec2D_i32 *iv_neg2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b)
+{
+  a->d[IX] = -b->d[IX];
+  a->d[IY] = -b->d[IY];
+  return a;
+}
+
 IVVec2D_i32 *iv_add3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c)
 {
   a->d[IX] = b->d[IX] + c->d[IX];
@@ -178,6 +185,7 @@ IVint32 iv_magn_v2i32(IVVec2D_i32 *a)
   return iv_aprx_sqrt_i64(iv_dot2_v2i32(a, a));
 }
 
+/* TODO FIXME: Return "no solution" if there would be divide-by-zero.  */
 /* Vector normalization, convert to a Q16.16 fixed-point
    representation.  */
 IVVec2D_i32 *iv_normalize2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b)
@@ -185,6 +193,7 @@ IVVec2D_i32 *iv_normalize2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b)
   return iv_shldiv4_v2i32_i32(a, a, 0x10, iv_magnitude_v2i32(a));
 }
 
+/* TODO FIXME: Return "no solution" if there would be divide-by-zero.  */
 /* Eliminate one vector component from another like "A - B".
 
    vec_elim(A, B) =  A - B * dot_product(A, B) / magnitude(B)
@@ -200,6 +209,7 @@ IVVec2D_i32 *iv_elim3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c)
   return a;
 }
 
+/* TODO FIXME: Return "no solution" if there would be divide-by-zero.  */
 /* Shortest path distance from point to plane (line in 2D).
 
    Let L = location vector of point,
@@ -216,6 +226,7 @@ IVint32 iv_dist2_v2i32_Eqs_v2i32(IVVec2D_i32 *a, IVEqs_v2i32 *b)
 		   iv_magnitude_v2i32(&b->v));
 }
 
+/* TODO FIXME: Return "no solution" if there would be divide-by-zero.  */
 /* Shortest path distance from point to plane (line in 2D), normalized
    plane surface normal vector, Q16.16 fixed-point.
 
@@ -231,6 +242,7 @@ IVint32 iv_dist2_v2i32_Eqs_v2q16i32(IVVec2D_i32 *a, IVEqs_v2i32 *b)
   return (IVint32)((iv_dot2_v2i32(a, &b->v) >> 0x10) - b->offset);
 }
 
+/* TODO FIXME: Return "no solution" if there would be divide-by-zero.  */
 /* Alternatively, rather than using a scalar `d`, you can define a
    point in the plane as a vector and subtract it from L before
    computing.
@@ -478,23 +490,74 @@ IVPoint2D_i32 *iv_isect3_Ray_NLine_v2i32(IVPoint2D_i32 *a, IVRay_v2i32 *b,
   return iv_add3_v2i32(a, &b->p0, &t);
 }
 
+/* Convert (reformat) Eqs representational form to NLine.  */
+IVNLine_v2i32 *iv_rf_NLine_Eqs_v2i32(IVNLine_v2i32 *a, IVEqs_v2i32 *b)
+{
+  /* TODO VERIFY PRECISION: offset is only 32 bits? */
+  /* Convert the origin offset to a point.  */
+  iv_muldiv4_v2i32_i64
+    (&a->p0, &b->v, b->offset, iv_dot2_v2i32(&b->v, &b->v));
+  /* Compute a perpendicular vector to use for the InLine.  */
+  a->v.d[IX] = -b->v.d[IY];
+  a->v.d[IY] = b->v.d[IX];
+  return a;
+}
+
+/* Convert (reformat) NLine representational form to Eqs.  */
+IVEqs_v2i32 *iv_rf_Eqs_NLine_v2i32(IVEqs_v2i32 *a, IVNLine_v2i32 *b)
+{
+  IVVec2D_i32 t;
+  /* Copy the perpendicular vector.  */
+  a->v = b->v;
+  /* Essentially, computing the origin offset is computing the
+     distance from the origin point to the plane, and then multiplying
+     by the length of the surface normal vector.  Therefore, we
+     happily avoid computing a square root in a magnitude computation.
+
+     L = 0;
+     L_rel_P = L - P;
+     dot_product(L_rel_P, A) / magnitude(A)
+     = dot_product(-P, A) / magnitude(A);
+
+     Multiply by magnitude(A):
+     dot_product(-P, A)
+  */
+  iv_neg2_v2i32(&t, &b->p0);
+  a->offset = (IVint32)iv_dot2_v2i32(&t, &b->v);
+  /* TODO VERIFY PRECISION: offset is only 32 bits? */
+  return a;
+}
+
+/* Convert (reformat) InLine representational form to NLine.  */
+IVNLine_v2i32 *iv_rf_NLine_InLine_v2i32(IVNLine_v2i32 *a, IVInLine_v2i32 *b)
+{
+  /* Copy the location.  */
+  a->p0 = b->p0;
+  /* Compute the perpendicular vector to use for the NLine.  */
+  a->v.d[IX] = -b->v.d[IY];
+  a->v.d[IY] = b->v.d[IX];
+  return a;
+}
+
+/* Convert (reformat) NLine representational form to InLine.  */
+IVNLine_v2i32 *iv_rf_InLine_NLine_v2i32(IVInLine_v2i32 *a, IVNLine_v2i32 *b)
+{
+  /* Exactly the same code as the reverse conversion, just different
+     types.  */
+  return iv_rf_NLine_InLine_v2i32((IVNLine_v2i32*)a, (IVInLine_v2i32*)b);
+}
+
 /* Solve a system of two simple linear equations, i.e. Ax = b format.
 
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.  */
 IVPoint2D_i32 *iv_solve2_s2_Eqs_v2i32(IVPoint2D_i32 *a, IVSys2_Eqs_v2i32 *b)
 {
-  IVVec2D_i32 *v0 = &b->d[0].v;
-  IVRay_v2i32 ray;
-  /* TODO VERIFY PRECISION: offset is only 32 bits? */
-  /* Reformat the first equation into a ray equation.  */
-  iv_muldiv4_v2i32_i64
-    (&ray.p0, &b->d[0].v, b->d[0].offset, iv_dot2_v2i32(v0, v0));
-  /* Compute a perpendicular vector to use for the ray.  */
-  ray.v.d[IX] = -v0->d[IY];
-  ray.v.d[IY] = v0->d[IX];
-  /* Now intersect the ray with the plane (line in 2D).  */
-  return iv_isect3_InLine_Eqs_v2i32(a, &ray, &b->d[0]);
+  IVInLine_v2i32 in_line;
+  /* Reformat the first equation into a InLine equation.  */
+  iv_rf_NLine_Eqs_v2i32(&in_line, &b->d[0]);
+  /* Now intersect the in_line with the plane (line in 2D).  */
+  return iv_isect3_InLine_Eqs_v2i32(a, &in_line, &b->d[0]);
 }
 
 /* Solve a system of two "surface-normal" perpendicular vector linear
@@ -505,12 +568,23 @@ IVPoint2D_i32 *iv_solve2_s2_Eqs_v2i32(IVPoint2D_i32 *a, IVSys2_Eqs_v2i32 *b)
 IVPoint2D_i32 *iv_solve2_s2_NLine_v2i32(IVPoint2D_i32 *a,
 					IVSys2_NLine_v2i32 *b)
 {
-  IVVec2D_i32 *v0 = &b->d[0].v;
-  IVRay_v2i32 ray;
-  ray.p0 = b->d[0].p0;
-  /* Compute a perpendicular vector to use for the ray.  */
-  ray.v.d[IX] = -v0->d[IY];
-  ray.v.d[IY] = v0->d[IX];
-  /* Now intersect the ray with the plane (line in 2D).  */
-  return iv_isect3_InLine_NLine_v2i32(a, &ray, &b->d[1]);
+  IVInLine_v2i32 in_line;
+  /* Reformat the first equation into an InLine equation.  */
+  iv_rf_InLine_NLine_v2i32(&in_line, &b->d[0]);
+  /* Now intersect the InLine with the plane (line in 2D).  */
+  return iv_isect3_InLine_NLine_v2i32(a, &in_line, &b->d[1]);
+}
+
+/* Solve a system of two InLine vector linear equations.
+
+   If there is no solution, the resulting point's coordinates are all
+   set to IVINT32_MIN.  */
+IVPoint2D_i32 *iv_solve2_s2_InLine_v2i32(IVPoint2D_i32 *a,
+					 IVSys2_InLine_v2i32 *b)
+{
+  IVNLine_v2i32 nline;
+  /* Reformat the second equation into an NLine equation.  */
+  iv_rf_InLine_NLine_v2i32(&nline, &b->d[1]);
+  /* Now intersect the InLine with the plane (line in 2D).  */
+  return iv_isect3_InLine_NLine_v2i32(a, &b->d[0], &nline);
 }

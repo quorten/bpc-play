@@ -164,6 +164,7 @@ typedef struct IVTris_p2u32_tag IVTris_p2u32;
 
 /********************************************************************/
 
+IVVec2D_i32 *iv_neg2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b);
 IVVec2D_i32 *iv_add3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c);
 IVVec2D_i32 *iv_sub3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c);
 IVVec2D_i32 *iv_muldiv4_v2i32_i32(IVVec2D_i32 *a, IVVec2D_i32 *b,
@@ -193,8 +194,14 @@ IVPoint2D_i32 *iv_isect3_Ray_Eqs_v2i32(IVPoint2D_i32 *a, IVRay_v2i32 *b,
 				       IVEqs_v2i32 *c);
 IVPoint2D_i32 *iv_isect3_Ray_NLine_v2i32(IVPoint2D_i32 *a, IVRay_v2i32 *b,
 					 IVNLine_v2i32 *c);
+IVNLine_v2i32 *iv_rf_NLine_Eqs_v2i32(IVNLine_v2i32 *a, IVEqs_v2i32 *b);
+IVEqs_v2i32 *iv_rf_Eqs_NLine_v2i32(IVEqs_v2i32 *a, IVNLine_v2i32 *b);
+IVNLine_v2i32 *iv_rf_NLine_InLine_v2i32(IVNLine_v2i32 *a, IVInLine_v2i32 *b);
+IVNLine_v2i32 *iv_rf_InLine_NLine_v2i32(IVInLine_v2i32 *a, IVNLine_v2i32 *b);
 IVPoint2D_i32 *iv_solve2_s2_Eqs_v2i32(IVPoint2D_i32 *a, IVSys2_Eqs_v2i32 *b);
 IVPoint2D_i32 *iv_solve2_s2_NLine_v2i32(IVPoint2D_i32 *a,
 					IVSys2_NLine_v2i32 *b);
+IVPoint2D_i32 *iv_solve2_s2_InLine_v2i32(IVPoint2D_i32 *a,
+					 IVSys2_InLine_v2i32 *b);
 
 #endif /* not IVECMATH_H */
