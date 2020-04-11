@@ -35,6 +35,8 @@ enum IVPtIdx_tag { IX, IY, IZ };
   };									\
   typedef struct typename##_array_tag typename##_array
 
+typedef unsigned char IVuint8;
+typedef unsigned short IVuint16;
 typedef unsigned int IVuint32;
 typedef int IVint32;
 typedef long long IVint64;
@@ -187,8 +189,8 @@ IVVec3D_i32 *iv_crossprodshr4_v3i32(IVVec3D_i32 *a,
 				    IVVec3D_i32 *b, IVVec3D_i32 *c,
 				    IVuint32 d);
 
-IVuint32 soft_bsr_i64(IVint64 a);
-IVuint32 soft_ns_bsr_i64(IVint64 a);
+IVuint8 soft_bsr_i64(IVint64 a);
+IVuint8 soft_ns_bsr_i64(IVint64 a);
 int init_sqrt_lut(void);
 void destroy_sqrt_lut(void);
 IVint32 iv_sqrt_u32(IVuint32 a);

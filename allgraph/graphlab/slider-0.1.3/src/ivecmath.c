@@ -219,15 +219,15 @@ available.
 static IVuint32 *sqrt_lut = NULL;
 
 /* Fallback implementation of bit-scan reverse in software.  */
-IVuint32 soft_bsr_i64(IVint64 a)
+IVuint8 soft_bsr_i64(IVint64 a)
 {
   /* Use a binary search tree of AND masks to determine where the most
      significant bit is located.  Note that with 16 bits or less, a
      sequential search is probably faster due to CPU branching
      penalties.  */
   IVint64 mask = 0xffffffff00000000LL;
-  IVuint32 shift = 0x10;
-  IVuint32 pos = 0x20;
+  IVuint8 shift = 0x10;
+  IVuint8 pos = 0x20;
   while (shift > 1) {
     if ((a & mask)) {
       /* Look more carefully to the left.  */
@@ -264,7 +264,7 @@ IVuint32 soft_bsr_i64(IVint64 a)
    doesn't use any shifting instructions at all!  This is useful if
    your CPU does not have bit-shifting instructions (Gigatron), or it
    doesn't support multi-bit shifts (i.e. 6502).  */
-IVuint32 soft_ns_bsr_i64(IVint64 a)
+IVuint8 soft_ns_bsr_i64(IVint64 a)
 {
   /* Use a binary search tree of AND masks to determine where the most
      significant bit is located.  Note that with 16 bits or less, a
@@ -336,10 +336,10 @@ IVuint32 soft_ns_bsr_i64(IVint64 a)
     0xc000000000000000LL,
     0x8000000000000000LL,
   };
-  static const IVuint32 shifts[6] =
+  static const IVuint8 shifts[6] =
     { 0x10, 0x08, 0x04, 0x02, 0x01, 0x00 };
-  IVuint32 shift_idx = 0;
-  IVuint32 pos = 0x20;
+  IVuint8 shift_idx = 0;
+  IVuint8 pos = 0x20;
   while (shift_idx < 4) {
     if ((a & masks[pos])) {
       /* Look more carefully to the left.  */
@@ -397,8 +397,8 @@ void destroy_sqrt_lut(void)
    returns IVINT32_MIN.  */
 IVint32 iv_sqrt_u32(IVuint32 a)
 {
-  IVuint32 pos = 0x8000;
-  IVuint32 shift = 0x4000;
+  IVuint16 pos = 0x8000;
+  IVuint16 shift = 0x4000;
   if (sqrt_lut == NULL)
     return IVINT32_MIN;
   while (shift > 1) {
@@ -451,13 +451,13 @@ IVint32 iv_sqrt_i32(IVint32 a)
    IVINT32_MIN is returned since there is no solution.  */
 IVint32 iv_aprx_sqrt_i64(IVint64 a)
 {
-  IVuint32 num_sig_bits;
+  IVuint8 num_sig_bits;
   if (a == 0)
     return 0;
   if (a < 0)
     return IVINT32_MIN;
   num_sig_bits = soft_bsr_i64(a);
-  return 1 << (num_sig_bits >> 1);
+  return (IVint32)1 << (num_sig_bits >> 1);
 }
 
 /* This method is designed to guarantee an underestimate of the square
@@ -465,7 +465,7 @@ IVint32 iv_aprx_sqrt_i64(IVint64 a)
    standard integer arithmetic.  */
 IVint32 iv_sqrt_i64(IVint64 a)
 {
-  IVuint32 pos;
+  IVuint8 pos;
   IVint32 x;
   IVint64 x2;
   if (a == 0)
@@ -476,12 +476,12 @@ IVint32 iv_sqrt_i64(IVint64 a)
     return iv_sqrt_u32((IVuint32)a);
   }
   pos = soft_bsr_i64(a) >> 1;
-  x = 1 << pos;
-  x2 = 1 << (pos << 1);
+  x = (IVint32)1 << pos;
+  x2 = (IVint64)1 << (pos << 1);
   pos--;
-  while (pos != (IVuint32)-1) {
-    IVint32 n = 1 << pos; /* n == 2^pos */
-    IVint64 n2 = 1 << (pos << 1); /* n^2 */
+  while (pos != (IVuint8)-1) {
+    IVint32 n = (IVint32)1 << pos; /* n == 2^pos */
+    IVint64 n2 = (IVint64)1 << (pos << 1); /* n^2 */
     IVint64 xn2 = (IVint64)x << (pos + 1); /* 2*x*n */
     /* (x + n)^2 = x^2 + 2*x*n + n^2 */
     IVint64 test = x2 + xn2 + n2;
