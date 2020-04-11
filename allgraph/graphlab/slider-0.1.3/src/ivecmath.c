@@ -110,12 +110,23 @@ IVVec2D_i32 *iv_mulshr4_v2i32_i32(IVVec2D_i32 *a, IVVec2D_i32 *b,
   return a;
 }
 
+/* shift left */
+IVVec2D_i32 *iv_shl3_v2i32_u32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint32 c)
+{
+  a->d[IX] = b->d[IX] << c;
+  a->d[IY] = b->d[IY] << c;
+  return a;
+}
+
 /* shift right, with symmetric positive/negative shift behavior */
 IVVec2D_i32 *iv_shr3_v2i32_u32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint32 c)
 {
   IVint32 tx = b->d[IX], ty = b->d[IY];
-  if (c == 0)
+  if (c == 0) {
+    a->d[IX] = tx;
+    a->d[IY] = ty;
     return a;
+  }
   /* Due to asymmetric two's complement, we must pre-increment one if
      less than zero.  */
   if (tx < 0) tx++;
