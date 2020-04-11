@@ -1,26 +1,47 @@
-/* Iterative integer square root computation.
+/*
 
-(x + n)^2
-= x^2 + 2*x*n + n^2
+Integer square root computation routines.  There are plenty of tricks
+that are used to optimize performance.
 
-So how do you use this equation to compute a square root?  Basically,
-you want to iteratively come closer to the actual solution.
+* The square root of any 32-bit integer can easily be computed with an
+  array of integers squared with only 64K entries.  A simple binary
+  search does the trick, the index will correspond to the square root.
+  The lookup table itself can be efficiently computed using the
+  following formula to compute the next entry from the previous one:
 
-So this is how it's done.
+  (x + 1)^2 = x^2 + 2*x*n + 1
 
-Starting from the most significant bit, you want to guess the value of
-each bit progressively.  That is your `n`.  Your current running
-approximation of the square root is your `x`.
+  This is quite similar to Bresenham's circle plotting algorithm.
 
-Initialize `x` by using the bit-wise approximate square root
-operation: bit-scan reverse to determine the most significant bit.
-Count the number of places after that bit, and divide by two.  Then
-shift right the number "1" by that number of places.  That is your
-approximate square root.
+* An approximate square root can be quickly and efficiently computed
+  using the bit-scan reverse CPU instruction (`bsr` in x86 CPUs) and
+  dividing the number of significant bits by two.  A software fallback
+  that does a binary search for the most significant bit in an integer
+  is still fairly fast and efficient, even on CPUs that may lack any
+  shift instructions whatsoever.
 
-Next, use the `x^2 + 2*x*n + n^2` equation to iteratively step closer
-to your integer square root.  You will start out with an underestimate
-and grow larger, until you've guessed all bits.
+  Please note that when you square the result of the approximate
+  square root, it can fall short of the actual number squared by up to
+  a factor of four.  So that means the result may be multiplied by a
+  factor of sqrt(0.25) = 0.5 compared to the actual value.
+
+  But, by all means, if you only need an order of magnitude estimate,
+  this method is plenty fine.
+
+* An iterative bit-guessing square root method is used to compute
+  64-bit integer square roots using the following formula for
+  stepping:
+
+  (x + n)^2 = x^2 + 2*x*n + n^2
+
+  `x` is the running total of the guessed square root, `n` is the
+  current bit value being guessed and tested.  The starting estimate
+  is initialized using the bit-scan reverse method to determine the
+  approximate square root.
+
+All methods are designed to truncate the result, as is standard with
+integer arithmetic, when there is no exact square root solution
+available.
 
 */
 
@@ -32,6 +53,8 @@ typedef int IVint32;
 typedef long long IVint64;
 #define IVINT32_MIN ((IVint32)0x80000000)
 
+static IVuint32 *sqrt_lut = NULL;
+
 /* Fallback implementation of bit-scan reverse in software.  */
 IVuint32 soft_bsr_i64(IVint64 a)
 {
@@ -39,31 +62,38 @@ IVuint32 soft_bsr_i64(IVint64 a)
      significant bit is located.  Note that with 16 bits or less, a
      sequential search is probably faster due to CPU branching
      penalties.  */
-  /* TODO FIXME: That's what I did wrong!  I should do a sequential
-     search when we get down to only 4 entries remaining!  */
   IVint64 mask = 0xffffffff00000000LL;
   IVuint32 shift = 0x10;
   IVuint32 pos = 0x20;
-  IVuint32 dir = 0;
-  while (shift > 0) {
+  while (shift > 1) {
     if ((a & mask)) {
       /* Look more carefully to the left.  */
       mask <<= shift;
       pos += shift;
       shift >>= 1;
-      dir = 1;
     } else {
       /* Look more carefully to the right.  */
       mask >>= shift;
       pos -= shift;
       shift >>= 1;
-      dir = (IVuint32)-1;
     }
   }
-  /* Now we need to find out if we need to go to the right by one or
-     just stay where we are.  */
-  if (!(a & mask))
+  /* Now do a sequential search on this last segment of size 4: +1, 0,
+     -1, -2.  We use -2 because otherwise we can't get all the way
+     down to bit zero.  */
+  mask <<= 1;
+  pos += 1;
+  /* N.B.: There is nothing to test on the end of the segment because
+     we return `pos` either way, so we only need to test the first
+     three.  Also, we use != comparison since shift_idx may go
+     negative and it's unsigned.  */
+  shift = pos - 3;
+  while (pos != shift) {
+    if ((a & mask))
+      return pos;
+    mask >>= 1;
     pos--;
+  }
   return pos;
 }
 
@@ -77,8 +107,6 @@ IVuint32 soft_ns_bsr_i64(IVint64 a)
      significant bit is located.  Note that with 16 bits or less, a
      sequential search is probably faster due to CPU branching
      penalties.  */
-  /* TODO FIXME: That's what I did wrong!  I should do a sequential
-     search when we get down to only 4 entries remaining!  */
   static const IVint64 masks[64] = {
     0xffffffffffffffffLL,
     0xfffffffffffffffeLL,
@@ -149,37 +177,114 @@ IVuint32 soft_ns_bsr_i64(IVint64 a)
     { 0x10, 0x08, 0x04, 0x02, 0x01, 0x00 };
   IVuint32 shift_idx = 0;
   IVuint32 pos = 0x20;
-  IVuint32 dir = 0;
-  while (shift_idx < 5) {
+  while (shift_idx < 4) {
     if ((a & masks[pos])) {
       /* Look more carefully to the left.  */
       pos += shifts[shift_idx++];
-      dir = 1;
     } else {
       /* Look more carefully to the right.  */
       pos -= shifts[shift_idx++];
-      dir = (IVuint32)-1;
     }
   }
-  /* Now we need to find out if we need to go to the right by one or
-     just stay where we are.  */
-  if (!(a & masks[pos]))
+  /* Now do a sequential search on this last segment of size 4: +1, 0,
+     -1, -2.  We use -2 because otherwise we can't get all the way
+     down to bit zero.  */
+  pos += 1;
+  /* N.B.: There is nothing to test on the end of the segment because
+     we return `pos` either way, so we only need to test the first
+     three.  Also, we use != comparison since shift_idx may go
+     negative and it's unsigned.  */
+  shift_idx = pos - 3;
+  while (pos != shift_idx) {
+    if ((a & masks[pos]))
+      return pos;
     pos--;
+  }
   return pos;
 }
 
-/* Compute an approximate square root by using bit-scan reverse and
-   dividing the number of significant bits by two.  Yes, we shift
-   right to divide by two.  If the operand is negative, IVINT32_MIN is
-   returned since there is no solution.
+/* Initialize the 64K entry square root lookup table, used for 32-bit
+   square root computations.  */
+int init_sqrt_lut(void)
+{
+  /* (x + 1)^2 = x^2 + 2*x + 1 */
+  IVuint32 x, x2q, x2;
+  sqrt_lut = (IVuint32*)malloc(sizeof(IVuint32) * 0x10000);
+  if (sqrt_lut == NULL)
+    return 0;
+  x = 0; x2q = 0; x2 = 1;
+  while (x < 0x10000) {
+    sqrt_lut[x] = x2q;
+    x++;
+    x2q += x2;
+    x2 += 2;
+  }
+  return 1;
+}
 
-   Please note that when you square the result of the approximate
-   square root, it can fall short of the actual number squared by up
-   to a factor of two.  So that means the result may be multiplied by
-   a factor of sqrt(0.5) ~= 0.707 compared to the actual value.
+void destroy_sqrt_lut(void)
+{
+  if (sqrt_lut != NULL)
+    free(sqrt_lut);
+}
 
-   But, by all means, if you only need an order of magnitude estimate,
-   this method is plenty fine.  */
+/* Compute a 32-bit unsigned integer square root using a 64K entry
+   lookup table.  If the square root lookup table is not initialized,
+   returns IVINT32_MIN.  */
+IVint32 iv_sqrt_u32(IVuint32 a)
+{
+  IVuint32 pos = 0x8000;
+  IVuint32 shift = 0x4000;
+  if (sqrt_lut == NULL)
+    return IVINT32_MIN;
+  while (shift > 1) {
+    IVuint32 val = sqrt_lut[pos];
+    if (a == val)
+      return pos;
+    else if (a < val) {
+      /* Look more carefully to the left.  */
+      pos -= shift;
+    } else /* (a > val) */ {
+      /* Look more carefully to the right.  */
+      pos += shift;
+    }
+    shift >>= 1;
+  }
+  /* Now do a sequential search on this last segment of size 4: -2,
+     -1, 0, +1.  We use -2 because otherwise we can't get all the way
+     down to position zero.  */
+  pos -= 2;
+  shift = pos + 3;
+  while (pos != shift) {
+    IVuint32 val = sqrt_lut[pos];
+    if (a == val)
+      return pos;
+    else if (a < val)
+      return pos - 1;
+    pos++;
+  }
+  /* Last iteration is rolled separately so that we don't have to undo
+     an excess increment to `pos` in the event of no matches.  */
+  if (a < sqrt_lut[pos])
+    return pos - 1;
+  return pos;
+}
+
+/* Compute a 32-bit integer square root using a 64K entry lookup
+   table.  If the operand is negative, IVINT32_MIN is returned since
+   there is no solution.  If the square root lookup table is not
+   initialized, returns IVINT32_MIN.  */
+IVint32 iv_sqrt_i32(IVint32 a)
+{
+  if (a < 0)
+    return IVINT32_MIN;
+  return iv_sqrt_u32((IVuint32)a);
+}
+
+/* Compute a 64-bit integer approximate square root by using bit-scan
+   reverse and dividing the number of significant bits by two.  Yes,
+   we shift right to divide by two.  If the operand is negative,
+   IVINT32_MIN is returned since there is no solution.  */
 IVint32 iv_aprx_sqrt_i64(IVint64 a)
 {
   IVuint32 num_sig_bits;
@@ -191,7 +296,6 @@ IVint32 iv_aprx_sqrt_i64(IVint64 a)
   return 1 << (num_sig_bits >> 1);
 }
 
-/* (x + n)^2 = x^2 + 2*x*n + n^2 */
 /* This method is designed to guarantee an underestimate of the square
    root, i.e. the fractional part is truncated as is the case with
    standard integer arithmetic.  */
@@ -204,6 +308,9 @@ IVint32 iv_sqrt_i64(IVint64 a)
     return 0;
   if (a < 0)
     return IVINT32_MIN;
+  if (a <= 0xffffffff && sqrt_lut != NULL) {
+    return iv_sqrt_u32((IVuint32)a);
+  }
   pos = soft_bsr_i64(a) >> 1;
   x = 1 << pos;
   x2 = 1 << (pos << 1);
@@ -228,8 +335,13 @@ int main(int argc, char *argv[])
   IVint32 input = 0, out_approx_sqrt, out_sqrt;
   if (argc >= 2)
     input = atoi(argv[1]);
+
+  if (!init_sqrt_lut())
+    puts("Error: Could not initialize square root lookup table.");
   out_approx_sqrt = iv_aprx_sqrt_i64(input);
   out_sqrt = iv_sqrt_i64(input);
+  destroy_sqrt_lut();
+
   printf("in == %d, aprx == %d, sqrt == %d\n",
 	 input, out_approx_sqrt, out_sqrt);
   printf("diff aprx == %d, sqrt == %d\n",
