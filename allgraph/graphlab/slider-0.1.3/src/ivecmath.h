@@ -180,6 +180,33 @@ IVVec2D_i32 *iv_mulshr4_v2i32_i32(IVVec2D_i32 *a, IVVec2D_i32 *b,
 IVVec2D_i32 *iv_shr3_v2i32_u32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint32 c);
 IVint64 iv_dot2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b);
 
+IVVec3D_i32 *iv_crossproddiv4_v3i32(IVVec3D_i32 *a,
+				    IVVec3D_i32 *b, IVVec3D_i32 *c,
+				    IVint32 d);
+IVVec3D_i32 *iv_crossprodshr4_v3i32(IVVec3D_i32 *a,
+				    IVVec3D_i32 *b, IVVec3D_i32 *c,
+				    IVuint32 d);
+
+IVuint32 soft_bsr_i64(IVint64 a);
+IVuint32 soft_ns_bsr_i64(IVint64 a);
+int init_sqrt_lut(void);
+void destroy_sqrt_lut(void);
+IVint32 iv_sqrt_u32(IVuint32 a);
+IVint32 iv_sqrt_i32(IVint32 a);
+IVint32 iv_aprx_sqrt_i64(IVint64 a);
+IVint32 iv_sqrt_i64(IVint64 a);
+
+IVint32 iv_magnitude_v2i32(IVVec2D_i32 *a);
+IVint32 iv_magn_v2i32(IVVec2D_i32 *a);
+IVVec2D_i32 *iv_normalize2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b);
+IVVec2D_i32 *iv_elim3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c);
+IVVec2D_i32 *iv_aelim3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c);
+IVint32 iv_dist2_v2i32_Eqs_v2i32(IVVec2D_i32 *a, IVEqs_v2i32 *b);
+IVint32 iv_adist2_v2i32_Eqs_v2i32(IVVec2D_i32 *a, IVEqs_v2i32 *b);
+IVint32 iv_dist2_v2i32_Eqs_v2q16i32(IVVec2D_i32 *a, IVEqs_v2i32 *b);
+IVint32 iv_dist2_v2i32_NRay_v2i32(IVVec2D_i32 *a, IVNLine_v2i32 *b);
+IVint32 iv_adist2_v2i32_NRay_v2i32(IVVec2D_i32 *a, IVNLine_v2i32 *b);
+
 IVPoint2D_i32 *iv_proj3_p2i32_Eqs_v2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b,
 					IVEqs_v2i32 *c);
 IVPoint2D_i32 *iv_proj3_p2i32_NLine_v2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b,
