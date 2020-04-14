@@ -345,7 +345,7 @@ wavrnd_expose (GtkWidget * widget, GdkEventExpose * event, gpointer user_data)
 	IVRay_v2i32 n_v3_ray = { n_v3, n_p3 };
 	IVPoint2D_i32 n_pp;
 
-	iv_proj3_p2i32_NLine_v2i32(&n_pp, &n_p3, &n_plane);
+	iv_proj3_p2i32_NLine_v2i32 (&n_pp, &n_p3, &n_plane);
 	pt_rect.x = n_pp.d[IX] - 5;
 	pt_rect.y = n_pp.d[IY] - 5;
 	pt_rect.width = 10;
@@ -354,7 +354,7 @@ wavrnd_expose (GtkWidget * widget, GdkEventExpose * event, gpointer user_data)
 	  (widget->window, wr_gc, TRUE,
 	  pt_rect.x, pt_rect.y, pt_rect.width, pt_rect.height);
 
-	iv_isect3_Ray_NLine_v2i32(&n_pp, &n_v3_ray, &n_plane);
+	iv_isect3_Ray_NLine_v2i32 (&n_pp, &n_v3_ray, &n_plane);
 
 	if (n_pp.d[IX] != IVINT32_MIN) {
 	  pt_rect.x = n_pp.d[IX] - 5;

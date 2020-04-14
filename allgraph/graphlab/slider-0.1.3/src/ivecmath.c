@@ -536,6 +536,22 @@ IVVec2D_i32 *iv_normalize2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b)
   return iv_shldiv4_v2i32_i32(a, a, 0x10, d);
 }
 
+/* Distance between two points.  */
+IVint32 iv_dist2_p2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b)
+{
+  IVVec2D_i32 t;
+  iv_sub3_v2i32(&t, a, b);
+  return iv_magnitude_v2i32(&t);
+}
+
+/* Approximate distance between two points.  */
+IVint32 iv_adist2_p2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b)
+{
+  IVVec2D_i32 t;
+  iv_sub3_v2i32(&t, a, b);
+  return iv_magn_v2i32(&t);
+}
+
 /* Eliminate one vector component from another like "A - B".
 
    vec_elim(A, B) =  A - B * dot_product(A, B) / magnitude(B)
@@ -680,6 +696,14 @@ IVint32 iv_adist2_v2i32_NRay_v2i32(IVVec2D_i32 *a, IVNLine_v2i32 *b)
 }
 
 /********************************************************************/
+
+/* Distance squared between two points.  */
+IVint64 iv_dist2q2_p2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b)
+{
+  IVVec2D_i32 t;
+  iv_sub3_v2i32(&t, a, b);
+  return iv_dot2_v2i32(&t, &t);
+}
 
 /* Project a point to a plane along the perpendicular:
 
