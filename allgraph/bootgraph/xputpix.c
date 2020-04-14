@@ -37,6 +37,15 @@ struct ImageBufHdr_tag
 };
 typedef struct ImageBufHdr_tag ImageBufHdr;
 
+/* Pixel data transfer from file to screen:
+   These masks are AND'd with the imageDesc in the TGA header,
+   bit 4 is left-to-right ordering
+   bit 5 is top-to-bottom */
+#define BOTTOM_LEFT  0x00	/* first pixel is bottom left corner */
+#define BOTTOM_RIGHT 0x10	/* first pixel is bottom right corner */
+#define TOP_LEFT     0x20	/* first pixel is top left corner */
+#define TOP_RIGHT    0x30	/* first pixel is top right corner */
+
 /* Runtime image buffer.  */
 struct RTImageBuf_tag
 {
@@ -71,15 +80,33 @@ typedef struct RTImageBuf_tag RTImageBuf;
 */
 
 void
-bg_put_pixel (unsigned char *fbdata,
-	      unsigned short pitch,
-	      unsigned short width,
-	      unsigned short height,
-	      unsigned char bpp,
-	      Point2D pt)
+bg_clear_img (RTImageBuf *rti)
 {
-  if (1)
-    ;
+  /* Clear the framebuffer.  */
+  unsigned char *fbdata = rti->image_data;
+  unsigned long image_size = rti->image_size;
+  unsigned i;
+    for (i = 0; i < image_size; i++) {
+      fbdata[i] = 0xff;
+    }
+}
+
+void
+bg_put_pixel (RTImageBuf *rti,
+	      Point2D pt,
+	      unsigned long color)
+{
+  unsigned char *fbdata = rti->image_data;
+  unsigned short pitch = rti->pitch;
+  unsigned short width = rti->hdr.width;
+  unsigned short height = rti->hdr.height;
+  unsigned short bpp = rti->hdr.bpp;
+  unsigned long addr;
+  if (pt.x < 0 || pt.y < 0 || pt.x >= width || pt.y >= height)
+    return; /* Clip out of bounds requests.  */
+  addr = pitch * pt.y + (bpp >> 3) * pt.x;
+  if (bpp == 32)
+    *(unsigned long*)(fbdata + addr) = (unsigned long)color;
 }
 
 /* Plot a cubic curve using a similar technique to the parabola curve.
@@ -96,7 +123,8 @@ bg_put_pixel (unsigned char *fbdata,
 
 */
 void
-plot_cubic_fast (char *fbdata, Point2D vertex, int scale, int x_max)
+plot_cubic_fast (RTImageBuf *rti, unsigned long color,
+		 Point2D vertex, int scale, int x_max)
 {
   Point2D cur;
   int x0 = 0, y0 = 0, y0_scale = 0;
@@ -113,34 +141,18 @@ plot_cubic_fast (char *fbdata, Point2D vertex, int scale, int x_max)
 	y0_scale += scale_2q;
 	cur.x = vertex.x + x0;
 	cur.y = vertex.y + y0;
-	/* PutPixel (cur); */
-	fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-	fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-	fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-	fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+	bg_put_pixel (rti, cur, color);
 	cur.x = vertex.x - x0;
 	cur.y = vertex.y - y0;
-	/* PutPixel (cur); */
-	fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-	fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-	fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-	fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+	bg_put_pixel (rti, cur, color);
       }
     } else {
       cur.x = vertex.x + x0;
       cur.y = vertex.y + y0;
-      /* PutPixel (cur); */
-      fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur, color);
       cur.x = vertex.x - x0;
       cur.y = vertex.y - y0;
-      /* PutPixel (cur); */
-      fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur, color);
     }
 
     x_3q += x3_2q + x_3odd;
@@ -156,7 +168,8 @@ plot_cubic_fast (char *fbdata, Point2D vertex, int scale, int x_max)
    draw a hyperbola in a painting program.  Literally, I just changed
    two lines of code!  Major x-axis.  */
 void
-plot_hyperbola_fast (char *fbdata, Point2D center, int rx, int ry, int limit)
+plot_hyperbola_fast (RTImageBuf *rti, unsigned long color,
+		     Point2D center, int rx, int ry, int limit)
 {
   Point2D cur;
   int x0 = rx, y0 = 0;
@@ -179,62 +192,30 @@ plot_hyperbola_fast (char *fbdata, Point2D center, int rx, int ry, int limit)
     if (y_2q >= y0_2q) {
       cur.x = center.x + x0;
       cur.y = center.y + y0;
-      /* PutPixel (cur); */
-      fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur, color);
       cur.x = center.x - x0;
       cur.y = center.y + y0;
-      /* PutPixel (cur); */
-      fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur, color);
       cur.x = center.x - x0;
       cur.y = center.y - y0;
-      /* PutPixel (cur); */
-      fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur, color);
       cur.x = center.x + x0;
       cur.y = center.y - y0;
-      /* PutPixel (cur); */
-      fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur, color);
     }
     while (y_2q < y0_2q) {
       cur.x = center.x + x0;
       cur.y = center.y + y0;
-      /* PutPixel (cur); */
-      fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur, color);
       cur.x = center.x - x0;
       cur.y = center.y + y0;
-      /* PutPixel (cur); */
-      fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur, color);
       cur.x = center.x - x0;
       cur.y = center.y - y0;
-      /* PutPixel (cur); */
-      fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur, color);
       cur.x = center.x + x0;
       cur.y = center.y - y0;
-      /* PutPixel (cur); */
-      fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur, color);
 
       y0++;
       y_2q += y_odd;
@@ -258,7 +239,8 @@ plot_hyperbola_fast (char *fbdata, Point2D center, int rx, int ry, int limit)
    approximation between table entries has good accuracy, given a
    sufficiently high resolution table.  */
 void
-plot_parabola_fast (char *fbdata, Point2D vertex, int scale, int x_max)
+plot_parabola_fast (RTImageBuf *rti, unsigned long color,
+		    Point2D vertex, int scale, int x_max)
 {
   Point2D cur;
   int x0 = 0, y0 = 0, y0_scale = 0;
@@ -276,34 +258,18 @@ plot_parabola_fast (char *fbdata, Point2D vertex, int scale, int x_max)
 	y0_scale += scale;
 	cur.x = vertex.x + x0;
 	cur.y = vertex.y + y0;
-	/* PutPixel (cur); */
-	fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-	fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-	fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-	fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+	bg_put_pixel (rti, cur, color);
 	cur.x = vertex.x - x0;
 	cur.y = vertex.y + y0;
-	/* PutPixel (cur); */
-	fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-	fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-	fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-	fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+	bg_put_pixel (rti, cur, color);
       }
     } else {
       cur.x = vertex.x + x0;
       cur.y = vertex.y + y0;
-      /* PutPixel (cur); */
-      fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur, color);
       cur.x = vertex.x - x0;
       cur.y = vertex.y + y0;
-      /* PutPixel (cur); */
-      fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur, color);
     }
 
     x_2q += x_odd;
@@ -385,7 +351,8 @@ flood_fill (char *fbdata, Point2D start, unsigned int fill_color)
 }
 
 void
-plot_ellipse_fast (char *fbdata, Point2D center, int rx, int ry)
+plot_ellipse_fast (RTImageBuf *rti, unsigned long color,
+		   Point2D center, int rx, int ry)
 {
   Point2D cur;
   int x0 = rx, y0 = 0;
@@ -408,62 +375,30 @@ plot_ellipse_fast (char *fbdata, Point2D center, int rx, int ry)
     if (y_2q >= y0_2q) {
       cur.x = center.x + x0;
       cur.y = center.y + y0;
-      /* PutPixel (cur); */
-      fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur, color);
       cur.x = center.x - x0;
       cur.y = center.y + y0;
-      /* PutPixel (cur); */
-      fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur, color);
       cur.x = center.x - x0;
       cur.y = center.y - y0;
-      /* PutPixel (cur); */
-      fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur, color);
       cur.x = center.x + x0;
       cur.y = center.y - y0;
-      /* PutPixel (cur); */
-      fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur, color);
     }
     while (y_2q < y0_2q) {
       cur.x = center.x + x0;
       cur.y = center.y + y0;
-      /* PutPixel (cur); */
-      fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur, color);
       cur.x = center.x - x0;
       cur.y = center.y + y0;
-      /* PutPixel (cur); */
-      fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur, color);
       cur.x = center.x - x0;
       cur.y = center.y - y0;
-      /* PutPixel (cur); */
-      fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur, color);
       cur.x = center.x + x0;
       cur.y = center.y - y0;
-      /* PutPixel (cur); */
-      fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur, color);
 
       y0++;
       y_2q += y_odd;
@@ -480,7 +415,8 @@ plot_ellipse_fast (char *fbdata, Point2D center, int rx, int ry)
 }
 
 void
-plot_circle_fast (char *fbdata, Point2D center, int size)
+plot_circle_fast (RTImageBuf *rti, unsigned long color,
+		  Point2D center, int size)
 {
   Point2D cur;
   int x0 = size, y0 = 0;
@@ -503,62 +439,30 @@ plot_circle_fast (char *fbdata, Point2D center, int size)
     if (y_2q >= y0_2q) {
       cur.x = center.x + x0;
       cur.y = center.y + y0;
-      /* PutPixel (cur); */
-      fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur, color);
       cur.x = center.x - y0;
       cur.y = center.y + x0;
-      /* PutPixel (cur); */
-      fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur, color);
       cur.x = center.x - x0;
       cur.y = center.y - y0;
-      /* PutPixel (cur); */
-      fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur, color);
       cur.x = center.x + y0;
       cur.y = center.y - x0;
-      /* PutPixel (cur); */
-      fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur, color);
     }
     while (y_2q < y0_2q) {
       cur.x = center.x + x0;
       cur.y = center.y + y0;
-      /* PutPixel (cur); */
-      fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur, color);
       cur.x = center.x - y0;
       cur.y = center.y + x0;
-      /* PutPixel (cur); */
-      fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur, color);
       cur.x = center.x - x0;
       cur.y = center.y - y0;
-      /* PutPixel (cur); */
-      fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur, color);
       cur.x = center.x + y0;
       cur.y = center.y - x0;
-      /* PutPixel (cur); */
-      fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur, color);
 
       y0++;
       y_2q += y_odd;
@@ -575,7 +479,8 @@ plot_circle_fast (char *fbdata, Point2D center, int size)
 }
 
 void
-plot_line_fast2 (char *fbdata, Point2D p1, Point2D p2)
+plot_line_fast2 (RTImageBuf *rti, unsigned long color,
+		 Point2D p1, Point2D p2)
 {
   Point2D delta = { p2.x - p1.x, p2.y - p1.y };
   Point2D adelta = { ABS(delta.x), ABS(delta.y) };
@@ -588,20 +493,12 @@ plot_line_fast2 (char *fbdata, Point2D p1, Point2D p2)
     if (adelta.y != 0)
       cur.y += signs.y;
     if (rem < adelta.y) {
-      /* PutPixel (cur); */
-      fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur, color);
     }
     while (rem >= adelta.y && cur.x != p2.x) {
       cur.x += signs.x;
       rem -= adelta.y;
-      /* PutPixel (cur); */
-      fbdata[(cur.y*320+cur.x)*4+0] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+1] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+2] = 0x00;
-      fbdata[(cur.y*320+cur.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur, color);
     }
   }
 }
@@ -614,7 +511,8 @@ plot_line_fast2 (char *fbdata, Point2D p1, Point2D p2)
   }
 
 void
-plot_tri_fast2 (char *fbdata, Point2D p1, Point2D p2, Point2D p3)
+plot_tri_fast2 (RTImageBuf *rti, unsigned long color, unsigned char filled,
+		Point2D p1, Point2D p2, Point2D p3)
 {
   /* First sort the points in vertical ascending order.  */
   Point2D s1, s2, s3;
@@ -652,52 +550,35 @@ plot_tri_fast2 (char *fbdata, Point2D p1, Point2D p2, Point2D p3)
     if (adelta2.y != 0)
       cur2.y += signs2.y;
     if (rem1 < adelta1.y) {
-      /* PutPixel (cur); */
-      fbdata[(cur1.y*320+cur1.x)*4+0] = 0x00;
-      fbdata[(cur1.y*320+cur1.x)*4+1] = 0x00;
-      fbdata[(cur1.y*320+cur1.x)*4+2] = 0x00;
-      fbdata[(cur1.y*320+cur1.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur1, color);
     }
     if (rem2 < adelta2.y) {
-      /* PutPixel (cur); */
-      fbdata[(cur2.y*320+cur2.x)*4+0] = 0x00;
-      fbdata[(cur2.y*320+cur2.x)*4+1] = 0x00;
-      fbdata[(cur2.y*320+cur2.x)*4+2] = 0x00;
-      fbdata[(cur2.y*320+cur2.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur2, color);
     }
     while (rem1 >= adelta1.y && cur1.x != p2.x) {
       cur1.x += signs1.x;
       rem1 -= adelta1.y;
-      /* PutPixel (cur); */
-      fbdata[(cur1.y*320+cur1.x)*4+0] = 0x00;
-      fbdata[(cur1.y*320+cur1.x)*4+1] = 0x00;
-      fbdata[(cur1.y*320+cur1.x)*4+2] = 0x00;
-      fbdata[(cur1.y*320+cur1.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur1, color);
     }
     while (rem2 >= adelta2.y && cur2.x != p3.x) {
       cur2.x += signs2.x;
       rem2 -= adelta2.y;
-      /* PutPixel (cur); */
-      fbdata[(cur2.y*320+cur2.x)*4+0] = 0x00;
-      fbdata[(cur2.y*320+cur2.x)*4+1] = 0x00;
-      fbdata[(cur2.y*320+cur2.x)*4+2] = 0x00;
-      fbdata[(cur2.y*320+cur2.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur2, color);
     }
-    /* Fill in the x values in the middle.  */
-    /* TODO: If we knew which way the lines were running, we could
-       better optimize this to avoid duplicate pixel plots.  */
-    if (adelta1.y != 0 && adelta2.y != 0) {
-      int xbegin = MIN(cur1.x, cur2.x);
-      int xend = MAX(cur1.x, cur2.x);
-      int scany = cur1.y;
-      int curx = xbegin;
-      while (curx < xend) {
-	/* PutPixel (cur); */
-	fbdata[(scany*320+curx)*4+0] = 0x00;
-	fbdata[(scany*320+curx)*4+1] = 0x00;
-	fbdata[(scany*320+curx)*4+2] = 0x00;
-	fbdata[(scany*320+curx)*4+3] = 0x00;
-	curx++;
+    if (filled) {
+      /* Fill in the x values in the middle.  */
+      /* TODO: If we knew which way the lines were running, we could
+	 better optimize this to avoid duplicate pixel plots.  */
+      if (adelta1.y != 0 && adelta2.y != 0) {
+	int xbegin = MIN(cur1.x, cur2.x);
+	int xend = MAX(cur1.x, cur2.x);
+	int scany = cur1.y;
+	int curx = xbegin;
+	while (curx < xend) {
+	  Point2D scancur = { curx, scany };
+	  bg_put_pixel (rti, scancur, color);
+	  curx++;
+	}
       }
     }
   }
@@ -727,60 +608,44 @@ plot_tri_fast2 (char *fbdata, Point2D p1, Point2D p2, Point2D p3)
     if (adelta2.y != 0)
       cur2.y += signs2.y;
     if (rem1 < adelta1.y) {
-      /* PutPixel (cur); */
-      fbdata[(cur1.y*320+cur1.x)*4+0] = 0x00;
-      fbdata[(cur1.y*320+cur1.x)*4+1] = 0x00;
-      fbdata[(cur1.y*320+cur1.x)*4+2] = 0x00;
-      fbdata[(cur1.y*320+cur1.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur1, color);
     }
     if (rem2 < adelta2.y) {
-      /* PutPixel (cur); */
-      fbdata[(cur2.y*320+cur2.x)*4+0] = 0x00;
-      fbdata[(cur2.y*320+cur2.x)*4+1] = 0x00;
-      fbdata[(cur2.y*320+cur2.x)*4+2] = 0x00;
-      fbdata[(cur2.y*320+cur2.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur2, color);
     }
     while (rem1 >= adelta1.y && cur1.x != p2.x) {
       cur1.x += signs1.x;
       rem1 -= adelta1.y;
-      /* PutPixel (cur); */
-      fbdata[(cur1.y*320+cur1.x)*4+0] = 0x00;
-      fbdata[(cur1.y*320+cur1.x)*4+1] = 0x00;
-      fbdata[(cur1.y*320+cur1.x)*4+2] = 0x00;
-      fbdata[(cur1.y*320+cur1.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur1, color);
     }
     while (rem2 >= adelta2.y && cur2.x != p3.x) {
       cur2.x += signs2.x;
       rem2 -= adelta2.y;
-      /* PutPixel (cur); */
-      fbdata[(cur2.y*320+cur2.x)*4+0] = 0x00;
-      fbdata[(cur2.y*320+cur2.x)*4+1] = 0x00;
-      fbdata[(cur2.y*320+cur2.x)*4+2] = 0x00;
-      fbdata[(cur2.y*320+cur2.x)*4+3] = 0x00;
+      bg_put_pixel (rti, cur2, color);
     }
-    /* Fill in the x values in the middle.  */
-    /* TODO: If we knew which way the lines were running, we could
-       better optimize this to avoid duplicate pixel plots.  */
-    if (adelta1.y != 0 && adelta2.y != 0) {
-      int xbegin = MIN(cur1.x, cur2.x);
-      int xend = MAX(cur1.x, cur2.x);
-      int scany = cur1.y;
-      int curx = xbegin;
-      while (curx < xend) {
-	/* PutPixel (cur); */
-	fbdata[(scany*320+curx)*4+0] = 0x00;
-	fbdata[(scany*320+curx)*4+1] = 0x00;
-	fbdata[(scany*320+curx)*4+2] = 0x00;
-	fbdata[(scany*320+curx)*4+3] = 0x00;
-	curx++;
+    if (filled) {
+      /* Fill in the x values in the middle.  */
+      /* TODO: If we knew which way the lines were running, we could
+	 better optimize this to avoid duplicate pixel plots.  */
+      if (adelta1.y != 0 && adelta2.y != 0) {
+	int xbegin = MIN(cur1.x, cur2.x);
+	int xend = MAX(cur1.x, cur2.x);
+	int scany = cur1.y;
+	int curx = xbegin;
+	while (curx < xend) {
+	  Point2D scancur = { curx, scany };
+	  bg_put_pixel (rti, scancur, color);
+	  curx++;
+	}
       }
     }
   }
 }
 
 void
-draw_geom (char *fbdata)
+draw_geom (RTImageBuf *rti)
 {
+  unsigned long color = 0x00000000;
 
   /* { /\* Now plot our line, safe and intuitive way.  *\/ */
   /*   Point2D p1 = { 10, 17 }; */
@@ -812,28 +677,28 @@ draw_geom (char *fbdata)
     Point2D p1 = { 10, 17 };
     Point2D p2 = { 130, 210 };
 
-    plot_line_fast2 (fbdata, p1, p2);
+    plot_line_fast2 (rti, color, p1, p2);
   }
 
   { /* Plot our line the fast way.  */
     Point2D p1 = { 10, 210 };
     Point2D p2 = { 200, 170 };
 
-    plot_line_fast2 (fbdata, p1, p2);
+    plot_line_fast2 (rti, color, p1, p2);
   }
 
   { /* Plot our line the fast way.  */
     Point2D p1 = { 10, 150 };
     Point2D p2 = { 200, 150 };
 
-    plot_line_fast2 (fbdata, p1, p2);
+    plot_line_fast2 (rti, color, p1, p2);
   }
 
   { /* Plot our line the fast way.  */
     Point2D p1 = { 280, 50 };
     Point2D p2 = { 280, 190 };
 
-    plot_line_fast2 (fbdata, p1, p2);
+    plot_line_fast2 (rti, color, p1, p2);
   }
 
   { /* Plot a triangle.  */
@@ -841,48 +706,37 @@ draw_geom (char *fbdata)
     Point2D p2 = { 20, 90 };
     Point2D p3 = { 150, 10 };
 
-    plot_tri_fast2 (fbdata, p1, p2, p3);
+    plot_tri_fast2 (rti, color, 1, p1, p2, p3);
   }
 
   { /* Plot a circle.  */
     Point2D p1 = { 150, 120 };
-    plot_circle_fast (fbdata, p1, 60);
+    plot_circle_fast (rti, color, p1, 60);
   }
 
   { /* Plot an ellipse.  */
     Point2D p1 = { 150, 120 };
-    plot_ellipse_fast (fbdata, p1, 30, 65);
+    plot_ellipse_fast (rti, color, p1, 30, 65);
   }
 
   { /* Plot a parabola.  */
     Point2D p1 = { 200, 20 };
-    plot_parabola_fast (fbdata, p1, 36, 80);
+    plot_parabola_fast (rti, color, p1, 36, 80);
   }
 
   { /* Plot a hyperbola.  */
     Point2D p1 = { 150, 120 };
-    plot_hyperbola_fast (fbdata, p1, 10, 10, 30);
+    plot_hyperbola_fast (rti, color, p1, 10, 10, 30);
   }
 
   { /* Plot a cubic curve.  */
     Point2D p1 = { 220, 120 };
-    plot_cubic_fast (fbdata, p1, 36, 50);
+    plot_cubic_fast (rti, color, p1, 36, 50);
   }
 
   { /* Flood fill!  */
     Point2D p1 = { 150, 170 };
-    flood_fill (fbdata, p1, 0x00000000);
-  }
-}
-
-void
-clear_img (char *fbdata)
-{
-  { /* Clear the framebuffer.  */
-    unsigned i;
-    for (i = 0; i < 4*320*240; i++) {
-      fbdata[i] = 0xff;
-    }
+    flood_fill (rti->image_data, p1, 0x00000000);
   }
 }
 
@@ -917,6 +771,15 @@ main (int argc, char *argv[])
   /* ??? We request 24-bit, but we must plot 32-bit data.  Pixels in
      BGRA format.  Scan lines are in top-down order.  */
   char fbdata[4*320*240];
+  RTImageBuf rti;
+
+  rti.image_data = fbdata;
+  rti.image_size = fbwidth * fbheight * 4;
+  rti.pitch = fbwidth * 4;
+  rti.hdr.width = fbwidth;
+  rti.hdr.height = fbheight;
+  rti.hdr.bpp = 32;
+  rti.hdr.image_desc = TOP_LEFT;
 
   /* { /\* Test patterns to determine the parameters of the image.  *\/
     unsigned i;
@@ -930,9 +793,9 @@ main (int argc, char *argv[])
     }
   } */
 
-  clear_img (fbdata);
+  bg_clear_img (&rti);
 
-  draw_geom (fbdata);
+  draw_geom (&rti);
 
   mydisplay = XOpenDisplay ("");
   myscreen = DefaultScreen (mydisplay);
@@ -1080,7 +943,9 @@ main (int argc, char *argv[])
 		     myevent.xmotion.x, myevent.xmotion.y);
 	  if (last_pt.x < 320 && last_pt.y < 240 &&
 	      myevent.xmotion.x < 320 && myevent.xmotion.y < 240)
-	    plot_line_fast2 (fbdata, last_pt, this_pt);
+	    {
+	      plot_line_fast2 (&rti, 0x00000000, last_pt, this_pt);
+	    }
 	}
 	last_pt.x = myevent.xmotion.x;
 	last_pt.y = myevent.xmotion.y;
@@ -1092,7 +957,7 @@ main (int argc, char *argv[])
 	  switch (text[0]) {
 	  case 'q': done = 1; break;
 	  case 'c':
-	    clear_img (fbdata);
+	    bg_clear_img (&rti);
 	    XPutImage (mydisplay,
 		       mywindow,
 		       mygc,
@@ -1102,7 +967,7 @@ main (int argc, char *argv[])
 		       fbwidth, fbheight);
 	    break;
 	  case 'd':
-	    draw_geom (fbdata);
+	    draw_geom (&rti);
 	    XPutImage (mydisplay,
 		       mywindow,
 		       mygc,
@@ -1128,7 +993,7 @@ main (int argc, char *argv[])
 	    } else {
 	      if (line_pt.x < 320 && line_pt.y < 240 &&
 		  last_pt.x < 320 && last_pt.y < 240)
-		plot_line_fast2 (fbdata, line_pt, last_pt);
+		plot_line_fast2 (&rti, 0x00000000, line_pt, last_pt);
 	      XPutImage (mydisplay,
 			 mywindow,
 			 mygc,
