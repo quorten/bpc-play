@@ -10,11 +10,9 @@
 #include <X11/Xutil.h>
 #include <X11/cursorfont.h>
 
-#include <X11/bitmaps/stipple>
-
 #include "ivecmath.h"
 
-char hello[] = "Hello, World.";
+char title[] = "Graphics Lab";
 
 IVPoint2D_i32 p1 = {{ 50, 50 }};
 IVPoint2D_i32 p2 = {{ 200, 150 }};
@@ -134,7 +132,6 @@ main (int argc, char *argv[])
   int done;
   XColor red;
   Cursor mycursor;
-  Pixmap mypixmap;
   Atom wmDeleteMessage;
   int is_pressed = 0;
   int line_start = 0;
@@ -157,15 +154,13 @@ main (int argc, char *argv[])
 				  DefaultRootWindow (mydisplay),
 				  myhint.x, myhint.y, myhint.width, myhint.height,
 				  5, myforeground, mybackground);
-  XSetStandardProperties (mydisplay, mywindow, hello, hello,
+  XSetStandardProperties (mydisplay, mywindow, title, title,
 			  None, argv, argc, &myhint);
 
   mycursor = XCreateFontCursor (mydisplay, XC_left_ptr);
   XDefineCursor (mydisplay, mywindow, mycursor);
 
   mygc = XCreateGC (mydisplay, mywindow, 0, 0);
-  mypixmap = XCreateBitmapFromData (mydisplay, mywindow, 
-				    stipple_bits, stipple_width, stipple_height);
 
   if (XMatchVisualInfo (mydisplay, myscreen, 24, TrueColor, &myvisinfo) == 0)
     fprintf (stderr, "error: no visuals\n");
@@ -173,8 +168,6 @@ main (int argc, char *argv[])
   mygcvalues.foreground = myforeground;
   mygcvalues.background = mybackground;
   mygcvalues.fill_style = FillSolid;
-  /* mygcvalues.fill_style = FillStippled; */
-  /* mygcvalues.stipple = mypixmap; */
   XChangeGC (mydisplay, mygc,
 	     GCForeground | GCBackground | GCFillStyle /* | GCStipple */, &mygcvalues);
 
@@ -217,11 +210,6 @@ main (int argc, char *argv[])
 	    XGetWindowAttributes (myevent.xexpose.display,
 				  myevent.xexpose.window,
 				  &attribs);
-	    /* XFillRectangle (myevent.xexpose.display,
-			    myevent.xexpose.window,
-			    mygc,
-			    0, 0,
-			    attribs.width, attribs.height); */
 	    XClearArea (myevent.xexpose.display,
 			myevent.xexpose.window,
 			0, 0,
@@ -285,11 +273,11 @@ main (int argc, char *argv[])
 	    break;
 	  }
 	}
-	XDrawImageString (myevent.xbutton.display,
+	/* XDrawImageString (myevent.xbutton.display,
 			  myevent.xbutton.window,
 			  mygc,
 			  5, 15,
-			  text, strlen (text));
+			  text, strlen (text)); */
 	break;
 
       case EnterNotify:
