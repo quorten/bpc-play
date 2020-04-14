@@ -145,6 +145,16 @@ typedef IVInPlane_v3i32_ar3 IVSys3_InPlane_v3i32;
 /********************************************************************/
 
 /* Common arbitrary length array types */
+
+/* nxm matrices and transposed matrices.  */
+struct IVMatNxM_i32_tag
+{
+  IVint32 *d;
+  IVuint16 width;
+  IVuint16 height;
+};
+typedef struct IVMatNxM_i32_tag IVMatNxM_i32;
+
 /* Point cloud */
 EA_TYPE(IVPoint2D_i32);
 EA_TYPE(IVLineSeg_u32);
@@ -233,5 +243,10 @@ IVPoint2D_i32 *iv_solve2_s2_NLine_v2i32(IVPoint2D_i32 *a,
 					IVSys2_NLine_v2i32 *b);
 IVPoint2D_i32 *iv_solve2_s2_InLine_v2i32(IVPoint2D_i32 *a,
 					 IVSys2_InLine_v2i32 *b);
+
+IVMatNxM_i32 *iv_mulshr4_mnxm_i32(IVMatNxM_i32 *a,
+				  IVMatNxM_i32 *b, IVMatNxM_i32 *c,
+				  IVuint32 d);
+IVMatNxM_i32 *iv_xpose2_mnxm_i32(IVMatNxM_i32 *a, IVMatNxM_i32 *b);
 
 #endif /* not IVECMATH_H */

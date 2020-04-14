@@ -1003,3 +1003,92 @@ IVPoint2D_i32 *iv_solve2_s2_InLine_v2i32(IVPoint2D_i32 *a,
   /* Now intersect the InLine with the plane (line in 2D).  */
   return iv_isect3_InLine_NLine_v2i32(a, &b->d[0], &nline);
 }
+
+/* Multiply, shift right two MxN integer matrices, with symmetric
+   positive/negative shift behavior.  After each element
+   multiplication, the result is shifted right by `n` bits before
+   adding to the accumulator.  The output matrix must be
+   pre-allocated.
+
+   If there is no solution, the resulting matrix entries are all set
+   to IVINT32_MIN.  */
+IVMatNxM_i32 *iv_mulshr4_mnxm_i32(IVMatNxM_i32 *a,
+				  IVMatNxM_i32 *b, IVMatNxM_i32 *c,
+				  IVuint32 d)
+{
+  IVuint16 inner = b->width;
+  IVuint16 a_width = a->width, a_height = a->height;
+  IVint32 *a_d = a->d, *b_d = b->d, *c_d = c->d;
+
+  if (inner != c->height ||
+      b->height != a_height ||
+      c->width != a_width) {
+    /* No solution, matrix dimension mismatch.  */
+    IVuint32 a_size = a_height * a_width;
+    IVuint32 i;
+    for (i = 0; i < a_size; i++) {
+      a_d[i] = IVINT32_MIN;
+    }
+    return a;
+  }
+
+  {
+    IVuint16 i, j, k;
+    IVuint16 a_width_i = 0; /* (a_width * i) */
+    IVuint16 inner_i = 0; /* (inner * i) */
+    for (i = 0; i < a_height; i++) {
+      for (j = 0; j < a_width; j++) {
+	IVint32 accum = 0;
+	IVuint16 a_width_k = 0; /* (a_width * k) */
+	for (k = 0; k < inner; k++) {
+	  IVint64 intermed =
+	    (IVint64)b_d[inner_i+k] * c_d[a_width_k+j];
+	  if (intermed < 0) intermed++;
+	  accum += intermed >> d;
+	  a_width_k += a_width;
+	}
+	a_d[a_width_i+j] = accum;
+      }
+      a_width_i += a_width;
+      inner_i += inner;
+    }
+  }
+
+  return a;
+}
+
+/* Transpose an integer matrix.  The output matrix must be
+   pre-allocated.
+
+   If there is a dimension mismatch, the resulting matrix entries are
+   all set to IVINT32_MIN.  */
+IVMatNxM_i32 *iv_xpose2_mnxm_i32(IVMatNxM_i32 *a, IVMatNxM_i32 *b)
+{
+  IVuint16 a_width = a->width, a_height = a->height;
+  IVint32 *a_d = a->d, *b_d = b->d;
+
+  if (a_width != b->height || a_height != b->width) {
+    /* No solution, matrix dimension mismatch.  */
+    IVuint32 a_size = a_height * a_width;
+    IVuint32 i;
+    for (i = 0; i < a_size; i++) {
+      a_d[i] = IVINT32_MIN;
+    }
+    return a;
+  }
+
+  {
+    IVuint16 i, j;
+    IVuint16 a_width_i = 0; /* (a_width * i) */
+    for (i = 0; i < a_height; i++) {
+      IVuint16 a_height_j = 0; /* (a_height * j) */
+      for (j = 0; j < a_width; j++) {
+	a_d[a_width_i+j] = b_d[a_height_j+i];
+	a_height_j += a_height;
+      }
+      a_width_i += a_width;
+    }
+  }
+
+  return a;
+}
