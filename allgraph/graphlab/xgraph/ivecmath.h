@@ -192,6 +192,8 @@ IVVec2D_i32 *iv_mulshr4_v2i32_i32(IVVec2D_i32 *a, IVVec2D_i32 *b,
 IVVec2D_i32 *iv_shl3_v2i32_u32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint32 c);
 IVVec2D_i32 *iv_shr3_v2i32_u32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint32 c);
 IVint64 iv_dot2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b);
+IVint64 iv_dotshr3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint32 c);
+IVint64 iv_magn2q_v2i32(IVPoint2D_i32 *a);
 
 IVVec3D_i32 *iv_crossproddiv4_v3i32(IVVec3D_i32 *a,
 				    IVVec3D_i32 *b, IVVec3D_i32 *c,

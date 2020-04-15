@@ -144,6 +144,25 @@ IVint64 iv_dot2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b)
   return (IVint64)a->d[IX] * b->d[IX] + (IVint64)a->d[IY] * b->d[IY];
 }
 
+/* Dot product with shift right by `c` bits after multiply, with
+   symmetric positive/negative shift behavior.  */
+IVint64 iv_dotshr3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint32 c)
+{
+  IVint64 tx = (IVint64)a->d[IX] * b->d[IX];
+  IVint64 ty = (IVint64)a->d[IY] * b->d[IY];
+  if (c != 0) {
+    if (tx < 0) tx++;
+    if (ty < 0) ty++;
+  }
+  return (tx >> c) + (ty >> c);
+}
+
+/* Magnitude squared of a vector.  */
+IVint64 iv_magn2q_v2i32(IVPoint2D_i32 *a)
+{
+  return iv_dot2_v2i32(a, a);
+}
+
 /********************************************************************/
 
 /*
@@ -513,13 +532,13 @@ IVint32 iv_sqrt_i64(IVint64 a)
 
 IVint32 iv_magnitude_v2i32(IVVec2D_i32 *a)
 {
-  return iv_sqrt_i64(iv_dot2_v2i32(a, a));
+  return iv_sqrt_i64(iv_magn2q_v2i32(a));
 }
 
 /* Approximate magnitude, faster but less accurate.  */
 IVint32 iv_magn_v2i32(IVVec2D_i32 *a)
 {
-  return iv_aprx_sqrt_i64(iv_dot2_v2i32(a, a));
+  return iv_aprx_sqrt_i64(iv_magn2q_v2i32(a));
 }
 
 /* Vector normalization, convert to a Q16.16 fixed-point
@@ -705,7 +724,7 @@ IVint64 iv_dist2q2_p2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b)
 {
   IVVec2D_i32 t;
   iv_sub3_v2i32(&t, a, b);
-  return iv_dot2_v2i32(&t, &t);
+  return iv_magn2q_v2i32(&t);
 }
 
 /* Project a point to a plane along the perpendicular:
@@ -729,7 +748,7 @@ IVPoint2D_i32 *iv_proj3_p2i32_Eqs_v2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b,
   IVVec2D_i32 t;
   /* TODO VERIFY PRECISION: offset is only 32 bits? */
   iv_muldiv4_v2i32_i64(&t, &c->v, iv_dot2_v2i32(b, &c->v) - c->offset,
-		       iv_dot2_v2i32(&c->v, &c->v));
+		       iv_magn2q_v2i32(&c->v));
   return iv_sub3_v2i32(a, b, &t);
 }
 
@@ -755,7 +774,7 @@ IVPoint2D_i32 *iv_proj3_p2i32_NLine_v2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b,
   IVVec2D_i32 t;
   iv_sub3_v2i32(&l_rel_p, b, &c->p0);
   iv_muldiv4_v2i32_i64(&t, &c->v, iv_dot2_v2i32(&l_rel_p, &c->v),
-		       iv_dot2_v2i32(&c->v, &c->v));
+		       iv_magn2q_v2i32(&c->v));
   return iv_sub3_v2i32(a, b, &t);
 }
 
@@ -940,7 +959,7 @@ IVNLine_v2i32 *iv_rf_NLine_Eqs_v2i32(IVNLine_v2i32 *a, IVEqs_v2i32 *b)
 {
   /* TODO VERIFY PRECISION: offset is only 32 bits?  */
   /* Convert the origin offset to a point.  */
-  IVint64 d = iv_dot2_v2i32(&b->v, &b->v) >> g_shr;
+  IVint64 d = iv_magn2q_v2i32(&b->v) >> g_shr;
   if (d == 0) {
     /* No solution.  */
     a->p0.d[IX] = IVINT32_MIN;
