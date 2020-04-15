@@ -1,17 +1,14 @@
 /* Simple integer vector math subroutines.  A second iteration on my
    previous complicated generics design.  We only support 32-bit
    integers with 64-bit intermediates, two dimensions, and three
-   dimensions.
-
-   Fixed-point arithmetic is only used as an intermediate form,
-   Q32.32.  */
+   dimensions.  */
 
 #ifndef IVECMATH_H
 #define IVECMATH_H
 
 /* Coordinate indices */
-typedef enum IVPtIdx_tag IVPtIdx;
 enum IVPtIdx_tag { IX, IY, IZ };
+typedef enum IVPtIdx_tag IVPtIdx;
 
 /* Fully fixed array.  Both the allocation and the length of the array
    are fixed and identical.  This is mainly some helper macros to make
@@ -186,22 +183,25 @@ IVVec2D_i32 *iv_muldiv4_v2i32_i64(IVVec2D_i32 *a, IVVec2D_i32 *b,
 IVVec2D_i32 *iv_muldiv4_v2i32_i64_i32(IVVec2D_i32 *a, IVVec2D_i32 *b,
 				      IVint64 c, IVint32 d);
 IVVec2D_i32 *iv_shldiv4_v2i32_i32(IVVec2D_i32 *a, IVVec2D_i32 *b,
-				  IVuint32 c, IVint32 d);
+				  IVuint8 c, IVint32 d);
 IVVec2D_i32 *iv_mulshr4_v2i32_i32(IVVec2D_i32 *a, IVVec2D_i32 *b,
-				  IVint32 c, IVuint32 q);
-IVVec2D_i32 *iv_shl3_v2i32_u32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint32 c);
-IVVec2D_i32 *iv_shr3_v2i32_u32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint32 c);
+				  IVint32 c, IVuint8 q);
+IVVec2D_i32 *iv_shl3_v2i32_u32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint8 c);
+IVVec2D_i32 *iv_shr3_v2i32_u32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint8 c);
 IVint64 iv_dot2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b);
-IVint64 iv_dotshr3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint32 q);
+IVint64 iv_dotshr3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint8 q);
 IVint64 iv_magn2q_v2i32(IVPoint2D_i32 *a);
-IVint64 iv_magn2qshr2_v2i32(IVPoint2D_i32 *a, IVuint32 q);
+IVint64 iv_magn2qshr2_v2i32(IVPoint2D_i32 *a, IVuint8 q);
+IVVec2D_i32 *iv_perpen2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b);
+IVVec2D_i32 *iv_nosol_v2i32(IVVec2D_i32 *a);
+IVuint8 iv_is_nosol_v2i32(IVVec2D_i32 *a);
 
 IVVec3D_i32 *iv_crossproddiv4_v3i32(IVVec3D_i32 *a,
 				    IVVec3D_i32 *b, IVVec3D_i32 *c,
 				    IVint32 d);
 IVVec3D_i32 *iv_crossprodshr4_v3i32(IVVec3D_i32 *a,
 				    IVVec3D_i32 *b, IVVec3D_i32 *c,
-				    IVuint32 q);
+				    IVuint8 q);
 
 IVuint8 soft_bsr_i64(IVint64 a);
 IVuint8 soft_ns_bsr_i64(IVint64 a);
@@ -213,53 +213,61 @@ IVint32 iv_aprx_sqrt_i64(IVint64 a);
 IVint32 iv_sqrt_i64(IVint64 a);
 
 IVint32 iv_magnitude_v2i32(IVVec2D_i32 *a);
+IVint32 iv_magnitude2_v2i32(IVVec2D_i32 *a, IVuint8 q);
 IVint32 iv_magn_v2i32(IVVec2D_i32 *a);
+IVint32 iv_magn2_v2i32(IVVec2D_i32 *a, IVuint8 q);
 IVVec2D_i32 *iv_normalize2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b);
-IVint32 iv_dist2_p2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b);
-IVint32 iv_adist2_p2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b);
-IVVec2D_i32 *iv_elim3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c);
-IVVec2D_i32 *iv_aelim3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c);
-IVint32 iv_dist2_v2i32_Eqs_v2i32(IVVec2D_i32 *a, IVEqs_v2i32 *b);
-IVint32 iv_adist2_v2i32_Eqs_v2i32(IVVec2D_i32 *a, IVEqs_v2i32 *b);
+IVint32 iv_dist3_p2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b, IVuint8 q);
+IVint32 iv_adist3_p2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b, IVuint8 q);
+IVVec2D_i32 *iv_elim4_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c,
+			    IVuint8 q);
+IVVec2D_i32 *iv_aelim4_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c,
+			     IVuint8 q);
+IVint32 iv_dist3_v2i32_Eqs_v2i32(IVVec2D_i32 *a, IVEqs_v2i32 *b, IVuint8 q);
+IVint32 iv_adist3_v2i32_Eqs_v2i32(IVVec2D_i32 *a, IVEqs_v2i32 *b, IVuint8 q);
 IVint32 iv_dist2_v2i32_Eqs_v2q16i32(IVVec2D_i32 *a, IVEqs_v2i32 *b);
-IVint32 iv_dist2_v2i32_NRay_v2i32(IVVec2D_i32 *a, IVNLine_v2i32 *b);
-IVint32 iv_adist2_v2i32_NRay_v2i32(IVVec2D_i32 *a, IVNLine_v2i32 *b);
+IVint32 iv_dist3_v2i32_NRay_v2i32(IVVec2D_i32 *a, IVNLine_v2i32 *b,
+				  IVuint8 q);
+IVint32 iv_adist3_v2i32_NRay_v2i32(IVVec2D_i32 *a, IVNLine_v2i32 *b,
+				   IVuint8 q);
 
-IVint64 iv_dist2q2_p2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b);
-IVPoint2D_i32 *iv_proj3_p2i32_Eqs_v2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b,
-					IVEqs_v2i32 *c);
-IVPoint2D_i32 *iv_proj3_p2i32_NLine_v2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b,
-					  IVNLine_v2i32 *c);
+IVint64 iv_dist2q3_p2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b, IVuint8 q);
+IVPoint2D_i32 *iv_proj4_p2i32_Eqs_v2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b,
+					IVEqs_v2i32 *c, IVuint8 q);
+IVPoint2D_i32 *iv_proj4_p2i32_NLine_v2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b,
+					  IVNLine_v2i32 *c, IVuint8 q);
 IVPoint2D_i32 *iv_isect4_InLine_Eqs_v2i32(IVPoint2D_i32 *a,
 					  IVInLine_v2i32 *b,
 					  IVEqs_v2i32 *c,
-					  IVuint32 q);
-IVPoint2D_i32 *iv_isect3_InLine_NLine_v2i32(IVPoint2D_i32 *a,
+					  IVuint8 q);
+IVPoint2D_i32 *iv_isect4_InLine_NLine_v2i32(IVPoint2D_i32 *a,
 					    IVInLine_v2i32 *b,
-					    IVNLine_v2i32 *c);
-IVPoint2D_i32 *iv_isect3_Ray_Eqs_v2i32(IVPoint2D_i32 *a, IVRay_v2i32 *b,
-				       IVEqs_v2i32 *c);
-IVPoint2D_i32 *iv_isect3_Ray_NLine_v2i32(IVPoint2D_i32 *a, IVRay_v2i32 *b,
-					 IVNLine_v2i32 *c);
-IVNLine_v2i32 *iv_rf_NLine_Eqs_v2i32(IVNLine_v2i32 *a, IVEqs_v2i32 *b,
-				     IVuint32 q);
-IVEqs_v2i32 *iv_rf_Eqs_NLine_v2i32(IVEqs_v2i32 *a, IVNLine_v2i32 *b,
-				     IVuint32 q);
-IVNLine_v2i32 *iv_rf_NLine_InLine_v2i32(IVNLine_v2i32 *a, IVInLine_v2i32 *b);
-IVNLine_v2i32 *iv_rf_InLine_NLine_v2i32(IVInLine_v2i32 *a, IVNLine_v2i32 *b);
+					    IVNLine_v2i32 *c,
+					    IVuint8 q);
+IVPoint2D_i32 *iv_isect4_Ray_Eqs_v2i32(IVPoint2D_i32 *a, IVRay_v2i32 *b,
+				       IVEqs_v2i32 *c, IVuint8 q);
+IVPoint2D_i32 *iv_isect4_Ray_NLine_v2i32(IVPoint2D_i32 *a, IVRay_v2i32 *b,
+					 IVNLine_v2i32 *c, IVuint8 q);
+IVNLine_v2i32 *iv_rf3_NLine_Eqs_v2i32(IVNLine_v2i32 *a, IVEqs_v2i32 *b,
+				      IVuint8 q);
+IVEqs_v2i32 *iv_rf3_Eqs_NLine_v2i32(IVEqs_v2i32 *a, IVNLine_v2i32 *b,
+				    IVuint8 q);
+IVNLine_v2i32 *iv_rf2_NLine_InLine_v2i32(IVNLine_v2i32 *a, IVInLine_v2i32 *b);
+IVNLine_v2i32 *iv_rf2_InLine_NLine_v2i32(IVInLine_v2i32 *a, IVNLine_v2i32 *b);
 IVPoint2D_i32 *iv_solve3_s2_Eqs_v2i32(IVPoint2D_i32 *a, IVSys2_Eqs_v2i32 *b,
-				      IVuint32 q);
-IVPoint2D_i32 *iv_solve2_s2_NLine_v2i32(IVPoint2D_i32 *a,
-					IVSys2_NLine_v2i32 *b);
-IVPoint2D_i32 *iv_solve2_s2_InLine_v2i32(IVPoint2D_i32 *a,
-					 IVSys2_InLine_v2i32 *b);
+				      IVuint8 q);
+IVPoint2D_i32 *iv_solve3_s2_NLine_v2i32(IVPoint2D_i32 *a,
+					IVSys2_NLine_v2i32 *b, IVuint8 q);
+IVPoint2D_i32 *iv_solve3_s2_InLine_v2i32(IVPoint2D_i32 *a,
+					 IVSys2_InLine_v2i32 *b, IVuint8 q);
 
 IVMatNxM_i32 *iv_mulshr4_mnxm_i32(IVMatNxM_i32 *a,
 				  IVMatNxM_i32 *b, IVMatNxM_i32 *c,
-				  IVuint32 q);
+				  IVuint8 q);
 IVMatNxM_i32 *iv_xpose2_mnxm_i32(IVMatNxM_i32 *a, IVMatNxM_i32 *b);
 
-IVPoint2D_i32 *iv_linreg2_p2i32(IVPoint2D_i32 *result,
-				IVPoint2D_i32_array *data);
+IVPoint2D_i32 *iv_linreg3_p2i32(IVPoint2D_i32 *result,
+				IVPoint2D_i32_array *data,
+				IVuint8 q);
 
 #endif /* not IVECMATH_H */

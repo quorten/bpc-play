@@ -54,13 +54,13 @@ draw_geom (Display *display, Window window, GC mygc)
 
     /* Use our spiffy new subroutines to compute perpendiculars and
        solutions.  */
-    iv_proj3_p2i32_NLine_v2i32 (&pp, &p3, &plane);
+    iv_proj4_p2i32_NLine_v2i32 (&pp, &p3, &plane, 0);
     XDrawLine (display, window, mygc,
 	       p3.d[IX], p3.d[IY], pp.d[IX], pp.d[IY]);
     /* XFillRectangle (display, window, mygc,
 		    pp.d[IX] - 5, pp.d[IY] - 5, 10, 10); */
 
-    iv_isect3_Ray_NLine_v2i32 (&pp, &v3_ray, &plane);
+    iv_isect4_Ray_NLine_v2i32 (&pp, &v3_ray, &plane, 0);
 
     if (pp.d[IX] != IVINT32_MIN) {
       XFillRectangle (display, window, mygc,
@@ -85,7 +85,7 @@ draw_geom (Display *display, Window window, GC mygc)
       /* y = m*x + b, vector format `[b, m]` */
       IVPoint2D_i32 coeffs;
       IVPoint2D_i32 r_p1, r_p2;
-      iv_linreg2_p2i32 (&coeffs, &reg_pts);
+      iv_linreg3_p2i32 (&coeffs, &reg_pts, 0);
       r_p1.d[IX] = 0;
       r_p1.d[IY] = (coeffs.d[1] * (r_p1.d[IX] - 0) + coeffs.d[0]) >> 0x10;
       r_p2.d[IX] = 600;
@@ -112,13 +112,15 @@ redraw_geom (Display *display, Window window, GC mygc)
    we don't have to compute the square root.  */
 IVuint16
 pick_point (IVint64 *result_dist_2,
-	    IVPoint2D_i32_array pts, IVPoint2D_i32 mouse_pt)
+	    IVPoint2D_i32_array *pts, IVPoint2D_i32 *mouse_pt)
 {
+  IVPoint2D_i32 *pts_d = pts->d;
+  IVuint16 pts_len = pts->len;
   IVint64 pick_dist_2 = 0x0fffffffffffffffLL;
   IVuint16 pick;
   IVuint16 i;
-  for (i = 0; i < pts.len; i++) {
-    IVint64 i_dist_2 = iv_dist2q2_p2i32 (&mouse_pt, &pts.d[i]);
+  for (i = 0; i < pts_len; i++) {
+    IVint64 i_dist_2 = iv_dist2q3_p2i32 (mouse_pt, &pts_d[i], 0);
     if (i_dist_2 < pick_dist_2) {
       pick_dist_2 = i_dist_2;
       pick = i;
@@ -139,8 +141,8 @@ drag_point (Display *display, Window window, GC mygc, int x, int y)
     IVPoint2D_i32_array isect; isect.d = isect_stor; isect.len = 4;
     IVint64 isect_dist_2;
     IVint64 reg_dist_2;
-    isect_drag_idx = pick_point (&isect_dist_2, isect, mouse_pt);
-    reg_drag_idx = pick_point (&reg_dist_2, reg_pts, mouse_pt);
+    isect_drag_idx = pick_point (&isect_dist_2, &isect, &mouse_pt);
+    reg_drag_idx = pick_point (&reg_dist_2, &reg_pts, &mouse_pt);
     if (isect_dist_2 < reg_dist_2)
       reg_drag_idx = (IVuint16)-1;
     else

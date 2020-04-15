@@ -1,10 +1,7 @@
 /* Simple integer vector math subroutines.  A second iteration on my
    previous complicated generics design.  We only support 32-bit
    integers with 64-bit intermediates, two dimensions, and three
-   dimensions.
-
-   Fixed-point arithmetic is only used as an intermediate form,
-   Q32.32.  */
+   dimensions.  */
 
 #include <stdlib.h>
 
@@ -12,6 +9,7 @@
 
 IVVec2D_i32 *iv_neg2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b)
 {
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
   a->d[IX] = -b->d[IX];
   a->d[IY] = -b->d[IY];
   return a;
@@ -19,6 +17,7 @@ IVVec2D_i32 *iv_neg2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b)
 
 IVVec2D_i32 *iv_add3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c)
 {
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
   a->d[IX] = b->d[IX] + c->d[IX];
   a->d[IY] = b->d[IY] + c->d[IY];
   return a;
@@ -26,6 +25,7 @@ IVVec2D_i32 *iv_add3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c)
 
 IVVec2D_i32 *iv_sub3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c)
 {
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
   a->d[IX] = b->d[IX] - c->d[IX];
   a->d[IY] = b->d[IY] - c->d[IY];
   return a;
@@ -35,6 +35,7 @@ IVVec2D_i32 *iv_sub3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c)
 IVVec2D_i32 *iv_muldiv4_v2i32_i32(IVVec2D_i32 *a, IVVec2D_i32 *b,
 				  IVint32 c, IVint32 d)
 {
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
   a->d[IX] = (IVint32)((IVint64)b->d[IX] * c / d);
   a->d[IY] = (IVint32)((IVint64)b->d[IY] * c / d);
   return a;
@@ -45,6 +46,7 @@ IVVec2D_i32 *iv_muldiv4_v2i32_i32(IVVec2D_i32 *a, IVVec2D_i32 *b,
 IVVec2D_i32 *iv_muldiv4_v2i32_i64(IVVec2D_i32 *a, IVVec2D_i32 *b,
 				  IVint64 c, IVint64 d)
 {
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
   if (d < 0) { c = -c; d = -d; }
   if (d >= 0x100000000LL) {
     /* Shift away all the low bits from both the numerator and the
@@ -70,6 +72,7 @@ IVVec2D_i32 *iv_muldiv4_v2i32_i64(IVVec2D_i32 *a, IVVec2D_i32 *b,
 IVVec2D_i32 *iv_muldiv4_v2i32_i64_i32(IVVec2D_i32 *a, IVVec2D_i32 *b,
 				      IVint64 c, IVint32 d)
 {
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
   if (c >= 0x100000000LL || c <= -0x100000000LL) {
     /* Fold c / d together before multiplying to try to avoid overflow
        when possible.  */
@@ -85,8 +88,9 @@ IVVec2D_i32 *iv_muldiv4_v2i32_i64_i32(IVVec2D_i32 *a, IVVec2D_i32 *b,
 
 /* shift left, divide */
 IVVec2D_i32 *iv_shldiv4_v2i32_i32(IVVec2D_i32 *a, IVVec2D_i32 *b,
-				  IVuint32 c, IVint32 d)
+				  IVuint8 c, IVint32 d)
 {
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
   a->d[IX] = (IVint32)((IVint64)b->d[IX] << c / d);
   a->d[IY] = (IVint32)((IVint64)b->d[IY] << c / d);
   return a;
@@ -95,8 +99,9 @@ IVVec2D_i32 *iv_shldiv4_v2i32_i32(IVVec2D_i32 *a, IVVec2D_i32 *b,
 /* multiply, shift right, with symmetric positive/negative shift
    behavior */
 IVVec2D_i32 *iv_mulshr4_v2i32_i32(IVVec2D_i32 *a, IVVec2D_i32 *b,
-				  IVint32 c, IVuint32 q)
+				  IVint32 c, IVuint8 q)
 {
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
   IVint64 tx = b->d[IX] * c;
   IVint64 ty = b->d[IY] * c;
   /* Due to asymmetric two's complement, we must pre-increment one if
@@ -111,16 +116,18 @@ IVVec2D_i32 *iv_mulshr4_v2i32_i32(IVVec2D_i32 *a, IVVec2D_i32 *b,
 }
 
 /* shift left */
-IVVec2D_i32 *iv_shl3_v2i32_u32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint32 c)
+IVVec2D_i32 *iv_shl3_v2i32_u32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint8 c)
 {
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
   a->d[IX] = b->d[IX] << c;
   a->d[IY] = b->d[IY] << c;
   return a;
 }
 
 /* shift right, with symmetric positive/negative shift behavior */
-IVVec2D_i32 *iv_shr3_v2i32_u32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint32 c)
+IVVec2D_i32 *iv_shr3_v2i32_u32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint8 c)
 {
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
   IVint32 tx = b->d[IX], ty = b->d[IY];
   if (c == 0) {
     a->d[IX] = tx;
@@ -138,13 +145,15 @@ IVVec2D_i32 *iv_shr3_v2i32_u32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint32 c)
 
 IVint64 iv_dot2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b)
 {
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
   return (IVint64)a->d[IX] * b->d[IX] + (IVint64)a->d[IY] * b->d[IY];
 }
 
 /* Dot product with shift right by `q` bits after multiply, with
    symmetric positive/negative shift behavior.  */
-IVint64 iv_dotshr3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint32 q)
+IVint64 iv_dotshr3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint8 q)
 {
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
   IVint64 tx = (IVint64)a->d[IX] * b->d[IX];
   IVint64 ty = (IVint64)a->d[IY] * b->d[IY];
   if (q != 0) {
@@ -162,9 +171,37 @@ IVint64 iv_magn2q_v2i32(IVPoint2D_i32 *a)
 
 /* Magnitude squared of a vector, with shift right by `q` bits after
    multiply, with symmetric positive/negative shift behavior.  */
-IVint64 iv_magn2qshr2_v2i32(IVPoint2D_i32 *a, IVuint32 q)
+IVint64 iv_magn2qshr2_v2i32(IVPoint2D_i32 *a, IVuint8 q)
 {
   return iv_dotshr3_v2i32(a, a, q);
+}
+
+/* Compute the perpendicular of a vector.  In 2D it's easy, there's
+   only one solution (or two if you count both directions).  */
+IVVec2D_i32 *iv_perpen2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b)
+{
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
+  a->d[IX] = -b->d[IY];
+  a->d[IY] = b->d[IX];
+  return a;
+}
+
+/* Assign the "no solution" value IVINT32_MIN to all components of the
+   given vector.  */
+IVVec2D_i32 *iv_nosol_v2i32(IVVec2D_i32 *a)
+{
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
+  a->d[IX] = IVINT32_MIN;
+  a->d[IY] = IVINT32_MIN;
+  return a;
+}
+
+/* Test if a vector is equal to the "no solution" vector.  */
+IVuint8 iv_is_nosol_v2i32(IVVec2D_i32 *a)
+{
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
+  return (a->d[IX] == IVINT32_MIN &&
+	  a->d[IY] == IVINT32_MIN);
 }
 
 /********************************************************************/
@@ -179,6 +216,7 @@ IVVec3D_i32 *iv_crossproddiv4_v3i32(IVVec3D_i32 *a,
 				    IVVec3D_i32 *b, IVVec3D_i32 *c,
 				    IVint32 d)
 {
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
   a->d[IX] = (IVint32)(((IVint64)b->d[IY] * c->d[IZ] -
 			(IVint64)b->d[IZ] * c->d[IY]) / d);
   a->d[IY] = (IVint32)(((IVint64)b->d[IZ] * c->d[IX] -
@@ -190,8 +228,9 @@ IVVec3D_i32 *iv_crossproddiv4_v3i32(IVVec3D_i32 *a,
 
 IVVec3D_i32 *iv_crossprodshr4_v3i32(IVVec3D_i32 *a,
 				    IVVec3D_i32 *b, IVVec3D_i32 *c,
-				    IVuint32 q)
+				    IVuint8 q)
 {
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
   /* TODO FIXME SYMMETRIC SHIFT BEHAVIOR */
   /* TODO VERIFY PRECISION */
   a->d[IX] = (IVint32)(((IVint64)b->d[IY] * c->d[IZ] -
@@ -539,10 +578,26 @@ IVint32 iv_magnitude_v2i32(IVVec2D_i32 *a)
   return iv_sqrt_i64(iv_magn2q_v2i32(a));
 }
 
+/* `q` = shift right factor, bits after decimal for fixed-point
+   operands */
+IVint32 iv_magnitude2_v2i32(IVVec2D_i32 *a, IVuint8 q)
+{
+  return iv_sqrt_i64(iv_magn2qshr2_v2i32(a, q));
+}
+
 /* Approximate magnitude, faster but less accurate.  */
 IVint32 iv_magn_v2i32(IVVec2D_i32 *a)
 {
   return iv_aprx_sqrt_i64(iv_magn2q_v2i32(a));
+}
+
+/* Approximate magnitude, faster but less accurate.
+
+   `q` = shift right factor, bits after decimal for fixed-point
+   operands */
+IVint32 iv_magn2_v2i32(IVVec2D_i32 *a, IVuint8 q)
+{
+  return iv_aprx_sqrt_i64(iv_magn2qshr2_v2i32(a, q));
 }
 
 /* Vector normalization, convert to a Q16.16 fixed-point
@@ -555,51 +610,57 @@ IVVec2D_i32 *iv_normalize2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b)
   IVint32 d = iv_magnitude_v2i32(a);
   if (d == 0) {
     /* No solution.  */
-    a->d[IX] = IVINT32_MIN;
-    a->d[IY] = IVINT32_MIN;
-    return a;
+    return iv_nosol_v2i32(a);
   }
   return iv_shldiv4_v2i32_i32(a, a, 0x10, d);
 }
 
-/* Distance between two points.  */
-IVint32 iv_dist2_p2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b)
+/* Distance between two points.
+
+   `q` = shift right factor, bits after decimal for fixed-point
+   operands */
+IVint32 iv_dist3_p2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b, IVuint8 q)
 {
   IVVec2D_i32 t;
   iv_sub3_v2i32(&t, a, b);
-  return iv_magnitude_v2i32(&t);
+  return iv_magnitude2_v2i32(&t, q);
 }
 
-/* Approximate distance between two points.  */
-IVint32 iv_adist2_p2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b)
+/* Approximate distance between two points.
+
+   `q` = shift right factor, bits after decimal for fixed-point
+   operands */
+IVint32 iv_adist3_p2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b, IVuint8 q)
 {
   IVVec2D_i32 t;
   iv_sub3_v2i32(&t, a, b);
-  return iv_magn_v2i32(&t);
+  return iv_magn2_v2i32(&t, q);
 }
 
 /* Eliminate one vector component from another like "A - B".
 
    vec_elim(A, B) =  A - B * dot_product(A, B) / magnitude(B)
 
+   `q` = shift right factor, bits after decimal for fixed-point
+   operands
+
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.
 */
-IVVec2D_i32 *iv_elim3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c)
+IVVec2D_i32 *iv_elim4_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c,
+			    IVuint8 q)
 {
   IVint32 d;
   IVVec2D_i32 t;
-  d = iv_magnitude_v2i32(c);
+  d = iv_magnitude2_v2i32(c, q);
   if (d == 0) {
     /* No solution.  */
-    a->d[IX] = IVINT32_MIN;
-    a->d[IY] = IVINT32_MIN;
-    return a;
+    return iv_nosol_v2i32(a);
   }
   iv_sub3_v2i32
     (a, b,
      iv_muldiv4_v2i32_i64_i32
-       (&t, c, iv_dot2_v2i32(b, c), d)
+       (&t, c, iv_dotshr3_v2i32(b, c, q), d)
     );
   return a;
 }
@@ -608,24 +669,26 @@ IVVec2D_i32 *iv_elim3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c)
 
    vec_elim(A, B) =  A - B * dot_product(A, B) / magnitude(B)
 
+   `q` = shift right factor, bits after decimal for fixed-point
+   operands
+
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.
 */
-IVVec2D_i32 *iv_aelim3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c)
+IVVec2D_i32 *iv_aelim3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c,
+			     IVuint8 q)
 {
   IVint32 d;
   IVVec2D_i32 t;
-  d = iv_magn_v2i32(c);
+  d = iv_magn2_v2i32(c, q);
   if (d == 0) {
     /* No solution.  */
-    a->d[IX] = IVINT32_MIN;
-    a->d[IY] = IVINT32_MIN;
-    return a;
+    return iv_nosol_v2i32(a);
   }
   iv_sub3_v2i32
     (a, b,
      iv_muldiv4_v2i32_i64_i32
-       (&t, c, iv_dot2_v2i32(b, c), d)
+       (&t, c, iv_dotshr3_v2i32(b, c, q), d)
     );
   return a;
 }
@@ -640,14 +703,18 @@ IVVec2D_i32 *iv_aelim3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c)
    dot_product(L, A) / magnitude(A) - d / magnitude(A)
    = (dot_product(L, A) - d) / magnitude(A)
 
+   `q` = shift right factor, bits after decimal for fixed-point
+   operands
+
    If there is no solution, IVINT32_MIN is returned.
 */
-IVint32 iv_dist2_v2i32_Eqs_v2i32(IVVec2D_i32 *a, IVEqs_v2i32 *b)
+IVint32 iv_dist3_v2i32_Eqs_v2i32(IVVec2D_i32 *a, IVEqs_v2i32 *b, IVuint8 q)
 {
-  IVint32 d = iv_magnitude_v2i32(&b->v);
+  /* Tags: SCALAR-ARITHMETIC */
+  IVint32 d = iv_magnitude2_v2i32(&b->v, q);
   if (d == 0)
     return IVINT32_MIN;
-  return (IVint32)((iv_dot2_v2i32(a, &b->v) - b->offset) / d);
+  return (IVint32)((iv_dotshr3_v2i32(a, &b->v, q) - b->offset) / d);
 }
 
 /* Approximate shortest path distance from point to plane (line in 2D).
@@ -660,14 +727,18 @@ IVint32 iv_dist2_v2i32_Eqs_v2i32(IVVec2D_i32 *a, IVEqs_v2i32 *b)
    dot_product(L, A) / magnitude(A) - d / magnitude(A)
    = (dot_product(L, A) - d) / magnitude(A)
 
+   `q` = shift right factor, bits after decimal for fixed-point
+   operands
+
    If there is no solution, IVINT32_MIN is returned.
 */
-IVint32 iv_adist2_v2i32_Eqs_v2i32(IVVec2D_i32 *a, IVEqs_v2i32 *b)
+IVint32 iv_adist3_v2i32_Eqs_v2i32(IVVec2D_i32 *a, IVEqs_v2i32 *b, IVuint8 q)
 {
-  IVint32 d = iv_magn_v2i32(&b->v);
+  /* Tags: SCALAR-ARITHMETIC */
+  IVint32 d = iv_magn2_v2i32(&b->v, q);
   if (d == 0)
     return IVINT32_MIN;
-  return (IVint32)((iv_dot2_v2i32(a, &b->v) - b->offset) / d);
+  return (IVint32)((iv_dotshr3_v2i32(a, &b->v, q) - b->offset) / d);
 }
 
 /* Shortest path distance from point to plane (line in 2D), normalized
@@ -682,6 +753,7 @@ IVint32 iv_adist2_v2i32_Eqs_v2i32(IVVec2D_i32 *a, IVEqs_v2i32 *b)
 */
 IVint32 iv_dist2_v2i32_Eqs_v2q16i32(IVVec2D_i32 *a, IVEqs_v2i32 *b)
 {
+  /* Tags: SCALAR-ARITHMETIC */
   return (IVint32)((iv_dot2_v2i32(a, &b->v) >> 0x10) - b->offset);
 }
 
@@ -696,39 +768,53 @@ IVint32 iv_dist2_v2i32_Eqs_v2q16i32(IVVec2D_i32 *a, IVEqs_v2i32 *b)
    L_rel_P = L - P;
    dot_product(L_rel_P, A) / magnitude(A);
 
+   `q` = shift right factor, bits after decimal for fixed-point
+   operands
+
    If there is no solution, IVINT32_MIN is returned.
 */
-IVint32 iv_dist2_v2i32_NRay_v2i32(IVVec2D_i32 *a, IVNLine_v2i32 *b)
+IVint32 iv_dist3_v2i32_NRay_v2i32(IVVec2D_i32 *a, IVNLine_v2i32 *b,
+				  IVuint8 q)
 {
+  /* Tags: SCALAR-ARITHMETIC */
   IVint32 d;
   IVVec2D_i32 l_rel_p;
-  d = iv_magnitude_v2i32(&b->v);
+  d = iv_magnitude2_v2i32(&b->v, q);
   if (d == 0)
     return IVINT32_MIN;
   iv_sub3_v2i32(&l_rel_p, a, &b->p0);
-  return (IVint32)(iv_dot2_v2i32(&l_rel_p, &b->v) / d);
+  return (IVint32)(iv_dotshr3_v2i32(&l_rel_p, &b->v, q) / d);
 }
 
-/* Approximate variant of the previous subroutine.  */
-IVint32 iv_adist2_v2i32_NRay_v2i32(IVVec2D_i32 *a, IVNLine_v2i32 *b)
+/* Approximate variant of distance to point in plane, like the
+   subroutine `iv_dist3_v2i32_NRay_v2i32()`.
+
+   `q` = shift right factor, bits after decimal for fixed-point
+   operands */
+IVint32 iv_adist3_v2i32_NRay_v2i32(IVVec2D_i32 *a, IVNLine_v2i32 *b,
+				   IVuint8 q)
 {
+  /* Tags: SCALAR-ARITHMETIC */
   IVint32 d;
   IVVec2D_i32 l_rel_p;
-  d = iv_magn_v2i32(&b->v);
+  d = iv_magn2_v2i32(&b->v, q);
   if (d == 0)
     return IVINT32_MIN;
   iv_sub3_v2i32(&l_rel_p, a, &b->p0);
-  return (IVint32)(iv_dot2_v2i32(&l_rel_p, &b->v) / d);
+  return (IVint32)(iv_dotshr3_v2i32(&l_rel_p, &b->v, q) / d);
 }
 
 /********************************************************************/
 
-/* Distance squared between two points.  */
-IVint64 iv_dist2q2_p2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b)
+/* Distance squared between two points.
+
+   `q` = shift right factor, bits after decimal for fixed-point
+   operands */
+IVint64 iv_dist2q3_p2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b, IVuint8 q)
 {
   IVVec2D_i32 t;
   iv_sub3_v2i32(&t, a, b);
-  return iv_magn2q_v2i32(&t);
+  return iv_magn2qshr2_v2i32(&t, q);
 }
 
 /* Project a point to a plane along the perpendicular:
@@ -745,13 +831,16 @@ IVint64 iv_dist2q2_p2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b)
    simplify as follows:
 
    L - A * (dot_product(L, A) - d) / dot_product(A, A)
-*/
-IVPoint2D_i32 *iv_proj3_p2i32_Eqs_v2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b,
-					IVEqs_v2i32 *c)
+
+   `q` = shift right factor, bits after decimal for fixed-point
+   operands */
+IVPoint2D_i32 *iv_proj4_p2i32_Eqs_v2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b,
+					IVEqs_v2i32 *c, IVuint8 q)
 {
+  /* Tags: SCALAR-ARITHMETIC */
   IVVec2D_i32 t;
-  iv_muldiv4_v2i32_i64(&t, &c->v, iv_dot2_v2i32(b, &c->v) - c->offset,
-		       iv_magn2q_v2i32(&c->v));
+  iv_muldiv4_v2i32_i64(&t, &c->v, iv_dotshr3_v2i32(b, &c->v, q) - c->offset,
+		       iv_magn2qshr2_v2i32(&c->v, q));
   return iv_sub3_v2i32(a, b, &t);
 }
 
@@ -769,15 +858,17 @@ IVPoint2D_i32 *iv_proj3_p2i32_Eqs_v2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b,
 
    L_rel_P = L - P;
    L - A * dot_product(L_rel_P, A) / dot_product(A, A);
-*/
-IVPoint2D_i32 *iv_proj3_p2i32_NLine_v2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b,
-					  IVNLine_v2i32 *c)
+
+   `q` = shift right factor, bits after decimal for fixed-point
+   operands */
+IVPoint2D_i32 *iv_proj4_p2i32_NLine_v2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b,
+					  IVNLine_v2i32 *c, IVuint8 q)
 {
   IVVec2D_i32 l_rel_p;
   IVVec2D_i32 t;
   iv_sub3_v2i32(&l_rel_p, b, &c->p0);
-  iv_muldiv4_v2i32_i64(&t, &c->v, iv_dot2_v2i32(&l_rel_p, &c->v),
-		       iv_magn2q_v2i32(&c->v));
+  iv_muldiv4_v2i32_i64(&t, &c->v, iv_dotshr3_v2i32(&l_rel_p, &c->v, q),
+		       iv_magn2qshr2_v2i32(&c->v, q));
   return iv_sub3_v2i32(a, b, &t);
 }
 
@@ -805,16 +896,15 @@ IVPoint2D_i32 *iv_proj3_p2i32_NLine_v2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b,
 IVPoint2D_i32 *iv_isect4_InLine_Eqs_v2i32(IVPoint2D_i32 *a,
 					  IVInLine_v2i32 *b,
 					  IVEqs_v2i32 *c,
-					  IVuint32 q)
+					  IVuint8 q)
 {
+  /* Tags: SCALAR-ARITHMETIC */
   IVVec2D_i32 t;
   IVint64 d;
   d = iv_dotshr3_v2i32(&b->v, &c->v, q);
   if (d == 0) {
     /* No solution.  */
-    a->d[IX] = IVINT32_MIN;
-    a->d[IY] = IVINT32_MIN;
-    return a;
+    return iv_nosol_v2i32(a);
   }
   iv_muldiv4_v2i32_i64(&t, &b->v,
 		       iv_dotshr3_v2i32(&b->p0, &c->v, q) - c->offset, d);
@@ -837,26 +927,26 @@ IVPoint2D_i32 *iv_isect4_InLine_Eqs_v2i32(IVPoint2D_i32 *a,
    a = resulting point
    b = ray
    c = plane
+   q = shift right factor, bits after decimal for fixed-point operands
 
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.
 */
-IVPoint2D_i32 *iv_isect3_InLine_NLine_v2i32(IVPoint2D_i32 *a,
+IVPoint2D_i32 *iv_isect4_InLine_NLine_v2i32(IVPoint2D_i32 *a,
 					    IVInLine_v2i32 *b,
-					    IVNLine_v2i32 *c)
+					    IVNLine_v2i32 *c,
+					    IVuint8 q)
 {
   IVVec2D_i32 l_rel_p;
   IVVec2D_i32 t;
   IVint64 d;
-  d = iv_dot2_v2i32(&b->v, &c->v);
+  d = iv_dotshr3_v2i32(&b->v, &c->v, q);
   if (d == 0) {
     /* No solution.  */
-    a->d[IX] = IVINT32_MIN;
-    a->d[IY] = IVINT32_MIN;
-    return a;
+    return iv_nosol_v2i32(a);
   }
   iv_sub3_v2i32(&l_rel_p, &b->p0, &c->p0);
-  iv_muldiv4_v2i32_i64(&t, &b->v, iv_dot2_v2i32(&l_rel_p, &c->v), d);
+  iv_muldiv4_v2i32_i64(&t, &b->v, iv_dotshr3_v2i32(&l_rel_p, &c->v, q), d);
   return iv_sub3_v2i32(a, &b->p0, &t);
 }
 
@@ -879,29 +969,27 @@ IVPoint2D_i32 *iv_isect3_InLine_NLine_v2i32(IVPoint2D_i32 *a,
    a = resulting point
    b = ray
    c = plane
+   q = shift right factor, bits after decimal for fixed-point operands
 
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.
 */
-IVPoint2D_i32 *iv_isect3_Ray_Eqs_v2i32(IVPoint2D_i32 *a, IVRay_v2i32 *b,
-				       IVEqs_v2i32 *c)
+IVPoint2D_i32 *iv_isect4_Ray_Eqs_v2i32(IVPoint2D_i32 *a, IVRay_v2i32 *b,
+				       IVEqs_v2i32 *c, IVuint8 q)
 {
+  /* Tags: SCALAR-ARITHMETIC */
   IVVec2D_i32 t;
   IVint64 n, d;
-  d = iv_dot2_v2i32(&b->v, &c->v);
+  d = iv_dotshr3_v2i32(&b->v, &c->v, q);
   if (d == 0) {
     /* No solution.  */
-    a->d[IX] = IVINT32_MIN;
-    a->d[IY] = IVINT32_MIN;
-    return a;
+    return iv_nosol_v2i32(a);
   }
-  n = -iv_dot2_v2i32(&b->p0, &c->v) + c->offset;
+  n = -iv_dotshr3_v2i32(&b->p0, &c->v, q) + c->offset;
   /* Bit-wise equivalent of (n / d) < 0 */
   if (((n & 0x8000000000000000LL) ^ (d & 0x8000000000000000LL)) != 0) {
     /* No solution.  */
-    a->d[IX] = IVINT32_MIN;
-    a->d[IY] = IVINT32_MIN;
-    return a;
+    return iv_nosol_v2i32(a);
   }
   iv_muldiv4_v2i32_i64(&t, &b->v, n, d);
   return iv_add3_v2i32(a, &b->p0, &t);
@@ -926,31 +1014,29 @@ IVPoint2D_i32 *iv_isect3_Ray_Eqs_v2i32(IVPoint2D_i32 *a, IVRay_v2i32 *b,
    a = resulting point
    b = ray
    c = plane
+   q = shift right factor, bits after decimal for fixed-point operands
 
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.
 */
-IVPoint2D_i32 *iv_isect3_Ray_NLine_v2i32(IVPoint2D_i32 *a, IVRay_v2i32 *b,
-					 IVNLine_v2i32 *c)
+IVPoint2D_i32 *iv_isect4_Ray_NLine_v2i32(IVPoint2D_i32 *a, IVRay_v2i32 *b,
+					 IVNLine_v2i32 *c, IVuint8 q)
 {
+  /* Tags: SCALAR-ARITHMETIC */
   IVVec2D_i32 l_rel_p;
   IVVec2D_i32 t;
   IVint64 n, d;
-  d = iv_dot2_v2i32(&b->v, &c->v);
+  d = iv_dotshr3_v2i32(&b->v, &c->v, q);
   if (d == 0) {
     /* No solution.  */
-    a->d[IX] = IVINT32_MIN;
-    a->d[IY] = IVINT32_MIN;
-    return a;
+    return iv_nosol_v2i32(a);
   }
   iv_sub3_v2i32(&l_rel_p, &b->p0, &c->p0);
-  n = -iv_dot2_v2i32(&l_rel_p, &c->v);
+  n = -iv_dotshr3_v2i32(&l_rel_p, &c->v, q);
   /* Bit-wise equivalent of (n / d) < 0 */
   if (((n & 0x8000000000000000LL) ^ (d & 0x8000000000000000LL)) != 0) {
     /* No solution.  */
-    a->d[IX] = IVINT32_MIN;
-    a->d[IY] = IVINT32_MIN;
-    return a;
+    return iv_nosol_v2i32(a);
   }
   iv_muldiv4_v2i32_i64(&t, &b->v, n, d);
   return iv_add3_v2i32(a, &b->p0, &t);
@@ -958,21 +1044,20 @@ IVPoint2D_i32 *iv_isect3_Ray_NLine_v2i32(IVPoint2D_i32 *a, IVRay_v2i32 *b,
 
 /* Convert (reformat) Eqs representational form to NLine.
 
-   `q` = shift right factor, bits after decimal for fixed-point operands
+   `q` = shift right factor, bits after decimal for fixed-point
+   operands
 
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.  */
-IVNLine_v2i32 *iv_rf_NLine_Eqs_v2i32(IVNLine_v2i32 *a, IVEqs_v2i32 *b,
-				     IVuint32 q)
+IVNLine_v2i32 *iv_rf3_NLine_Eqs_v2i32(IVNLine_v2i32 *a, IVEqs_v2i32 *b,
+				      IVuint8 q)
 {
   /* Convert the origin offset to a point.  */
   IVint64 d = iv_magn2qshr2_v2i32(&b->v, q);
   if (d == 0) {
     /* No solution.  */
-    a->p0.d[IX] = IVINT32_MIN;
-    a->p0.d[IY] = IVINT32_MIN;
-    a->v.d[IX] = IVINT32_MIN;
-    a->v.d[IY] = IVINT32_MIN;
+    iv_nosol_v2i32(&a->p0);
+    iv_nosol_v2i32(&a->v);
     return a;
   }
   iv_muldiv4_v2i32_i64
@@ -986,8 +1071,8 @@ IVNLine_v2i32 *iv_rf_NLine_Eqs_v2i32(IVNLine_v2i32 *a, IVEqs_v2i32 *b,
 
    `q` = shift right factor, bits after decimal for fixed-point
    operands */
-IVEqs_v2i32 *iv_rf_Eqs_NLine_v2i32(IVEqs_v2i32 *a, IVNLine_v2i32 *b,
-				   IVuint32 q)
+IVEqs_v2i32 *iv_rf3_Eqs_NLine_v2i32(IVEqs_v2i32 *a, IVNLine_v2i32 *b,
+				    IVuint8 q)
 {
   IVVec2D_i32 t;
   /* Copy the perpendicular vector.  */
@@ -1011,36 +1096,38 @@ IVEqs_v2i32 *iv_rf_Eqs_NLine_v2i32(IVEqs_v2i32 *a, IVNLine_v2i32 *b,
 }
 
 /* Convert (reformat) InLine representational form to NLine.  */
-IVNLine_v2i32 *iv_rf_NLine_InLine_v2i32(IVNLine_v2i32 *a, IVInLine_v2i32 *b)
+IVNLine_v2i32 *iv_rf2_NLine_InLine_v2i32(IVNLine_v2i32 *a, IVInLine_v2i32 *b)
 {
   /* Copy the location.  */
   a->p0 = b->p0;
   /* Compute the perpendicular vector to use for the NLine.  */
-  a->v.d[IX] = -b->v.d[IY];
-  a->v.d[IY] = b->v.d[IX];
+  iv_perpen2_v2i32(&a->v, &b->v);
   return a;
 }
 
 /* Convert (reformat) NLine representational form to InLine.  */
-IVNLine_v2i32 *iv_rf_InLine_NLine_v2i32(IVInLine_v2i32 *a, IVNLine_v2i32 *b)
+IVNLine_v2i32 *iv_rf2_InLine_NLine_v2i32(IVInLine_v2i32 *a, IVNLine_v2i32 *b)
 {
   /* Exactly the same code as the reverse conversion, just different
      types.  */
-  return iv_rf_NLine_InLine_v2i32((IVNLine_v2i32*)a, (IVInLine_v2i32*)b);
+  return iv_rf2_NLine_InLine_v2i32((IVNLine_v2i32*)a, (IVInLine_v2i32*)b);
 }
 
 /* Solve a system of two simple linear equations, i.e. Ax = b format.
 
+   `q` = shift right factor, bits after decimal for fixed-point
+   operands
+
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.  */
 IVPoint2D_i32 *iv_solve3_s2_Eqs_v2i32(IVPoint2D_i32 *a, IVSys2_Eqs_v2i32 *b,
-				      IVuint32 q)
+				      IVuint8 q)
 {
   IVNLine_v2i32 nline;
   IVInLine_v2i32 in_line;
   /* Reformat the first equation into a InLine equation.  */
-  iv_rf_NLine_Eqs_v2i32(&nline, &b->d[0], q);
-  iv_rf_InLine_NLine_v2i32(&in_line,  &nline);
+  iv_rf3_NLine_Eqs_v2i32(&nline, &b->d[0], q);
+  iv_rf2_InLine_NLine_v2i32(&in_line,  &nline);
   /* Now intersect the in_line with the plane (line in 2D).  */
   return iv_isect4_InLine_Eqs_v2i32(a, &in_line, &b->d[1], q);
 }
@@ -1048,30 +1135,36 @@ IVPoint2D_i32 *iv_solve3_s2_Eqs_v2i32(IVPoint2D_i32 *a, IVSys2_Eqs_v2i32 *b,
 /* Solve a system of two "surface-normal" perpendicular vector linear
    equations.
 
+   `q` = shift right factor, bits after decimal for fixed-point
+   operands
+
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.  */
-IVPoint2D_i32 *iv_solve2_s2_NLine_v2i32(IVPoint2D_i32 *a,
-					IVSys2_NLine_v2i32 *b)
+IVPoint2D_i32 *iv_solve3_s2_NLine_v2i32(IVPoint2D_i32 *a,
+					IVSys2_NLine_v2i32 *b, IVuint8 q)
 {
   IVInLine_v2i32 in_line;
   /* Reformat the first equation into an InLine equation.  */
-  iv_rf_InLine_NLine_v2i32(&in_line, &b->d[0]);
+  iv_rf2_InLine_NLine_v2i32(&in_line, &b->d[0]);
   /* Now intersect the InLine with the plane (line in 2D).  */
-  return iv_isect3_InLine_NLine_v2i32(a, &in_line, &b->d[1]);
+  return iv_isect4_InLine_NLine_v2i32(a, &in_line, &b->d[1], q);
 }
 
 /* Solve a system of two InLine vector linear equations.
 
+   `q` = shift right factor, bits after decimal for fixed-point
+   operands
+
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.  */
-IVPoint2D_i32 *iv_solve2_s2_InLine_v2i32(IVPoint2D_i32 *a,
-					 IVSys2_InLine_v2i32 *b)
+IVPoint2D_i32 *iv_solve3_s2_InLine_v2i32(IVPoint2D_i32 *a,
+					 IVSys2_InLine_v2i32 *b, IVuint8 q)
 {
   IVNLine_v2i32 nline;
   /* Reformat the second equation into an NLine equation.  */
-  iv_rf_InLine_NLine_v2i32(&nline, &b->d[1]);
+  iv_rf2_InLine_NLine_v2i32(&nline, &b->d[1]);
   /* Now intersect the InLine with the plane (line in 2D).  */
-  return iv_isect3_InLine_NLine_v2i32(a, &b->d[0], &nline);
+  return iv_isect4_InLine_NLine_v2i32(a, &b->d[0], &nline, q);
 }
 
 /* Multiply, shift right two MxN integer matrices, with symmetric
@@ -1084,7 +1177,7 @@ IVPoint2D_i32 *iv_solve2_s2_InLine_v2i32(IVPoint2D_i32 *a,
    to IVINT32_MIN.  */
 IVMatNxM_i32 *iv_mulshr4_mnxm_i32(IVMatNxM_i32 *a,
 				  IVMatNxM_i32 *b, IVMatNxM_i32 *c,
-				  IVuint32 q)
+				  IVuint8 q)
 {
   IVuint16 inner = b->width;
   IVuint16 a_width = a->width, a_height = a->height;
@@ -1167,16 +1260,20 @@ IVMatNxM_i32 *iv_xpose2_mnxm_i32(IVMatNxM_i32 *a, IVMatNxM_i32 *b)
    form.  Result vector format is `[b, m]`.  Output is in Q16.16
    fixed-point format.
 
-   TODO: Accept user specification for shift factor on the data, bits
-   after the decimal.
+   `q` = shift right factor, bits after decimal for fixed-point
+   operands
 
    TODO: Add subroutine to check if data is well-formed before running
    solvers.
 
-   If there is no solution, the resulting matrix entries are all set
-   to IVINT32_MIN.  */
-IVPoint2D_i32 *iv_linreg2_p2i32(IVPoint2D_i32 *result,
-				IVPoint2D_i32_array *data)
+   If there is a memory allocation error, the resulting coefficient
+   vector's entries are all set to IVINT32_MIN.
+
+   If there is no solution, the resulting coefficient vector's entries
+   are all set to IVINT32_MIN.  */
+IVPoint2D_i32 *iv_linreg3_p2i32(IVPoint2D_i32 *result,
+				IVPoint2D_i32_array *data,
+				IVuint8 q)
 {
   IVPoint2D_i32 *data_d = data->d;
   IVuint16 data_len = data->len;
@@ -1191,33 +1288,29 @@ IVPoint2D_i32 *iv_linreg2_p2i32(IVPoint2D_i32 *result,
   IVuint16 i;
 
   /* Pre-allocate all intermediate data structures.  */
+  mat_a.d = NULL;
+  mat_a_t.d = NULL;
+  col_b.d = NULL;
+
   mat_a.width = 2;
   mat_a.height = data_len;
   mat_a.d = (IVint32*)malloc(sizeof(IVint32) * mat_a.width * mat_a.height);
-  /* TODO: Signal memory error.  */
   if (mat_a.d == NULL)
-    return result;
+    goto dirty_cleanup;
 
   mat_a_t.width = mat_a.height;
   mat_a_t.height = mat_a.width;
   mat_a_t.d =
     (IVint32*)malloc(sizeof(IVint32) * mat_a_t.width * mat_a_t.height);
-  /* TODO: Signal memory error.  */
-  if (mat_a_t.d == NULL) {
-    free (mat_a.d);
-    return result;
-  }
+  if (mat_a_t.d == NULL)
+    goto dirty_cleanup;
 
   col_b.width = 1;
   col_b.height = data_len;
   col_b.d =
     (IVint32*)malloc(sizeof(IVint32) * col_b.width * col_b.height);
-  /* TODO: Signal memory error.  */
-  if (col_b.d == NULL) {
-    free (mat_a.d);
-    free (mat_a_t.d);
-    return result;
-  }
+  if (col_b.d == NULL)
+    goto dirty_cleanup;
 
   mat_a_t_a.width = 2;
   mat_a_t_a.height = 2;
@@ -1228,7 +1321,7 @@ IVPoint2D_i32 *iv_linreg2_p2i32(IVPoint2D_i32 *result,
 
   /* Pack into the coefficient matrix `A`.  */
   for (i = 0; i < data_len; i++) {
-    mat_a.d[mat_a.width*i+0] = 1;
+    mat_a.d[mat_a.width*i+0] = 1 << q;
     mat_a.d[mat_a.width*i+1] = data_d[i].d[IX];
   }
   /* Compute `A^T`.  */
@@ -1240,10 +1333,10 @@ IVPoint2D_i32 *iv_linreg2_p2i32(IVPoint2D_i32 *result,
   }
 
   /* Compute `A^T * A`.  */
-  iv_mulshr4_mnxm_i32(&mat_a_t_a, &mat_a_t, &mat_a, 0);
+  iv_mulshr4_mnxm_i32(&mat_a_t_a, &mat_a_t, &mat_a, q);
 
   /* Compute `A^T * b`.  */
-  iv_mulshr4_mnxm_i32(&col_a_t_b, &mat_a_t, &col_b, 0);
+  iv_mulshr4_mnxm_i32(&col_a_t_b, &mat_a_t, &col_b, q);
 
   /* Pack into IVSys2_Eqs_v2i32 representational form.  */
   sys.d[0].v.d[IX] = mat_a_t_a.d[0];
@@ -1289,5 +1382,12 @@ IVPoint2D_i32 *iv_linreg2_p2i32(IVPoint2D_i32 *result,
   free (mat_a_t.d);
   free (col_b.d);
 
+  return result;
+
+ dirty_cleanup:
+  iv_nosol_v2i32(result);
+  if (mat_a.d != NULL) free (mat_a.d);
+  if (mat_a_t.d != NULL) free (mat_a_t.d);
+  if (col_b.d != NULL) free (col_b.d);
   return result;
 }
