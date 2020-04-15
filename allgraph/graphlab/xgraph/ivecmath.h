@@ -79,13 +79,13 @@ typedef IVuint32_ar3 IVTri_u32;
 struct IVEqs_v2i32_tag
 {
   IVVec2D_i32 v; /* "left" side of vector equation */
-  IVint32 offset; /* "right" side of vector equation */
+  IVint64 offset; /* "right" side of vector equation */
 };
 typedef struct IVEqs_v2i32_tag IVEqs_v2i32;
 struct IVEqs_v3i32_tag
 {
   IVVec3D_i32 v; /* "left" side of vector equation */
-  IVint32 offset; /* "right" side of vector equation */
+  IVint64 offset; /* "right" side of vector equation */
 };
 typedef struct IVEqs_v3i32_tag IVEqs_v3i32;
 

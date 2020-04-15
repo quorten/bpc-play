@@ -750,7 +750,6 @@ IVPoint2D_i32 *iv_proj3_p2i32_Eqs_v2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b,
 					IVEqs_v2i32 *c)
 {
   IVVec2D_i32 t;
-  /* TODO VERIFY PRECISION: offset is only 32 bits? */
   iv_muldiv4_v2i32_i64(&t, &c->v, iv_dot2_v2i32(b, &c->v) - c->offset,
 		       iv_magn2q_v2i32(&c->v));
   return iv_sub3_v2i32(a, b, &t);
@@ -966,7 +965,6 @@ IVPoint2D_i32 *iv_isect3_Ray_NLine_v2i32(IVPoint2D_i32 *a, IVRay_v2i32 *b,
 IVNLine_v2i32 *iv_rf_NLine_Eqs_v2i32(IVNLine_v2i32 *a, IVEqs_v2i32 *b,
 				     IVuint32 q)
 {
-  /* TODO VERIFY PRECISION: offset is only 32 bits?  */
   /* Convert the origin offset to a point.  */
   IVint64 d = iv_magn2qshr2_v2i32(&b->v, q);
   if (d == 0) {
@@ -1008,8 +1006,7 @@ IVEqs_v2i32 *iv_rf_Eqs_NLine_v2i32(IVEqs_v2i32 *a, IVNLine_v2i32 *b,
      dot_product(-P, A)
   */
   iv_neg2_v2i32(&t, &b->p0);
-  a->offset = (IVint32)iv_dotshr3_v2i32(&t, &b->v, q);
-  /* TODO VERIFY PRECISION: offset is only 32 bits? */
+  a->offset = iv_dotshr3_v2i32(&t, &b->v, q);
   return a;
 }
 
