@@ -10,9 +10,6 @@
 
 #include "ivecmath.h"
 
-/* TODO FIXME temporary!  */
-IVuint8 g_shr = 0;
-
 IVVec2D_i32 *iv_neg2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b)
 {
   a->d[IX] = -b->d[IX];
@@ -161,6 +158,13 @@ IVint64 iv_dotshr3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint32 c)
 IVint64 iv_magn2q_v2i32(IVPoint2D_i32 *a)
 {
   return iv_dot2_v2i32(a, a);
+}
+
+/* Magnitude squared of a vector, with shift right by `c` bits after
+   multiply, with symmetric positive/negative shift behavior.  */
+IVint64 iv_magn2qshr2_v2i32(IVPoint2D_i32 *a, IVuint32 b)
+{
+  return iv_dotshr3_v2i32(a, a, b);
 }
 
 /********************************************************************/
@@ -794,25 +798,28 @@ IVPoint2D_i32 *iv_proj3_p2i32_NLine_v2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b,
    a = resulting point
    b = ray
    c = plane
+   d = shift right factor, bits after decimal for fixed-point operands
 
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.
 */
-IVPoint2D_i32 *iv_isect3_InLine_Eqs_v2i32(IVPoint2D_i32 *a,
+IVPoint2D_i32 *iv_isect4_InLine_Eqs_v2i32(IVPoint2D_i32 *a,
 					  IVInLine_v2i32 *b,
-					  IVEqs_v2i32 *c)
+					  IVEqs_v2i32 *c,
+					  IVuint32 d)
 {
   IVVec2D_i32 t;
-  IVint64 d;
-  d = iv_dot2_v2i32(&b->v, &c->v) >> g_shr;
-  if (d == 0) {
+  IVint64 denom;
+  denom = iv_dotshr3_v2i32(&b->v, &c->v, d);
+  if (denom == 0) {
     /* No solution.  */
     a->d[IX] = IVINT32_MIN;
     a->d[IY] = IVINT32_MIN;
     return a;
   }
   iv_muldiv4_v2i32_i64(&t, &b->v,
-		       (iv_dot2_v2i32(&b->p0, &c->v) >> g_shr) - c->offset, d);
+		       iv_dotshr3_v2i32(&b->p0, &c->v, d) - c->offset,
+		       denom);
   return iv_sub3_v2i32(a, &b->p0, &t);
 }
 
@@ -953,14 +960,17 @@ IVPoint2D_i32 *iv_isect3_Ray_NLine_v2i32(IVPoint2D_i32 *a, IVRay_v2i32 *b,
 
 /* Convert (reformat) Eqs representational form to NLine.
 
+   `d` = shift right factor, bits after decimal for fixed-point operands
+
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.  */
-IVNLine_v2i32 *iv_rf_NLine_Eqs_v2i32(IVNLine_v2i32 *a, IVEqs_v2i32 *b)
+IVNLine_v2i32 *iv_rf_NLine_Eqs_v2i32(IVNLine_v2i32 *a, IVEqs_v2i32 *b,
+				     IVuint32 d)
 {
   /* TODO VERIFY PRECISION: offset is only 32 bits?  */
   /* Convert the origin offset to a point.  */
-  IVint64 d = iv_magn2q_v2i32(&b->v) >> g_shr;
-  if (d == 0) {
+  IVint64 denom = iv_magn2qshr2_v2i32(&b->v, d);
+  if (denom == 0) {
     /* No solution.  */
     a->p0.d[IX] = IVINT32_MIN;
     a->p0.d[IY] = IVINT32_MIN;
@@ -969,14 +979,18 @@ IVNLine_v2i32 *iv_rf_NLine_Eqs_v2i32(IVNLine_v2i32 *a, IVEqs_v2i32 *b)
     return a;
   }
   iv_muldiv4_v2i32_i64
-    (&a->p0, &b->v, b->offset, d);
+    (&a->p0, &b->v, b->offset, denom);
   /* Copy the perpendicular vector.  */
   a->v = b->v;
   return a;
 }
 
-/* Convert (reformat) NLine representational form to Eqs.  */
-IVEqs_v2i32 *iv_rf_Eqs_NLine_v2i32(IVEqs_v2i32 *a, IVNLine_v2i32 *b)
+/* Convert (reformat) NLine representational form to Eqs.
+
+   `d` = shift right factor, bits after decimal for fixed-point
+   operands */
+IVEqs_v2i32 *iv_rf_Eqs_NLine_v2i32(IVEqs_v2i32 *a, IVNLine_v2i32 *b,
+				   IVuint32 d)
 {
   IVVec2D_i32 t;
   /* Copy the perpendicular vector.  */
@@ -995,7 +1009,7 @@ IVEqs_v2i32 *iv_rf_Eqs_NLine_v2i32(IVEqs_v2i32 *a, IVNLine_v2i32 *b)
      dot_product(-P, A)
   */
   iv_neg2_v2i32(&t, &b->p0);
-  a->offset = (IVint32)iv_dot2_v2i32(&t, &b->v);
+  a->offset = (IVint32)iv_dotshr3_v2i32(&t, &b->v, d);
   /* TODO VERIFY PRECISION: offset is only 32 bits? */
   return a;
 }
@@ -1023,15 +1037,16 @@ IVNLine_v2i32 *iv_rf_InLine_NLine_v2i32(IVInLine_v2i32 *a, IVNLine_v2i32 *b)
 
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.  */
-IVPoint2D_i32 *iv_solve2_s2_Eqs_v2i32(IVPoint2D_i32 *a, IVSys2_Eqs_v2i32 *b)
+IVPoint2D_i32 *iv_solve3_s2_Eqs_v2i32(IVPoint2D_i32 *a, IVSys2_Eqs_v2i32 *b,
+				      IVuint32 d)
 {
   IVNLine_v2i32 nline;
   IVInLine_v2i32 in_line;
   /* Reformat the first equation into a InLine equation.  */
-  iv_rf_NLine_Eqs_v2i32(&nline, &b->d[0]);
+  iv_rf_NLine_Eqs_v2i32(&nline, &b->d[0], d);
   iv_rf_InLine_NLine_v2i32(&in_line,  &nline);
   /* Now intersect the in_line with the plane (line in 2D).  */
-  return iv_isect3_InLine_Eqs_v2i32(a, &in_line, &b->d[1]);
+  return iv_isect4_InLine_Eqs_v2i32(a, &in_line, &b->d[1], d);
 }
 
 /* Solve a system of two "surface-normal" perpendicular vector linear
@@ -1258,19 +1273,20 @@ IVPoint2D_i32 *iv_linreg2_p2i32(IVPoint2D_i32 *result,
   {
     IVuint8 num_bits = soft_bsr_i64(sys.d[0].v.d[IY]);
     IVuint8 shr_div = num_bits;
-    g_shr = 0x10;
-    if (shr_div > g_shr)
-      shr_div = g_shr;
-    sys.d[0].v.d[IX] <<= g_shr - shr_div;
-    sys.d[0].v.d[IY] <<= g_shr - shr_div;
-    sys.d[0].offset <<= g_shr - shr_div;
-    sys.d[1].v.d[IX] <<= g_shr - shr_div;
-    sys.d[1].v.d[IY] <<= g_shr - shr_div;
-    sys.d[1].offset <<= g_shr - shr_div;
+    IVuint8 num_shr;
+    if (shr_div > 0x10)
+      shr_div = 0x10;
+    num_shr = 0x10 - shr_div;
+    sys.d[0].v.d[IX] <<= num_shr;
+    sys.d[0].v.d[IY] <<= num_shr;
+    sys.d[0].offset <<= num_shr;
+    sys.d[1].v.d[IX] <<= num_shr;
+    sys.d[1].v.d[IY] <<= num_shr;
+    sys.d[1].offset <<= num_shr;
   }
 
   /* Solve the system!  */
-  iv_solve2_s2_Eqs_v2i32(result, &sys);
+  iv_solve3_s2_Eqs_v2i32(result, &sys, 0x10);
 
   /* Cleanup.  */
   free (mat_a.d);
