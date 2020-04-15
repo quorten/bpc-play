@@ -6,9 +6,13 @@
    Fixed-point arithmetic is only used as an intermediate form,
    Q32.32.  */
 
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "ivecmath.h"
+
+/* TODO FIXME temporary!  */
+IVuint8 g_shr = 0;
 
 IVVec2D_i32 *iv_neg2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b)
 {
@@ -782,7 +786,7 @@ IVPoint2D_i32 *iv_isect3_InLine_Eqs_v2i32(IVPoint2D_i32 *a,
 {
   IVVec2D_i32 t;
   IVint64 d;
-  d = iv_dot2_v2i32(&b->v, &c->v);
+  d = iv_dot2_v2i32(&b->v, &c->v) >> g_shr;
   if (d == 0) {
     /* No solution.  */
     a->d[IX] = IVINT32_MIN;
@@ -790,7 +794,7 @@ IVPoint2D_i32 *iv_isect3_InLine_Eqs_v2i32(IVPoint2D_i32 *a,
     return a;
   }
   iv_muldiv4_v2i32_i64(&t, &b->v,
-		       iv_dot2_v2i32(&b->p0, &c->v) - c->offset, d);
+		       (iv_dot2_v2i32(&b->p0, &c->v) >> g_shr) - c->offset, d);
   return iv_sub3_v2i32(a, &b->p0, &t);
 }
 
@@ -929,16 +933,27 @@ IVPoint2D_i32 *iv_isect3_Ray_NLine_v2i32(IVPoint2D_i32 *a, IVRay_v2i32 *b,
   return iv_add3_v2i32(a, &b->p0, &t);
 }
 
-/* Convert (reformat) Eqs representational form to NLine.  */
+/* Convert (reformat) Eqs representational form to NLine.
+
+   If there is no solution, the resulting point's coordinates are all
+   set to IVINT32_MIN.  */
 IVNLine_v2i32 *iv_rf_NLine_Eqs_v2i32(IVNLine_v2i32 *a, IVEqs_v2i32 *b)
 {
-  /* TODO VERIFY PRECISION: offset is only 32 bits? */
+  /* TODO VERIFY PRECISION: offset is only 32 bits?  */
   /* Convert the origin offset to a point.  */
+  IVint64 d = iv_dot2_v2i32(&b->v, &b->v) >> g_shr;
+  if (d == 0) {
+    /* No solution.  */
+    a->p0.d[IX] = IVINT32_MIN;
+    a->p0.d[IY] = IVINT32_MIN;
+    a->v.d[IX] = IVINT32_MIN;
+    a->v.d[IY] = IVINT32_MIN;
+    return a;
+  }
   iv_muldiv4_v2i32_i64
-    (&a->p0, &b->v, b->offset, iv_dot2_v2i32(&b->v, &b->v));
-  /* Compute a perpendicular vector to use for the InLine.  */
-  a->v.d[IX] = -b->v.d[IY];
-  a->v.d[IY] = b->v.d[IX];
+    (&a->p0, &b->v, b->offset, d);
+  /* Copy the perpendicular vector.  */
+  a->v = b->v;
   return a;
 }
 
@@ -992,11 +1007,13 @@ IVNLine_v2i32 *iv_rf_InLine_NLine_v2i32(IVInLine_v2i32 *a, IVNLine_v2i32 *b)
    set to IVINT32_MIN.  */
 IVPoint2D_i32 *iv_solve2_s2_Eqs_v2i32(IVPoint2D_i32 *a, IVSys2_Eqs_v2i32 *b)
 {
+  IVNLine_v2i32 nline;
   IVInLine_v2i32 in_line;
   /* Reformat the first equation into a InLine equation.  */
-  iv_rf_NLine_Eqs_v2i32(&in_line, &b->d[0]);
+  iv_rf_NLine_Eqs_v2i32(&nline, &b->d[0]);
+  iv_rf_InLine_NLine_v2i32(&in_line,  &nline);
   /* Now intersect the in_line with the plane (line in 2D).  */
-  return iv_isect3_InLine_Eqs_v2i32(a, &in_line, &b->d[0]);
+  return iv_isect3_InLine_Eqs_v2i32(a, &in_line, &b->d[1]);
 }
 
 /* Solve a system of two "surface-normal" perpendicular vector linear
@@ -1067,7 +1084,7 @@ IVMatNxM_i32 *iv_mulshr4_mnxm_i32(IVMatNxM_i32 *a,
 	for (k = 0; k < inner; k++) {
 	  IVint64 intermed =
 	    (IVint64)b_d[inner_i+k] * c_d[a_width_k+j];
-	  if (intermed < 0) intermed++;
+	  if (d != 0 && intermed < 0) intermed++;
 	  accum += intermed >> d;
 	  a_width_k += a_width;
 	}
@@ -1115,4 +1132,136 @@ IVMatNxM_i32 *iv_xpose2_mnxm_i32(IVMatNxM_i32 *a, IVMatNxM_i32 *b)
   }
 
   return a;
+}
+
+/* Compute a linear regression of the "y = m*x + b" representational
+   form.  Result vector format is `[b, m]`.  Input integers must be in
+   Q16.16 fixed-point format, output is also in Q16.16 fixed-point
+   format.
+
+   If there is no solution, the resulting matrix entries are all set
+   to IVINT32_MIN.  */
+IVPoint2D_i32 *iv_linreg2_p2q16i32(IVPoint2D_i32 *result,
+				   IVPoint2D_i32_array *data)
+{
+  IVPoint2D_i32 *data_d = data->d;
+  IVuint16 data_len = data->len;
+  IVMatNxM_i32 mat_a; /* Matrix A */
+  IVMatNxM_i32 mat_a_t; /* Matrix A^T */
+  IVMatNxM_i32 col_b; /* Column vector b */
+  IVMatNxM_i32 mat_a_t_a; /* Matrix A^T * A */
+  IVMat2x2_i32 mat_a_t_a_stor; /* Allocation for Matrix A^T * A */
+  IVMatNxM_i32 col_a_t_b; /* Column vector A^T * b */
+  IVVec2D_i32 col_a_t_b_stor; /* Allocation for Column vector A^T * b */
+  IVSys2_Eqs_v2i32 sys;
+  IVuint16 i;
+
+  /* Pre-allocate all intermediate data structures.  */
+  mat_a.width = 2;
+  mat_a.height = data_len;
+  mat_a.d = (IVint32*)malloc(sizeof(IVint32) * mat_a.width * mat_a.height);
+  /* TODO: Signal memory error.  */
+  if (mat_a.d == NULL)
+    return result;
+
+  mat_a_t.width = mat_a.height;
+  mat_a_t.height = mat_a.width;
+  mat_a_t.d =
+    (IVint32*)malloc(sizeof(IVint32) * mat_a_t.width * mat_a_t.height);
+  /* TODO: Signal memory error.  */
+  if (mat_a_t.d == NULL) {
+    free (mat_a.d);
+    return result;
+  }
+
+  col_b.width = 1;
+  col_b.height = data_len;
+  col_b.d =
+    (IVint32*)malloc(sizeof(IVint32) * col_b.width * col_b.height);
+  /* TODO: Signal memory error.  */
+  if (col_b.d == NULL) {
+    free (mat_a.d);
+    free (mat_a_t.d);
+    return result;
+  }
+
+  mat_a_t_a.width = 2;
+  mat_a_t_a.height = 2;
+  mat_a_t_a.d = mat_a_t_a_stor.d;
+  col_a_t_b.width = 1;
+  col_a_t_b.height = 2;
+  col_a_t_b.d = col_a_t_b_stor.d;
+
+  /* Pack into the coefficient matrix `A`.  */
+  for (i = 0; i < data_len; i++) {
+    mat_a.d[mat_a.width*i+0] = 1 << 0x10 >> 0x10;
+    /* N.B.: Trying to subtract 100 for better numerical stability.  */
+    mat_a.d[mat_a.width*i+1] = (data_d[i].d[IX] >> 0x10) /* - 100 */;
+  }
+  /* Compute `A^T`.  */
+  iv_xpose2_mnxm_i32(&mat_a_t, &mat_a);
+
+  /* Pack into the coefficient matrix `b`.  */
+  for (i = 0; i < data_len; i++) {
+    col_b.d[i] = data_d[i].d[IY] >> 0x10;
+  }
+
+  /* Compute `A^T * A`.  */
+  iv_mulshr4_mnxm_i32(&mat_a_t_a, &mat_a_t, &mat_a, 0 /* 0x10 */);
+
+  /* Compute `A^T * b`.  */
+  iv_mulshr4_mnxm_i32(&col_a_t_b, &mat_a_t, &col_b, 0 /* 0x10 */);
+
+  /* Pack into IVSys2_Eqs_v2i32 representational form.  */
+  sys.d[0].v.d[IX] = mat_a_t_a.d[0];
+  sys.d[0].v.d[IY] = mat_a_t_a.d[1];
+  sys.d[0].offset = col_a_t_b.d[0];
+  sys.d[1].v.d[IX] = mat_a_t_a.d[2];
+  sys.d[1].v.d[IY] = mat_a_t_a.d[3];
+  sys.d[1].offset = col_a_t_b.d[1];
+
+  printf("%d %d %d\n", sys.d[0].v.d[IX], sys.d[0].v.d[IY], sys.d[0].offset);
+  printf("%d %d %d\n", sys.d[1].v.d[IX], sys.d[1].v.d[IY], sys.d[1].offset);
+  printf("\n");
+  /* Now, here's the trick.  We want to analyze the slopes of the line
+     equations to determine how much we can divide the numbers, up to
+     our shift limit.  You can divide all equations and get the same
+     result, so long as the sub-computations do proper decimal place
+     handling.
+
+     For slopes less than one, double the slope is approximately
+     double the angle.  But for slopes much greater than one, double
+     the slope is pretty much the exact same angle, which is why it's
+     important to divide when using a geometric equation solver.
+
+     Absolutely ideal behavior requires us to do division computations
+     rather than mere bit shifting.  */
+  {
+    IVuint8 num_bits = soft_bsr_i64(sys.d[0].v.d[IY]);
+    IVuint8 shr_div = num_bits;
+    printf("%d\n", num_bits);
+    g_shr = 0x08;
+    if (shr_div > g_shr)
+      shr_div = g_shr;
+    printf("%d\n", shr_div);
+    sys.d[0].v.d[IX] <<= g_shr - shr_div;
+    sys.d[0].v.d[IY] <<= g_shr - shr_div;
+    sys.d[0].offset <<= g_shr - shr_div;
+    sys.d[1].v.d[IX] <<= g_shr - shr_div;
+    sys.d[1].v.d[IY] <<= g_shr - shr_div;
+    sys.d[1].offset <<= g_shr - shr_div;
+  printf("%d %d %d\n", sys.d[0].v.d[IX], sys.d[0].v.d[IY], sys.d[0].offset);
+  printf("%d %d %d\n", sys.d[1].v.d[IX], sys.d[1].v.d[IY], sys.d[1].offset);
+  printf("\n");
+  }
+
+  /* Solve the system!  */
+  iv_solve2_s2_Eqs_v2i32(result, &sys);
+
+  /* Cleanup.  */
+  free (mat_a.d);
+  free (mat_a_t.d);
+  free (col_b.d);
+
+  return result;
 }

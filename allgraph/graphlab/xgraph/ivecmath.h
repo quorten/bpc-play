@@ -252,4 +252,7 @@ IVMatNxM_i32 *iv_mulshr4_mnxm_i32(IVMatNxM_i32 *a,
 				  IVuint32 d);
 IVMatNxM_i32 *iv_xpose2_mnxm_i32(IVMatNxM_i32 *a, IVMatNxM_i32 *b);
 
+IVPoint2D_i32 *iv_linreg2_p2q16i32(IVPoint2D_i32 *result,
+				   IVPoint2D_i32_array *data);
+
 #endif /* not IVECMATH_H */

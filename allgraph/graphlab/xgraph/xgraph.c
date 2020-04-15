@@ -19,6 +19,9 @@ IVPoint2D_i32 p2 = {{ 200, 150 }};
 IVPoint2D_i32 p3 = {{ 150, 200 }};
 IVPoint2D_i32 p4 = {{ 150, 190 }};
 
+IVPoint2D_i32 reg_pts_stor[32];
+IVPoint2D_i32_array reg_pts;
+
 void
 draw_geom (Display *display, Window window, GC mygc)
 {
@@ -58,6 +61,17 @@ draw_geom (Display *display, Window window, GC mygc)
     if (pp.d[IX] != IVINT32_MIN) {
       XFillRectangle (display, window, mygc,
 		      pp.d[IX] - 5, pp.d[IY] - 5, 10, 10);
+    }
+  }
+
+  /* Draw all the linear regression points.  */
+  {
+    IVuint16 i;
+    for (i = 0; i < reg_pts.len; i++) {
+      XFillRectangle (display, window, mygc,
+		      (reg_pts.d[i].d[IX] >> 0x10) - 5,
+		      (reg_pts.d[i].d[IY] >> 0x10) - 5,
+		      10, 10);
     }
   }
 }
@@ -189,6 +203,9 @@ main (int argc, char *argv[])
 
   XMapRaised (mydisplay, mywindow);
 
+  reg_pts.d = reg_pts_stor;
+  reg_pts.len = 0;
+
   done = 0;
   while (done == 0) {
 
@@ -266,11 +283,50 @@ main (int argc, char *argv[])
 			0, 0,
 			attribs.width, attribs.height,
 			False);
+	    reg_pts.len = 0;
 	    break;
 	  }
 	  case 'd':
 	    draw_geom (myevent.xkey.display, myevent.xkey.window, mygc);
 	    break;
+	  case 'p':
+	    /* Add a linear regression data point.  */
+	    if (reg_pts.len < 25) {
+	      reg_pts.d[reg_pts.len].d[IX] = myevent.xkey.x << 0x10;
+	      reg_pts.d[reg_pts.len].d[IY] = myevent.xkey.y << 0x10;
+	      reg_pts.len++;
+	    }
+	    {
+	      XWindowAttributes attribs;
+	      XGetWindowAttributes (myevent.xkey.display,
+				    myevent.xkey.window,
+				    &attribs);
+	      XClearArea (myevent.xkey.display,
+			  myevent.xkey.window,
+			  0, 0,
+			  attribs.width, attribs.height,
+			  False);
+	      draw_geom (myevent.xkey.display, myevent.xkey.window, mygc);
+	    }
+	    break;
+	  case 'r':
+	    {
+	      /* Compute and draw the linear regression line.  */
+	      /* y = m*x + b, vector format `[b, m]` */
+	      IVPoint2D_i32 coeffs;
+	      IVPoint2D_i32 r_p1, r_p2;
+	      iv_linreg2_p2q16i32 (&coeffs, &reg_pts);
+	      r_p1.d[IX] = 0;
+	      r_p1.d[IY] = (coeffs.d[1] * (r_p1.d[IX] - 0) + coeffs.d[0]) >> 0x08 /* 0x10 */;
+	      r_p2.d[IX] = 600;
+	      r_p2.d[IY] = (coeffs.d[1] * (r_p2.d[IX] - 0) + coeffs.d[0]) >> 0x08 /* 0x10 */;
+	      printf("%d %d\n", coeffs.d[0], coeffs.d[1]);
+	      XDrawLine (myevent.xkey.display,
+			 myevent.xkey.window,
+			 mygc,
+			 r_p1.d[IX], r_p1.d[IY], r_p2.d[IX], r_p2.d[IY]);
+	      break;
+	    }
 	  }
 	}
 	/* XDrawImageString (myevent.xbutton.display,
