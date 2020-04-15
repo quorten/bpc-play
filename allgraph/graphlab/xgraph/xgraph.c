@@ -20,7 +20,11 @@ IVPoint2D_i32 p3 = {{ 150, 200 }};
 IVPoint2D_i32 p4 = {{ 150, 190 }};
 
 IVPoint2D_i32 reg_pts_stor[32];
-IVPoint2D_i32_array reg_pts;
+IVPoint2D_i32_array reg_pts = { reg_pts_stor, 0 };
+
+/* Index of selected mouse point, or (IVuint16)-1 if none.  */
+IVuint16 isect_drag_idx = (IVuint16)-1;
+IVuint16 reg_drag_idx = (IVuint16)-1;
 
 void
 draw_geom (Display *display, Window window, GC mygc)
@@ -69,11 +73,59 @@ draw_geom (Display *display, Window window, GC mygc)
     IVuint16 i;
     for (i = 0; i < reg_pts.len; i++) {
       XFillRectangle (display, window, mygc,
-		      (reg_pts.d[i].d[IX] >> 0x10) - 5,
-		      (reg_pts.d[i].d[IY] >> 0x10) - 5,
+		      reg_pts.d[i].d[IX] - 5,
+		      reg_pts.d[i].d[IY] - 5,
 		      10, 10);
     }
   }
+
+  if (reg_pts.len >= 2)
+    {
+      /* Compute and draw the linear regression line.  */
+      /* y = m*x + b, vector format `[b, m]` */
+      IVPoint2D_i32 coeffs;
+      IVPoint2D_i32 r_p1, r_p2;
+      iv_linreg2_p2i32 (&coeffs, &reg_pts);
+      r_p1.d[IX] = 0;
+      r_p1.d[IY] = (coeffs.d[1] * (r_p1.d[IX] - 0) + coeffs.d[0]) >> 0x10;
+      r_p2.d[IX] = 600;
+      r_p2.d[IY] = (coeffs.d[1] * (r_p2.d[IX] - 0) + coeffs.d[0]) >> 0x10;
+      XDrawLine (display, window, mygc,
+		 r_p1.d[IX], r_p1.d[IY], r_p2.d[IX], r_p2.d[IY]);
+    }
+}
+
+void
+redraw_geom (Display *display, Window window, GC mygc)
+{
+  XWindowAttributes attribs;
+  XGetWindowAttributes (display, window, &attribs);
+  XClearArea (display, window,
+	      0, 0,
+	      attribs.width, attribs.height,
+	      False);
+  draw_geom(display, window, mygc);
+}
+
+/* Find out which point we're selecting with the mouse based off of
+   the closest match.  N.B.: We compare the distance squared so that
+   we don't have to compute the square root.  */
+IVuint16
+pick_point (IVint64 *result_dist_2,
+	    IVPoint2D_i32_array pts, IVPoint2D_i32 mouse_pt)
+{
+  IVint64 pick_dist_2 = 0x0fffffffffffffffLL;
+  IVuint16 pick;
+  IVuint16 i;
+  for (i = 0; i < pts.len; i++) {
+    IVint64 i_dist_2 = iv_dist2q2_p2i32 (&mouse_pt, &pts.d[i]);
+    if (i_dist_2 < pick_dist_2) {
+      pick_dist_2 = i_dist_2;
+      pick = i;
+    }
+  }
+  *result_dist_2 = pick_dist_2;
+  return pick;
 }
 
 void
@@ -81,52 +133,50 @@ drag_point (Display *display, Window window, GC mygc, int x, int y)
 {
   IVPoint2D_i32 mouse_pt = {{ x, y }};
 
-  { /* Find out which point we're selecting and moving based off of
-       the closest match.  N.B.: We compare the distance squared so
-       that we don't have to compute the square root.  */
-    IVint64 p1_dist_2, p2_dist_2, p3_dist_2, p4_dist_2;
-    p1_dist_2 = iv_dist2q2_p2i32 (&mouse_pt, &p1);
-    p2_dist_2 = iv_dist2q2_p2i32 (&mouse_pt, &p2);
-    p3_dist_2 = iv_dist2q2_p2i32 (&mouse_pt, &p3);
-    p4_dist_2 = iv_dist2q2_p2i32 (&mouse_pt, &p4);
-    if (p1_dist_2 < p2_dist_2 && p1_dist_2 < p3_dist_2 &&
-	p1_dist_2 < p4_dist_2)
-      {
-	/* Select p1 */
-	p1.d[IX] = mouse_pt.d[IX]; p1.d[IY] = mouse_pt.d[IY];
-      }
-    else if (p2_dist_2 < p1_dist_2 && p2_dist_2 < p3_dist_2 &&
-	     p2_dist_2 < p4_dist_2)
-      {
-	/* Select p2 */
-	p2.d[IX] = mouse_pt.d[IX]; p2.d[IY] = mouse_pt.d[IY];
-      }
-    else if (p3_dist_2 < p2_dist_2 && p3_dist_2 < p1_dist_2 &&
-	     p3_dist_2 < p4_dist_2)
-      {
-	/* Select p3 */
-	p3.d[IX] = mouse_pt.d[IX]; p3.d[IY] = mouse_pt.d[IY];
-      }
-    else /* if (p4_dist_2 < p1_dist_2 && p4_dist_2 < p2_dist_2 &&
-	     p4_dist_2 < p3_dist_2) */
-      {
-	/* Select p4 */
-	p4.d[IX] = mouse_pt.d[IX]; p4.d[IY] = mouse_pt.d[IY];
-      }
+  if (isect_drag_idx == (IVuint16)-1 && reg_drag_idx == (IVuint16)-1) {
+    /* Find out which point we should select.  */
+    IVPoint2D_i32 isect_stor[] = { p1, p2, p3, p4 };
+    IVPoint2D_i32_array isect; isect.d = isect_stor; isect.len = 4;
+    IVint64 isect_dist_2;
+    IVint64 reg_dist_2;
+    isect_drag_idx = pick_point (&isect_dist_2, isect, mouse_pt);
+    reg_drag_idx = pick_point (&reg_dist_2, reg_pts, mouse_pt);
+    if (isect_dist_2 < reg_dist_2)
+      reg_drag_idx = (IVuint16)-1;
+    else
+      isect_drag_idx = (IVuint16)-1;
+  }
+
+  /* Drag the selected point.  */
+  if (isect_drag_idx != (IVuint16)-1) {
+    switch (isect_drag_idx) {
+    case 0:
+      /* Drag p1 */
+      p1.d[IX] = mouse_pt.d[IX]; p1.d[IY] = mouse_pt.d[IY];
+      break;
+    case 1:
+      /* Drag p2 */
+      p2.d[IX] = mouse_pt.d[IX]; p2.d[IY] = mouse_pt.d[IY];
+      break;
+    case 2:
+      /* Drag p3 */
+      p3.d[IX] = mouse_pt.d[IX]; p3.d[IY] = mouse_pt.d[IY];
+      break;
+    case 3:
+      /* Drag p4 */
+      p4.d[IX] = mouse_pt.d[IX]; p4.d[IY] = mouse_pt.d[IY];
+      break;
+    }
+  }
+  if (reg_drag_idx != (IVuint16)-1) {
+    reg_pts.d[reg_drag_idx].d[IX] = mouse_pt.d[IX];
+    reg_pts.d[reg_drag_idx].d[IY] = mouse_pt.d[IY];
   }
 
   /* TODO: Now invalidate the affected region of the drawing area.
      Maybe we should use double-buffering or clipping for flicker-free
      display updates.  */
-  {
-    XWindowAttributes attribs;
-    XGetWindowAttributes (display, window, &attribs);
-    XClearArea (display, window,
-		0, 0,
-		attribs.width, attribs.height,
-		False);
-    draw_geom(display, window, mygc);
-  }
+  redraw_geom(display, window, mygc);
 }
 
 int
@@ -203,9 +253,6 @@ main (int argc, char *argv[])
 
   XMapRaised (mydisplay, mywindow);
 
-  reg_pts.d = reg_pts_stor;
-  reg_pts.len = 0;
-
   done = 0;
   while (done == 0) {
 
@@ -222,18 +269,7 @@ main (int argc, char *argv[])
       {
       case Expose:
 	if (myevent.xexpose.count == 0)
-	  {
-	    XWindowAttributes attribs;
-	    XGetWindowAttributes (myevent.xexpose.display,
-				  myevent.xexpose.window,
-				  &attribs);
-	    XClearArea (myevent.xexpose.display,
-			myevent.xexpose.window,
-			0, 0,
-			attribs.width, attribs.height,
-			False);
-	    draw_geom (myevent.xexpose.display, myevent.xexpose.window, mygc);
-	  }
+	  redraw_geom (myevent.xexpose.display, myevent.xexpose.window, mygc);
 	break;
 
       case ButtonPress:
@@ -249,6 +285,8 @@ main (int argc, char *argv[])
 
       case ButtonRelease:
 	is_pressed = 0;
+	isect_drag_idx = (IVuint16)-1;
+	reg_drag_idx = (IVuint16)-1;
 	break;
 
       case MotionNotify:
@@ -286,47 +324,23 @@ main (int argc, char *argv[])
 	    reg_pts.len = 0;
 	    break;
 	  }
+	  case 'e':
+	    /* Clear all linear regression data points.  */
+	    reg_pts.len = 0;
+	    redraw_geom (myevent.xkey.display, myevent.xkey.window, mygc);
+	    break;
 	  case 'd':
 	    draw_geom (myevent.xkey.display, myevent.xkey.window, mygc);
 	    break;
 	  case 'p':
 	    /* Add a linear regression data point.  */
 	    if (reg_pts.len < 25) {
-	      reg_pts.d[reg_pts.len].d[IX] = myevent.xkey.x << 0x10;
-	      reg_pts.d[reg_pts.len].d[IY] = myevent.xkey.y << 0x10;
+	      reg_pts.d[reg_pts.len].d[IX] = myevent.xkey.x;
+	      reg_pts.d[reg_pts.len].d[IY] = myevent.xkey.y;
 	      reg_pts.len++;
 	    }
-	    {
-	      XWindowAttributes attribs;
-	      XGetWindowAttributes (myevent.xkey.display,
-				    myevent.xkey.window,
-				    &attribs);
-	      XClearArea (myevent.xkey.display,
-			  myevent.xkey.window,
-			  0, 0,
-			  attribs.width, attribs.height,
-			  False);
-	      draw_geom (myevent.xkey.display, myevent.xkey.window, mygc);
-	    }
+	    redraw_geom (myevent.xkey.display, myevent.xkey.window, mygc);
 	    break;
-	  case 'r':
-	    {
-	      /* Compute and draw the linear regression line.  */
-	      /* y = m*x + b, vector format `[b, m]` */
-	      IVPoint2D_i32 coeffs;
-	      IVPoint2D_i32 r_p1, r_p2;
-	      iv_linreg2_p2q16i32 (&coeffs, &reg_pts);
-	      r_p1.d[IX] = 0;
-	      r_p1.d[IY] = (coeffs.d[1] * (r_p1.d[IX] - 0) + coeffs.d[0]) >> 0x08 /* 0x10 */;
-	      r_p2.d[IX] = 600;
-	      r_p2.d[IY] = (coeffs.d[1] * (r_p2.d[IX] - 0) + coeffs.d[0]) >> 0x08 /* 0x10 */;
-	      printf("%d %d\n", coeffs.d[0], coeffs.d[1]);
-	      XDrawLine (myevent.xkey.display,
-			 myevent.xkey.window,
-			 mygc,
-			 r_p1.d[IX], r_p1.d[IY], r_p2.d[IX], r_p2.d[IY]);
-	      break;
-	    }
 	  }
 	}
 	/* XDrawImageString (myevent.xbutton.display,

@@ -6,7 +6,6 @@
    Fixed-point arithmetic is only used as an intermediate form,
    Q32.32.  */
 
-#include <stdio.h>
 #include <stdlib.h>
 
 #include "ivecmath.h"
@@ -1135,14 +1134,19 @@ IVMatNxM_i32 *iv_xpose2_mnxm_i32(IVMatNxM_i32 *a, IVMatNxM_i32 *b)
 }
 
 /* Compute a linear regression of the "y = m*x + b" representational
-   form.  Result vector format is `[b, m]`.  Input integers must be in
-   Q16.16 fixed-point format, output is also in Q16.16 fixed-point
-   format.
+   form.  Result vector format is `[b, m]`.  Output is in Q16.16
+   fixed-point format.
+
+   TODO: Accept user specification for shift factor on the data, bits
+   after the decimal.
+
+   TODO: Add subroutine to check if data is well-formed before running
+   solvers.
 
    If there is no solution, the resulting matrix entries are all set
    to IVINT32_MIN.  */
-IVPoint2D_i32 *iv_linreg2_p2q16i32(IVPoint2D_i32 *result,
-				   IVPoint2D_i32_array *data)
+IVPoint2D_i32 *iv_linreg2_p2i32(IVPoint2D_i32 *result,
+				IVPoint2D_i32_array *data)
 {
   IVPoint2D_i32 *data_d = data->d;
   IVuint16 data_len = data->len;
@@ -1194,23 +1198,22 @@ IVPoint2D_i32 *iv_linreg2_p2q16i32(IVPoint2D_i32 *result,
 
   /* Pack into the coefficient matrix `A`.  */
   for (i = 0; i < data_len; i++) {
-    mat_a.d[mat_a.width*i+0] = 1 << 0x10 >> 0x10;
-    /* N.B.: Trying to subtract 100 for better numerical stability.  */
-    mat_a.d[mat_a.width*i+1] = (data_d[i].d[IX] >> 0x10) /* - 100 */;
+    mat_a.d[mat_a.width*i+0] = 1;
+    mat_a.d[mat_a.width*i+1] = data_d[i].d[IX];
   }
   /* Compute `A^T`.  */
   iv_xpose2_mnxm_i32(&mat_a_t, &mat_a);
 
   /* Pack into the coefficient matrix `b`.  */
   for (i = 0; i < data_len; i++) {
-    col_b.d[i] = data_d[i].d[IY] >> 0x10;
+    col_b.d[i] = data_d[i].d[IY];
   }
 
   /* Compute `A^T * A`.  */
-  iv_mulshr4_mnxm_i32(&mat_a_t_a, &mat_a_t, &mat_a, 0 /* 0x10 */);
+  iv_mulshr4_mnxm_i32(&mat_a_t_a, &mat_a_t, &mat_a, 0);
 
   /* Compute `A^T * b`.  */
-  iv_mulshr4_mnxm_i32(&col_a_t_b, &mat_a_t, &col_b, 0 /* 0x10 */);
+  iv_mulshr4_mnxm_i32(&col_a_t_b, &mat_a_t, &col_b, 0);
 
   /* Pack into IVSys2_Eqs_v2i32 representational form.  */
   sys.d[0].v.d[IX] = mat_a_t_a.d[0];
@@ -1220,9 +1223,6 @@ IVPoint2D_i32 *iv_linreg2_p2q16i32(IVPoint2D_i32 *result,
   sys.d[1].v.d[IY] = mat_a_t_a.d[3];
   sys.d[1].offset = col_a_t_b.d[1];
 
-  printf("%d %d %d\n", sys.d[0].v.d[IX], sys.d[0].v.d[IY], sys.d[0].offset);
-  printf("%d %d %d\n", sys.d[1].v.d[IX], sys.d[1].v.d[IY], sys.d[1].offset);
-  printf("\n");
   /* Now, here's the trick.  We want to analyze the slopes of the line
      equations to determine how much we can divide the numbers, up to
      our shift limit.  You can divide all equations and get the same
@@ -1239,20 +1239,15 @@ IVPoint2D_i32 *iv_linreg2_p2q16i32(IVPoint2D_i32 *result,
   {
     IVuint8 num_bits = soft_bsr_i64(sys.d[0].v.d[IY]);
     IVuint8 shr_div = num_bits;
-    printf("%d\n", num_bits);
-    g_shr = 0x08;
+    g_shr = 0x10;
     if (shr_div > g_shr)
       shr_div = g_shr;
-    printf("%d\n", shr_div);
     sys.d[0].v.d[IX] <<= g_shr - shr_div;
     sys.d[0].v.d[IY] <<= g_shr - shr_div;
     sys.d[0].offset <<= g_shr - shr_div;
     sys.d[1].v.d[IX] <<= g_shr - shr_div;
     sys.d[1].v.d[IY] <<= g_shr - shr_div;
     sys.d[1].offset <<= g_shr - shr_div;
-  printf("%d %d %d\n", sys.d[0].v.d[IX], sys.d[0].v.d[IY], sys.d[0].offset);
-  printf("%d %d %d\n", sys.d[1].v.d[IX], sys.d[1].v.d[IY], sys.d[1].offset);
-  printf("\n");
   }
 
   /* Solve the system!  */
