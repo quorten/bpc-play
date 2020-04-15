@@ -95,18 +95,18 @@ IVVec2D_i32 *iv_shldiv4_v2i32_i32(IVVec2D_i32 *a, IVVec2D_i32 *b,
 /* multiply, shift right, with symmetric positive/negative shift
    behavior */
 IVVec2D_i32 *iv_mulshr4_v2i32_i32(IVVec2D_i32 *a, IVVec2D_i32 *b,
-				  IVint32 c, IVuint32 d)
+				  IVint32 c, IVuint32 q)
 {
   IVint64 tx = b->d[IX] * c;
   IVint64 ty = b->d[IY] * c;
   /* Due to asymmetric two's complement, we must pre-increment one if
      less than zero.  */
-  if (d != 0) {
+  if (q != 0) {
     if (tx < 0) tx++;
     if (ty < 0) ty++;
   }
-  a->d[IX] = (IVint32)(tx >> d);
-  a->d[IY] = (IVint32)(ty >> d);
+  a->d[IX] = (IVint32)(tx >> q);
+  a->d[IY] = (IVint32)(ty >> q);
   return a;
 }
 
@@ -141,17 +141,17 @@ IVint64 iv_dot2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b)
   return (IVint64)a->d[IX] * b->d[IX] + (IVint64)a->d[IY] * b->d[IY];
 }
 
-/* Dot product with shift right by `c` bits after multiply, with
+/* Dot product with shift right by `q` bits after multiply, with
    symmetric positive/negative shift behavior.  */
-IVint64 iv_dotshr3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint32 c)
+IVint64 iv_dotshr3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint32 q)
 {
   IVint64 tx = (IVint64)a->d[IX] * b->d[IX];
   IVint64 ty = (IVint64)a->d[IY] * b->d[IY];
-  if (c != 0) {
+  if (q != 0) {
     if (tx < 0) tx++;
     if (ty < 0) ty++;
   }
-  return (tx >> c) + (ty >> c);
+  return (tx >> q) + (ty >> q);
 }
 
 /* Magnitude squared of a vector.  */
@@ -160,11 +160,11 @@ IVint64 iv_magn2q_v2i32(IVPoint2D_i32 *a)
   return iv_dot2_v2i32(a, a);
 }
 
-/* Magnitude squared of a vector, with shift right by `c` bits after
+/* Magnitude squared of a vector, with shift right by `q` bits after
    multiply, with symmetric positive/negative shift behavior.  */
-IVint64 iv_magn2qshr2_v2i32(IVPoint2D_i32 *a, IVuint32 b)
+IVint64 iv_magn2qshr2_v2i32(IVPoint2D_i32 *a, IVuint32 q)
 {
-  return iv_dotshr3_v2i32(a, a, b);
+  return iv_dotshr3_v2i32(a, a, q);
 }
 
 /********************************************************************/
@@ -190,16 +190,16 @@ IVVec3D_i32 *iv_crossproddiv4_v3i32(IVVec3D_i32 *a,
 
 IVVec3D_i32 *iv_crossprodshr4_v3i32(IVVec3D_i32 *a,
 				    IVVec3D_i32 *b, IVVec3D_i32 *c,
-				    IVuint32 d)
+				    IVuint32 q)
 {
   /* TODO FIXME SYMMETRIC SHIFT BEHAVIOR */
   /* TODO VERIFY PRECISION */
   a->d[IX] = (IVint32)(((IVint64)b->d[IY] * c->d[IZ] -
-			(IVint64)b->d[IZ] * c->d[IY]) >> d);
+			(IVint64)b->d[IZ] * c->d[IY]) >> q);
   a->d[IY] = (IVint32)(((IVint64)b->d[IZ] * c->d[IX] -
-			(IVint64)b->d[IX] * c->d[IZ]) >> d);
+			(IVint64)b->d[IX] * c->d[IZ]) >> q);
   a->d[IZ] = (IVint32)(((IVint64)b->d[IX] * c->d[IY] -
-			(IVint64)b->d[IY] * c->d[IX]) >> d);
+			(IVint64)b->d[IY] * c->d[IX]) >> q);
   return a;
 }
 
@@ -285,8 +285,8 @@ IVuint8 soft_bsr_i64(IVint64 a)
   pos += 1;
   /* N.B.: There is nothing to test on the end of the segment because
      we return `pos` either way, so we only need to test the first
-     three.  Also, we use != comparison since shift_idx may go
-     negative and it's unsigned.  */
+     three.  Also, we use != comparison since `shift` may go negative
+     and it's unsigned.  */
   shift = pos - 3;
   while (pos != shift) {
     if ((a & mask))
@@ -392,7 +392,7 @@ IVuint8 soft_ns_bsr_i64(IVint64 a)
   pos += 1;
   /* N.B.: There is nothing to test on the end of the segment because
      we return `pos` either way, so we only need to test the first
-     three.  Also, we use != comparison since shift_idx may go
+     three.  Also, we use != comparison since `shift_idx` may go
      negative and it's unsigned.  */
   shift_idx = pos - 3;
   while (pos != shift_idx) {
@@ -798,7 +798,7 @@ IVPoint2D_i32 *iv_proj3_p2i32_NLine_v2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b,
    a = resulting point
    b = ray
    c = plane
-   d = shift right factor, bits after decimal for fixed-point operands
+   q = shift right factor, bits after decimal for fixed-point operands
 
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.
@@ -806,20 +806,19 @@ IVPoint2D_i32 *iv_proj3_p2i32_NLine_v2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b,
 IVPoint2D_i32 *iv_isect4_InLine_Eqs_v2i32(IVPoint2D_i32 *a,
 					  IVInLine_v2i32 *b,
 					  IVEqs_v2i32 *c,
-					  IVuint32 d)
+					  IVuint32 q)
 {
   IVVec2D_i32 t;
-  IVint64 denom;
-  denom = iv_dotshr3_v2i32(&b->v, &c->v, d);
-  if (denom == 0) {
+  IVint64 d;
+  d = iv_dotshr3_v2i32(&b->v, &c->v, q);
+  if (d == 0) {
     /* No solution.  */
     a->d[IX] = IVINT32_MIN;
     a->d[IY] = IVINT32_MIN;
     return a;
   }
   iv_muldiv4_v2i32_i64(&t, &b->v,
-		       iv_dotshr3_v2i32(&b->p0, &c->v, d) - c->offset,
-		       denom);
+		       iv_dotshr3_v2i32(&b->p0, &c->v, q) - c->offset, d);
   return iv_sub3_v2i32(a, &b->p0, &t);
 }
 
@@ -960,17 +959,17 @@ IVPoint2D_i32 *iv_isect3_Ray_NLine_v2i32(IVPoint2D_i32 *a, IVRay_v2i32 *b,
 
 /* Convert (reformat) Eqs representational form to NLine.
 
-   `d` = shift right factor, bits after decimal for fixed-point operands
+   `q` = shift right factor, bits after decimal for fixed-point operands
 
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.  */
 IVNLine_v2i32 *iv_rf_NLine_Eqs_v2i32(IVNLine_v2i32 *a, IVEqs_v2i32 *b,
-				     IVuint32 d)
+				     IVuint32 q)
 {
   /* TODO VERIFY PRECISION: offset is only 32 bits?  */
   /* Convert the origin offset to a point.  */
-  IVint64 denom = iv_magn2qshr2_v2i32(&b->v, d);
-  if (denom == 0) {
+  IVint64 d = iv_magn2qshr2_v2i32(&b->v, q);
+  if (d == 0) {
     /* No solution.  */
     a->p0.d[IX] = IVINT32_MIN;
     a->p0.d[IY] = IVINT32_MIN;
@@ -979,7 +978,7 @@ IVNLine_v2i32 *iv_rf_NLine_Eqs_v2i32(IVNLine_v2i32 *a, IVEqs_v2i32 *b,
     return a;
   }
   iv_muldiv4_v2i32_i64
-    (&a->p0, &b->v, b->offset, denom);
+    (&a->p0, &b->v, b->offset, d);
   /* Copy the perpendicular vector.  */
   a->v = b->v;
   return a;
@@ -987,10 +986,10 @@ IVNLine_v2i32 *iv_rf_NLine_Eqs_v2i32(IVNLine_v2i32 *a, IVEqs_v2i32 *b,
 
 /* Convert (reformat) NLine representational form to Eqs.
 
-   `d` = shift right factor, bits after decimal for fixed-point
+   `q` = shift right factor, bits after decimal for fixed-point
    operands */
 IVEqs_v2i32 *iv_rf_Eqs_NLine_v2i32(IVEqs_v2i32 *a, IVNLine_v2i32 *b,
-				   IVuint32 d)
+				   IVuint32 q)
 {
   IVVec2D_i32 t;
   /* Copy the perpendicular vector.  */
@@ -1009,7 +1008,7 @@ IVEqs_v2i32 *iv_rf_Eqs_NLine_v2i32(IVEqs_v2i32 *a, IVNLine_v2i32 *b,
      dot_product(-P, A)
   */
   iv_neg2_v2i32(&t, &b->p0);
-  a->offset = (IVint32)iv_dotshr3_v2i32(&t, &b->v, d);
+  a->offset = (IVint32)iv_dotshr3_v2i32(&t, &b->v, q);
   /* TODO VERIFY PRECISION: offset is only 32 bits? */
   return a;
 }
@@ -1038,15 +1037,15 @@ IVNLine_v2i32 *iv_rf_InLine_NLine_v2i32(IVInLine_v2i32 *a, IVNLine_v2i32 *b)
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.  */
 IVPoint2D_i32 *iv_solve3_s2_Eqs_v2i32(IVPoint2D_i32 *a, IVSys2_Eqs_v2i32 *b,
-				      IVuint32 d)
+				      IVuint32 q)
 {
   IVNLine_v2i32 nline;
   IVInLine_v2i32 in_line;
   /* Reformat the first equation into a InLine equation.  */
-  iv_rf_NLine_Eqs_v2i32(&nline, &b->d[0], d);
+  iv_rf_NLine_Eqs_v2i32(&nline, &b->d[0], q);
   iv_rf_InLine_NLine_v2i32(&in_line,  &nline);
   /* Now intersect the in_line with the plane (line in 2D).  */
-  return iv_isect4_InLine_Eqs_v2i32(a, &in_line, &b->d[1], d);
+  return iv_isect4_InLine_Eqs_v2i32(a, &in_line, &b->d[1], q);
 }
 
 /* Solve a system of two "surface-normal" perpendicular vector linear
@@ -1080,7 +1079,7 @@ IVPoint2D_i32 *iv_solve2_s2_InLine_v2i32(IVPoint2D_i32 *a,
 
 /* Multiply, shift right two MxN integer matrices, with symmetric
    positive/negative shift behavior.  After each element
-   multiplication, the result is shifted right by `n` bits before
+   multiplication, the result is shifted right by `q` bits before
    adding to the accumulator.  The output matrix must be
    pre-allocated.
 
@@ -1088,7 +1087,7 @@ IVPoint2D_i32 *iv_solve2_s2_InLine_v2i32(IVPoint2D_i32 *a,
    to IVINT32_MIN.  */
 IVMatNxM_i32 *iv_mulshr4_mnxm_i32(IVMatNxM_i32 *a,
 				  IVMatNxM_i32 *b, IVMatNxM_i32 *c,
-				  IVuint32 d)
+				  IVuint32 q)
 {
   IVuint16 inner = b->width;
   IVuint16 a_width = a->width, a_height = a->height;
@@ -1117,8 +1116,8 @@ IVMatNxM_i32 *iv_mulshr4_mnxm_i32(IVMatNxM_i32 *a,
 	for (k = 0; k < inner; k++) {
 	  IVint64 intermed =
 	    (IVint64)b_d[inner_i+k] * c_d[a_width_k+j];
-	  if (d != 0 && intermed < 0) intermed++;
-	  accum += intermed >> d;
+	  if (q != 0 && intermed < 0) intermed++;
+	  accum += intermed >> q;
 	  a_width_k += a_width;
 	}
 	a_d[a_width_i+j] = accum;
