@@ -62,13 +62,13 @@ draw_geom (Display *display, Window window, GC mygc)
 
     /* Use our spiffy new subroutines to compute perpendiculars and
        solutions.  */
-    iv_proj4_p2i32_NLine_v2i32 (&pp, &p3, &plane, 0);
+    iv_proj3_p2i32_NLine_v2i32 (&pp, &p3, &plane);
     XDrawLine (display, window, mygc,
 	       p3.d[IX], p3.d[IY], pp.d[IX], pp.d[IY]);
     /* XFillRectangle (display, window, mygc,
 		    pp.d[IX] - 5, pp.d[IY] - 5, 10, 10); */
 
-    iv_isect4_Ray_NLine_v2i32 (&pp, &v3_ray, &plane, 0);
+    iv_isect3_Ray_NLine_v2i32 (&pp, &v3_ray, &plane);
 
     if (pp.d[IX] != IVINT32_MIN) {
       XFillRectangle (display, window, mygc,
@@ -81,7 +81,7 @@ draw_geom (Display *display, Window window, GC mygc)
       IVint32 qualfac;
       sys.d[0].v = v1;
       sys.d[1].v = v3;
-      qualfac = iv_qualfac2_s2_Eqs_v2i32 (&sys, 0);
+      qualfac = iv_prequalfac_s2_Eqs_v2i32 (&sys);
       sprintf (isect_qf_str, "isect qf = %f", (float)qualfac / 0x10000);
     }
   }
@@ -105,8 +105,8 @@ draw_geom (Display *display, Window window, GC mygc)
     IVPoint2D_i32 coeffs;
     IVPoint2D_i32 r_p1, r_p2;
     iv_pack_linreg_s2_Eqs_v2i32 (&sys, &reg_pts, 0);
-    qualfac = iv_qualfac2_s2_Eqs_v2i32 (&sys, 0x10);
-    iv_solve3_s2_Eqs_v2i32 (&coeffs, &sys, 0x10);
+    qualfac = iv_prequalfac_s2_Eqs_v2i32 (&sys);
+    iv_solve2_s2_Eqs_v2i32 (&coeffs, &sys);
     r_p1.d[IX] = 0;
     r_p1.d[IY] = (coeffs.d[1] * (r_p1.d[IX] - 0) + coeffs.d[0]) >> 0x10;
     r_p2.d[IX] = 600;
@@ -121,11 +121,11 @@ draw_geom (Display *display, Window window, GC mygc)
       sprintf (mat_line1, "[ %f %f %f",
 	       (float)sys.d[0].v.d[IX] / 0x10000,
 	       (float)sys.d[0].v.d[IY] / 0x10000,
-	       (float)sys.d[0].offset / 0x10000);
+	       (float)sys.d[0].offset / 0x100000000LL);
       sprintf (mat_line2, "  %f %f %f ]",
 	       (float)sys.d[1].v.d[IX] / 0x10000,
 	       (float)sys.d[1].v.d[IY] / 0x10000,
-	       (float)sys.d[1].offset / 0x10000);
+	       (float)sys.d[1].offset / 0x100000000LL);
     }
   }
 
@@ -173,7 +173,7 @@ pick_point (IVint64 *result_dist_2,
   IVuint16 pick;
   IVuint16 i;
   for (i = 0; i < pts_len; i++) {
-    IVint64 i_dist_2 = iv_dist2q3_p2i32 (mouse_pt, &pts_d[i], 0);
+    IVint64 i_dist_2 = iv_dist2q2_p2i32 (mouse_pt, &pts_d[i]);
     if (i_dist_2 < pick_dist_2) {
       pick_dist_2 = i_dist_2;
       pick = i;
