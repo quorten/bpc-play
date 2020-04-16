@@ -7,6 +7,14 @@
 
 #include "ivecmath.h"
 
+IVint64 iv_abs_i64(IVint64 a)
+{
+  if (a < 0) return -a;
+  return a;
+}
+
+/********************************************************************/
+
 IVVec2D_i32 *iv_neg2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b)
 {
   /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
@@ -190,7 +198,7 @@ IVVec2D_i32 *iv_perpen2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b)
    given vector.  */
 IVVec2D_i32 *iv_nosol_v2i32(IVVec2D_i32 *a)
 {
-  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
+  /* Tags: VEC-COMPONENTS */
   a->d[IX] = IVINT32_MIN;
   a->d[IY] = IVINT32_MIN;
   return a;
@@ -1167,6 +1175,60 @@ IVPoint2D_i32 *iv_solve3_s2_InLine_v2i32(IVPoint2D_i32 *a,
   return iv_isect4_InLine_NLine_v2i32(a, &b->d[0], &nline, q);
 }
 
+/* Quality check on system of equations.  This is computed as follows:
+
+   Let A = plane 1 surface normal vector,
+       B = plane 2 surface normal vector
+
+   abs(dot_product(perpendicular(A), B)) / (magnitude(A) * magnitude(B))
+
+   If either vector magnitude is zero, the returned quality factor is
+   zero.
+
+   The result is in Q16.16 fixed-point format.  Note that since we're
+   dividing by truncated square roots, sometimes the result is greater
+   than 1.0 in Q16.16.
+
+   To be fast, use approximate magnitude instead.  Operating directly
+   on the results of bit-scan reverse is fastest since you can add
+   rather than multiply.  */
+IVint32 iv_qualfac2_s2_Eqs_v2i32(IVSys2_Eqs_v2i32 *a, IVuint8 q)
+{
+  /* Tags: SCALAR-ARITHMETIC */
+  IVVec2D_i32 vt;
+  IVint64 vt_dot_v2;
+  IVint32 magn_vt, magn_v2;
+  IVint32 norm_vt_dot_v2;
+  iv_perpen2_v2i32(&vt, &a->d[0].v);
+  vt_dot_v2 = iv_abs_i64(iv_dotshr3_v2i32(&vt, &a->d[1].v, q));
+  magn_vt = iv_magnitude2_v2i32(&vt, q);
+  if (magn_vt == 0)
+    return 0;
+  magn_v2 = iv_magnitude2_v2i32(&a->d[1].v, q);
+  if (magn_v2 == 0)
+    return 0;
+  if (vt_dot_v2 >= 0x80000000LL) {
+    /* Okay, this is tricky since we don't have much headroom due to
+       the 64-bit numerator.  Divide by the smallest factor and the
+       remaining factor is guaranteed to be within the headroom of
+       IVint32.  So then we can do a standard multiply-divide to
+       obtain the fixed-point result.  */
+    if (magn_v2 < magn_vt) {
+      vt_dot_v2 /= magn_v2;
+      norm_vt_dot_v2 = (IVint32)((vt_dot_v2 << 0x10) / magn_vt);
+    } else {
+      vt_dot_v2 /= magn_vt;
+      norm_vt_dot_v2 = (IVint32)((vt_dot_v2 << 0x10) / magn_v2);
+    }
+  } else {
+    IVint64 magn_vt_v2 = (IVint64)magn_vt * magn_v2;
+    norm_vt_dot_v2 = (IVint32)((vt_dot_v2 << 0x10) / magn_vt_v2);
+  }
+  return norm_vt_dot_v2;
+}
+
+/********************************************************************/
+
 /* Multiply, shift right two MxN integer matrices, with symmetric
    positive/negative shift behavior.  After each element
    multiplication, the result is shifted right by `q` bits before
@@ -1256,24 +1318,22 @@ IVMatNxM_i32 *iv_xpose2_mnxm_i32(IVMatNxM_i32 *a, IVMatNxM_i32 *b)
   return a;
 }
 
-/* Compute a linear regression of the "y = m*x + b" representational
-   form.  Result vector format is `[b, m]`.  Output is in Q16.16
-   fixed-point format.
+/********************************************************************/
+
+/* Set up system of equations to compute a linear regression of the "y
+   = m*x + b" representational form.  When the system is solved, the
+   result vector format is `[b, m]`.  The equations are formatted for
+   solving in Q16.16 fixed-point format since you'll need a
+   fixed-point number for the fractional slope.
 
    `q` = shift right factor, bits after decimal for fixed-point
    operands
 
-   TODO: Add subroutine to check if data is well-formed before running
-   solvers.
-
-   If there is a memory allocation error, the resulting coefficient
-   vector's entries are all set to IVINT32_MIN.
-
-   If there is no solution, the resulting coefficient vector's entries
-   are all set to IVINT32_MIN.  */
-IVPoint2D_i32 *iv_linreg3_p2i32(IVPoint2D_i32 *result,
-				IVPoint2D_i32_array *data,
-				IVuint8 q)
+   If there is a memory allocation error, the system of equation's
+   entries are all set to IVINT32_MIN (and IVINT64_MIN).  */
+IVSys2_Eqs_v2i32 *iv_pack_linreg_s2_Eqs_v2i32(IVSys2_Eqs_v2i32 *sys,
+					      IVPoint2D_i32_array *data,
+					      IVuint8 q)
 {
   IVPoint2D_i32 *data_d = data->d;
   IVuint16 data_len = data->len;
@@ -1284,7 +1344,6 @@ IVPoint2D_i32 *iv_linreg3_p2i32(IVPoint2D_i32 *result,
   IVMat2x2_i32 mat_a_t_a_stor; /* Allocation for Matrix A^T * A */
   IVMatNxM_i32 col_a_t_b; /* Column vector A^T * b */
   IVVec2D_i32 col_a_t_b_stor; /* Allocation for Column vector A^T * b */
-  IVSys2_Eqs_v2i32 sys;
   IVuint16 i;
 
   /* Pre-allocate all intermediate data structures.  */
@@ -1339,55 +1398,56 @@ IVPoint2D_i32 *iv_linreg3_p2i32(IVPoint2D_i32 *result,
   iv_mulshr4_mnxm_i32(&col_a_t_b, &mat_a_t, &col_b, q);
 
   /* Pack into IVSys2_Eqs_v2i32 representational form.  */
-  sys.d[0].v.d[IX] = mat_a_t_a.d[0];
-  sys.d[0].v.d[IY] = mat_a_t_a.d[1];
-  sys.d[0].offset = col_a_t_b.d[0];
-  sys.d[1].v.d[IX] = mat_a_t_a.d[2];
-  sys.d[1].v.d[IY] = mat_a_t_a.d[3];
-  sys.d[1].offset = col_a_t_b.d[1];
+  sys->d[0].v.d[IX] = mat_a_t_a.d[0];
+  sys->d[0].v.d[IY] = mat_a_t_a.d[1];
+  sys->d[0].offset = col_a_t_b.d[0];
+  sys->d[1].v.d[IX] = mat_a_t_a.d[2];
+  sys->d[1].v.d[IY] = mat_a_t_a.d[3];
+  sys->d[1].offset = col_a_t_b.d[1];
 
-  /* Now, here's the trick.  We want to analyze the slopes of the line
-     equations to determine how much we can divide the numbers, up to
-     our shift limit.  You can divide all equations and get the same
-     result, so long as the sub-computations do proper decimal place
-     handling.
-
-     For slopes less than one, double the slope is approximately
-     double the angle.  But for slopes much greater than one, double
-     the slope is pretty much the exact same angle, which is why it's
-     important to divide when using a geometric equation solver.
-
-     Absolutely ideal behavior requires us to do division computations
-     rather than mere bit shifting.  */
+  /* Here's what we're doing here.  Since we'll need a fixed-point
+     solution, our equation solver will operate with a Q16.16 decimal
+     point.  For large integers, they can just be passed in without
+     modification and it will all work, since in a system of equations
+     you can divide all entries by the same number and get the same
+     result.  However, if our inputs are small integers and we input
+     them as-is, some values may get shifted to zero in the
+     computations, so we adaptively shift all entries right based off
+     of an entry that is similar to the median value of the
+     entries.  */
   {
-    IVuint8 num_bits = soft_bsr_i64(sys.d[0].v.d[IY]);
-    IVuint8 shr_div = num_bits;
+    IVint32 test_value = sys->d[0].v.d[IY];
+    IVuint8 shr_div;
     IVuint8 num_shr;
+    if (test_value < 0)
+      shr_div = soft_bsr_i64(-test_value);
+    else
+      shr_div = soft_bsr_i64(test_value);
     if (shr_div > 0x10)
       shr_div = 0x10;
     num_shr = 0x10 - shr_div;
-    sys.d[0].v.d[IX] <<= num_shr;
-    sys.d[0].v.d[IY] <<= num_shr;
-    sys.d[0].offset <<= num_shr;
-    sys.d[1].v.d[IX] <<= num_shr;
-    sys.d[1].v.d[IY] <<= num_shr;
-    sys.d[1].offset <<= num_shr;
+    sys->d[0].v.d[IX] <<= num_shr;
+    sys->d[0].v.d[IY] <<= num_shr;
+    sys->d[0].offset <<= num_shr;
+    sys->d[1].v.d[IX] <<= num_shr;
+    sys->d[1].v.d[IY] <<= num_shr;
+    sys->d[1].offset <<= num_shr;
   }
-
-  /* Solve the system!  */
-  iv_solve3_s2_Eqs_v2i32(result, &sys, 0x10);
 
   /* Cleanup.  */
   free (mat_a.d);
   free (mat_a_t.d);
   free (col_b.d);
 
-  return result;
+  return sys;
 
  dirty_cleanup:
-  iv_nosol_v2i32(result);
+  iv_nosol_v2i32(&sys->d[0].v);
+  sys->d[0].offset = IVINT64_MIN;
+  iv_nosol_v2i32(&sys->d[1].v);
+  sys->d[1].offset = IVINT64_MIN;
   if (mat_a.d != NULL) free (mat_a.d);
   if (mat_a_t.d != NULL) free (mat_a_t.d);
   if (col_b.d != NULL) free (col_b.d);
-  return result;
+  return sys;
 }

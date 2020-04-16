@@ -26,11 +26,19 @@ IVPoint2D_i32_array reg_pts = { reg_pts_stor, 0 };
 IVuint16 isect_drag_idx = (IVuint16)-1;
 IVuint16 reg_drag_idx = (IVuint16)-1;
 
+/* Quality factor view mode, 0 = disable, 1 = isect, 2 = linreg.  */
+IVuint8 qf_view = 0;
+
 void
 draw_geom (Display *display, Window window, GC mygc)
 {
   IVVec2D_i32 v1, v2, v3;
   IVPoint2D_i32 pc;
+
+  char isect_qf_str[32] = "";
+  char linreg_qf_str[32] = "";
+  char mat_line1[64] = "";
+  char mat_line2[64] = "";
 
   iv_sub3_v2i32 (&v1, &p2, &p1);
   iv_sub3_v2i32 (&v2, &p3, &p1);
@@ -66,6 +74,16 @@ draw_geom (Display *display, Window window, GC mygc)
       XFillRectangle (display, window, mygc,
 		      pp.d[IX] - 5, pp.d[IY] - 5, 10, 10);
     }
+
+    if (qf_view == 1) {
+      /* Compute the equation solving quality factor on our setup.  */
+      IVSys2_Eqs_v2i32 sys;
+      IVint32 qualfac;
+      sys.d[0].v = v1;
+      sys.d[1].v = v3;
+      qualfac = iv_qualfac2_s2_Eqs_v2i32 (&sys, 0);
+      sprintf (isect_qf_str, "isect qf = %f", (float)qualfac / 0x10000);
+    }
   }
 
   /* Draw all the linear regression points.  */
@@ -79,20 +97,55 @@ draw_geom (Display *display, Window window, GC mygc)
     }
   }
 
-  if (reg_pts.len >= 2)
-    {
-      /* Compute and draw the linear regression line.  */
-      /* y = m*x + b, vector format `[b, m]` */
-      IVPoint2D_i32 coeffs;
-      IVPoint2D_i32 r_p1, r_p2;
-      iv_linreg3_p2i32 (&coeffs, &reg_pts, 0);
-      r_p1.d[IX] = 0;
-      r_p1.d[IY] = (coeffs.d[1] * (r_p1.d[IX] - 0) + coeffs.d[0]) >> 0x10;
-      r_p2.d[IX] = 600;
-      r_p2.d[IY] = (coeffs.d[1] * (r_p2.d[IX] - 0) + coeffs.d[0]) >> 0x10;
-      XDrawLine (display, window, mygc,
-		 r_p1.d[IX], r_p1.d[IY], r_p2.d[IX], r_p2.d[IY]);
+  if (reg_pts.len >= 2) {
+    /* Compute and draw the linear regression line.  */
+    /* y = m*x + b, vector format `[b, m]` */
+    IVSys2_Eqs_v2i32 sys;
+    IVint32 qualfac;
+    IVPoint2D_i32 coeffs;
+    IVPoint2D_i32 r_p1, r_p2;
+    iv_pack_linreg_s2_Eqs_v2i32 (&sys, &reg_pts, 0);
+    qualfac = iv_qualfac2_s2_Eqs_v2i32 (&sys, 0x10);
+    iv_solve3_s2_Eqs_v2i32 (&coeffs, &sys, 0x10);
+    r_p1.d[IX] = 0;
+    r_p1.d[IY] = (coeffs.d[1] * (r_p1.d[IX] - 0) + coeffs.d[0]) >> 0x10;
+    r_p2.d[IX] = 600;
+    r_p2.d[IY] = (coeffs.d[1] * (r_p2.d[IX] - 0) + coeffs.d[0]) >> 0x10;
+    XDrawLine (display, window, mygc,
+	       r_p1.d[IX], r_p1.d[IY], r_p2.d[IX], r_p2.d[IY]);
+
+    if (qf_view == 2) {
+      /* Show the quality factor of the internal system of equations
+	 built to compute the linear regression coefficients.  */
+      sprintf (linreg_qf_str, "linreg qf = %f", (float)qualfac / 0x10000);
+      sprintf (mat_line1, "[ %f %f %f",
+	       (float)sys.d[0].v.d[IX] / 0x10000,
+	       (float)sys.d[0].v.d[IY] / 0x10000,
+	       (float)sys.d[0].offset / 0x10000);
+      sprintf (mat_line2, "  %f %f %f ]",
+	       (float)sys.d[1].v.d[IX] / 0x10000,
+	       (float)sys.d[1].v.d[IY] / 0x10000,
+	       (float)sys.d[1].offset / 0x10000);
     }
+  }
+
+  /* Defer actually drawing text until the very end so that it is
+     drawn on top of all graphics.  */
+  if (qf_view == 1) {
+    XDrawImageString (display, window, mygc,
+		      5, 15,
+		      isect_qf_str, strlen (isect_qf_str));
+  } else if (qf_view == 2) {
+    XDrawImageString (display, window, mygc,
+		      5, 15,
+		      linreg_qf_str, strlen (linreg_qf_str));
+    XDrawImageString (display, window, mygc,
+		      300, 15,
+		      mat_line1, strlen (mat_line1));
+    XDrawImageString (display, window, mygc,
+		      300, 30,
+		      mat_line2, strlen (mat_line2));
+  }
 }
 
 void
@@ -177,7 +230,8 @@ drag_point (Display *display, Window window, GC mygc, int x, int y)
 
   /* TODO: Now invalidate the affected region of the drawing area.
      Maybe we should use double-buffering or clipping for flicker-free
-     display updates.  */
+     display updates.  Note, however, that the flicker is only visible
+     on non-compositing window managers.  */
   redraw_geom(display, window, mygc);
 }
 
@@ -341,6 +395,13 @@ main (int argc, char *argv[])
 	      reg_pts.d[reg_pts.len].d[IY] = myevent.xkey.y;
 	      reg_pts.len++;
 	    }
+	    redraw_geom (myevent.xkey.display, myevent.xkey.window, mygc);
+	    break;
+	  case 'v':
+	    /* Change quality factor view mode.  */
+	    qf_view++;
+	    if (qf_view > 2)
+	      qf_view = 0;
 	    redraw_geom (myevent.xkey.display, myevent.xkey.window, mygc);
 	    break;
 	  }

@@ -39,6 +39,7 @@ typedef int IVint32;
 typedef long long IVint64;
 
 #define IVINT32_MIN ((IVint32)0x80000000)
+#define IVINT64_MIN ((IVint64)0x8000000000000000LL)
 
 FFA_TYPE(IVint32, 2);
 FFA_TYPE(IVint32, 3);
@@ -173,6 +174,8 @@ typedef struct IVTris_p2u32_tag IVTris_p2u32;
 
 /********************************************************************/
 
+IVint64 iv_abs_i64(IVint64 a);
+
 IVVec2D_i32 *iv_neg2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b);
 IVVec2D_i32 *iv_add3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c);
 IVVec2D_i32 *iv_sub3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c);
@@ -260,14 +263,15 @@ IVPoint2D_i32 *iv_solve3_s2_NLine_v2i32(IVPoint2D_i32 *a,
 					IVSys2_NLine_v2i32 *b, IVuint8 q);
 IVPoint2D_i32 *iv_solve3_s2_InLine_v2i32(IVPoint2D_i32 *a,
 					 IVSys2_InLine_v2i32 *b, IVuint8 q);
+IVint32 iv_qualfac2_s2_Eqs_v2i32(IVSys2_Eqs_v2i32 *a, IVuint8 q);
 
 IVMatNxM_i32 *iv_mulshr4_mnxm_i32(IVMatNxM_i32 *a,
 				  IVMatNxM_i32 *b, IVMatNxM_i32 *c,
 				  IVuint8 q);
 IVMatNxM_i32 *iv_xpose2_mnxm_i32(IVMatNxM_i32 *a, IVMatNxM_i32 *b);
 
-IVPoint2D_i32 *iv_linreg3_p2i32(IVPoint2D_i32 *result,
-				IVPoint2D_i32_array *data,
-				IVuint8 q);
+IVSys2_Eqs_v2i32 *iv_pack_linreg_s2_Eqs_v2i32(IVSys2_Eqs_v2i32 *sys,
+					      IVPoint2D_i32_array *data,
+					      IVuint8 q);
 
 #endif /* not IVECMATH_H */
