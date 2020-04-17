@@ -1,7 +1,10 @@
 /* Simple integer vector math subroutines.  A second iteration on my
    previous complicated generics design.  We only support 32-bit
    integers with 64-bit intermediates, two dimensions, and three
-   dimensions.  */
+   dimensions.
+
+   Fixed-point arithmetic is transparently supported by most
+   higher-level vector math operators.  */
 
 #ifndef IVECMATH_H
 #define IVECMATH_H
@@ -39,15 +42,35 @@ typedef signed char IVint8;
 typedef int IVint32;
 typedef long long IVint64;
 
+typedef IVint32 IVint32q16; /* Q16.16 fixed-point */
+typedef IVint64 IVint64q32; /* Q32.32 fixed-point */
+
 #define IVINT32_MIN ((IVint32)0x80000000)
 #define IVINT64_MIN ((IVint64)0x8000000000000000LL)
 
+struct IVint32_nar2_tag
+{
+  IVint32 x;
+  IVint32 y;
+};
+typedef struct IVint32_nar2_tag IVint32_nar2;
+
+struct IVint32_nar3_tag
+{
+  IVint32 x;
+  IVint32 y;
+  IVint32 z;
+};
+typedef struct IVint32_nar3_tag IVint32_nar3;
+
 FFA_TYPE(IVint32, 2);
+FFA_TYPE(IVint32q16, 2);
 FFA_TYPE(IVint32, 3);
 FFA_TYPE(IVint32, 4);
 FFA_TYPE(IVint32, 9);
 /* {2,3}-dimensional vectors and points */
 typedef IVint32_ar2 IVVec2D_i32;
+typedef IVint32q16_ar2 IVVec2D_i32q16;
 typedef IVint32_ar2 IVPoint2D_i32;
 typedef IVint32_ar3 IVVec3D_i32;
 typedef IVint32_ar3 IVPoint3D_i32;
@@ -79,16 +102,18 @@ struct IVEqs_v2i32_tag
 {
   IVVec2D_i32 v; /* "left" side of vector equation */
   IVint64 offset; /* "right" side of vector equation */
-  /* N.B.: If using fixed-point, make sure offset has double the
-     number of bits after the decimal.  */
 };
 typedef struct IVEqs_v2i32_tag IVEqs_v2i32;
+struct IVEqs_v2i32q16_tag
+{
+  IVVec2D_i32q16 v; /* "left" side of vector equation */
+  IVint64q32 offset; /* "right" side of vector equation */
+};
+typedef struct IVEqs_v2i32q16_tag IVEqs_v2i32q16;
 struct IVEqs_v3i32_tag
 {
   IVVec3D_i32 v; /* "left" side of vector equation */
   IVint64 offset; /* "right" side of vector equation */
-  /* N.B.: If using fixed-point, make sure offset has double the
-     number of bits after the decimal.  */
 };
 typedef struct IVEqs_v3i32_tag IVEqs_v3i32;
 
@@ -133,12 +158,14 @@ typedef struct IVInPlane_v3i32_tag IVInPlane_v3i32;
 
 /* Dimensional systems of {2,3} equations */
 FFA_TYPE(IVEqs_v2i32, 2);
+FFA_TYPE(IVEqs_v2i32q16, 2);
 FFA_TYPE(IVEqs_v3i32, 3);
 FFA_TYPE(IVNLine_v2i32, 2);
 FFA_TYPE(IVInLine_v2i32, 2);
 FFA_TYPE(IVNPlane_v3i32, 3);
 FFA_TYPE(IVInPlane_v3i32, 3);
 typedef IVEqs_v2i32_ar2 IVSys2_Eqs_v2i32;
+typedef IVEqs_v2i32q16_ar2 IVSys2_Eqs_v2i32q16;
 typedef IVEqs_v3i32_ar3 IVSys3_Eqs_v3i32;
 typedef IVNLine_v2i32_ar2 IVSys2_NLine_v2i32;
 typedef IVInLine_v2i32_ar2 IVSys2_InLine_v2i32;
@@ -221,14 +248,15 @@ IVint32 iv_sqrt_i64(IVint64 a);
 
 IVint32 iv_magnitude_v2i32(IVVec2D_i32 *a);
 IVint32 iv_magn_v2i32(IVVec2D_i32 *a);
-IVVec2D_i32 *iv_normalize2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b);
+IVVec2D_i32q16 *iv_normalize2_i32q16_v2i32(IVVec2D_i32q16 *a,
+					   IVVec2D_i32 *b);
 IVint32 iv_dist2_p2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b);
 IVint32 iv_adist2_p2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b);
 IVVec2D_i32 *iv_elim3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c);
 IVVec2D_i32 *iv_aelim3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c);
 IVint32 iv_dist2_v2i32_Eqs_v2i32(IVVec2D_i32 *a, IVEqs_v2i32 *b);
 IVint32 iv_adist2_v2i32_Eqs_v2i32(IVVec2D_i32 *a, IVEqs_v2i32 *b);
-IVint32 iv_dist2_v2i32_Eqs_v2q16i32(IVVec2D_i32 *a, IVEqs_v2i32 *b);
+IVint32 iv_dist2_v2i32_Eqs_v2i32q16(IVVec2D_i32 *a, IVEqs_v2i32q16 *b);
 IVint32 iv_dist2_v2i32_NRay_v2i32(IVVec2D_i32 *a, IVNLine_v2i32 *b);
 IVint32 iv_adist2_v2i32_NRay_v2i32(IVVec2D_i32 *a, IVNLine_v2i32 *b);
 
@@ -256,15 +284,14 @@ IVPoint2D_i32 *iv_solve2_s2_NLine_v2i32(IVPoint2D_i32 *a,
 					IVSys2_NLine_v2i32 *b);
 IVPoint2D_i32 *iv_solve2_s2_InLine_v2i32(IVPoint2D_i32 *a,
 					 IVSys2_InLine_v2i32 *b);
-IVint32 iv_prequalfac_s2_Eqs_v2i32(IVSys2_Eqs_v2i32 *a);
+IVint32q16 iv_prequalfac_i32q16_s2_Eqs_v2i32(IVSys2_Eqs_v2i32 *a);
 
 IVMatNxM_i32 *iv_mulshr4_mnxm_i32(IVMatNxM_i32 *a,
 				  IVMatNxM_i32 *b, IVMatNxM_i32 *c,
 				  IVuint8 q);
 IVMatNxM_i32 *iv_xpose2_mnxm_i32(IVMatNxM_i32 *a, IVMatNxM_i32 *b);
 
-IVSys2_Eqs_v2i32 *iv_pack_linreg_s2_Eqs_v2i32(IVSys2_Eqs_v2i32 *sys,
-					      IVPoint2D_i32_array *data,
-					      IVuint8 q);
+IVSys2_Eqs_v2i32q16 *iv_pack_linreg_s2_Eqs_v2i32q16_v2i32
+  (IVSys2_Eqs_v2i32q16 *sys, IVPoint2D_i32_array *data, IVuint8 q);
 
 #endif /* not IVECMATH_H */

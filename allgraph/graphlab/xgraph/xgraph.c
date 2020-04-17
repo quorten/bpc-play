@@ -63,14 +63,16 @@ draw_geom (Display *display, Window window, GC mygc)
     /* Use our spiffy new subroutines to compute perpendiculars and
        solutions.  */
     iv_proj3_p2i32_NLine_v2i32 (&pp, &p3, &plane);
-    XDrawLine (display, window, mygc,
-	       p3.d[IX], p3.d[IY], pp.d[IX], pp.d[IY]);
-    /* XFillRectangle (display, window, mygc,
-		    pp.d[IX] - 5, pp.d[IY] - 5, 10, 10); */
+    if (!iv_is_nosol_v2i32 (&pp)) {
+      XDrawLine (display, window, mygc,
+		 p3.d[IX], p3.d[IY], pp.d[IX], pp.d[IY]);
+      /* XFillRectangle (display, window, mygc,
+		      pp.d[IX] - 5, pp.d[IY] - 5, 10, 10); */
+    }
 
     iv_isect3_Ray_NLine_v2i32 (&pp, &v3_ray, &plane);
 
-    if (pp.d[IX] != IVINT32_MIN) {
+    if (!iv_is_nosol_v2i32 (&pp)) {
       XFillRectangle (display, window, mygc,
 		      pp.d[IX] - 5, pp.d[IY] - 5, 10, 10);
     }
@@ -81,7 +83,7 @@ draw_geom (Display *display, Window window, GC mygc)
       IVint32 qualfac;
       sys.d[0].v = v1;
       sys.d[1].v = v3;
-      qualfac = iv_prequalfac_s2_Eqs_v2i32 (&sys);
+      qualfac = iv_prequalfac_i32q16_s2_Eqs_v2i32 (&sys);
       sprintf (isect_qf_str, "isect qf = %f", (float)qualfac / 0x10000);
     }
   }
@@ -100,13 +102,13 @@ draw_geom (Display *display, Window window, GC mygc)
   if (reg_pts.len >= 2) {
     /* Compute and draw the linear regression line.  */
     /* y = m*x + b, vector format `[b, m]` */
-    IVSys2_Eqs_v2i32 sys;
+    IVSys2_Eqs_v2i32q16 sys;
     IVint32 qualfac;
     IVPoint2D_i32 coeffs;
     IVPoint2D_i32 r_p1, r_p2;
-    iv_pack_linreg_s2_Eqs_v2i32 (&sys, &reg_pts, 0);
-    qualfac = iv_prequalfac_s2_Eqs_v2i32 (&sys);
-    iv_solve2_s2_Eqs_v2i32 (&coeffs, &sys);
+    iv_pack_linreg_s2_Eqs_v2i32q16_v2i32 (&sys, &reg_pts, 0);
+    qualfac = iv_prequalfac_i32q16_s2_Eqs_v2i32 ((IVSys2_Eqs_v2i32*)&sys);
+    iv_solve2_s2_Eqs_v2i32 (&coeffs, (IVSys2_Eqs_v2i32*)&sys);
     r_p1.d[IX] = 0;
     r_p1.d[IY] = (coeffs.d[1] * (r_p1.d[IX] - 0) + coeffs.d[0]) >> 0x10;
     r_p2.d[IX] = 600;
@@ -377,7 +379,6 @@ main (int argc, char *argv[])
 			0, 0,
 			attribs.width, attribs.height,
 			False);
-	    reg_pts.len = 0;
 	    break;
 	  }
 	  case 'e':

@@ -1,7 +1,20 @@
 /* Simple integer vector math subroutines.  A second iteration on my
    previous complicated generics design.  We only support 32-bit
    integers with 64-bit intermediates, two dimensions, and three
-   dimensions.  */
+   dimensions.
+
+   Fixed-point arithmetic is transparently supported by most
+   higher-level vector math operators, i.e. distance to plane, project
+   point on plane, intersect, solve system of equations, etc.  This is
+   because most of the underlying equations to compute intermediates
+   happily cancel out any differences in bits-after-decimal to end up
+   with a result with the same number of bits after the decimal, even
+   without knowledge of what that is specifically.  In the few areas
+   where that is not the case, there are variant subroutines that
+   couple shifting right with multiplies.  Here, you specify the shift
+   right factor `q` to be equal to the number of bits after the
+   decimal and the outputs will be computed with the same number of
+   bits-after-decimal.  */
 
 #include <stdlib.h>
 
@@ -622,14 +635,15 @@ IVint32 iv_magn_v2i32(IVVec2D_i32 *a)
 
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.  */
-IVVec2D_i32 *iv_normalize2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b)
+IVVec2D_i32q16 *iv_normalize2_i32q16_v2i32(IVVec2D_i32q16 *a, IVVec2D_i32 *b)
 {
-  IVint32 d = iv_magnitude_v2i32(a);
+  IVint32 d = iv_magnitude_v2i32(b);
   if (d == 0) {
     /* No solution.  */
-    return iv_nosol_v2i32(a);
+    return (IVVec2D_i32q16*)iv_nosol_v2i32((IVVec2D_i32*)a);
   }
-  return iv_shldiv4_v2i32_i32(a, a, 0x10, d);
+  return (IVVec2D_i32q16*)iv_shldiv4_v2i32_i32((IVVec2D_i32*)a,
+					       (IVVec2D_i32*)a, 0x10, d);
 }
 
 /* Distance between two points.  */
@@ -748,10 +762,11 @@ IVint32 iv_adist2_v2i32_Eqs_v2i32(IVVec2D_i32 *a, IVEqs_v2i32 *b)
 
    dot_product(L, A) - d
 */
-IVint32 iv_dist2_v2i32_Eqs_v2q16i32(IVVec2D_i32 *a, IVEqs_v2i32 *b)
+IVint32q16 iv_dist2_v2i32_Eqs_v2i32q16(IVVec2D_i32 *a, IVEqs_v2i32q16 *b)
 {
   /* Tags: SCALAR-ARITHMETIC */
-  return (IVint32)((iv_dot2_v2i32(a, &b->v) >> 0x10) - b->offset);
+  return (IVint32)((iv_dot2_v2i32(a, (IVVec2D_i32*)&b->v) >> 0x10) -
+		   b->offset);
 }
 
 /* Alternatively, rather than using a scalar `d`, you can define a
@@ -817,14 +832,22 @@ IVint64 iv_dist2q2_p2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b)
    simplify as follows:
 
    L - A * (dot_product(L, A) - d) / dot_product(A, A)
+
+   If there is no solution, the resulting point's coordinates are all
+   set to IVINT32_MIN.
 */
 IVPoint2D_i32 *iv_proj3_p2i32_Eqs_v2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b,
 					IVEqs_v2i32 *c)
 {
   /* Tags: SCALAR-ARITHMETIC */
   IVVec2D_i32 t;
-  iv_muldiv4_v2i32_i64(&t, &c->v, iv_dot2_v2i32(b, &c->v) - c->offset,
-		       iv_magn2q_v2i32(&c->v));
+  IVint64 d;
+  d = iv_magn2q_v2i32(&c->v);
+  if (d == 0) {
+    /* No solution.  */
+    return iv_nosol_v2i32(a);
+  }
+  iv_muldiv4_v2i32_i64(&t, &c->v, iv_dot2_v2i32(b, &c->v) - c->offset, d);
   return iv_sub3_v2i32(a, b, &t);
 }
 
@@ -842,15 +865,23 @@ IVPoint2D_i32 *iv_proj3_p2i32_Eqs_v2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b,
 
    L_rel_P = L - P;
    L - A * dot_product(L_rel_P, A) / dot_product(A, A);
+
+   If there is no solution, the resulting point's coordinates are all
+   set to IVINT32_MIN.
 */
 IVPoint2D_i32 *iv_proj3_p2i32_NLine_v2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b,
 					  IVNLine_v2i32 *c)
 {
   IVVec2D_i32 l_rel_p;
   IVVec2D_i32 t;
+  IVint64 d;
   iv_sub3_v2i32(&l_rel_p, b, &c->p0);
-  iv_muldiv4_v2i32_i64(&t, &c->v, iv_dot2_v2i32(&l_rel_p, &c->v),
-		       iv_magn2q_v2i32(&c->v));
+  d = iv_magn2q_v2i32(&c->v);
+  if (d == 0) {
+    /* No solution.  */
+    return iv_nosol_v2i32(a);
+  }
+  iv_muldiv4_v2i32_i64(&t, &c->v, iv_dot2_v2i32(&l_rel_p, &c->v), d);
   return iv_sub3_v2i32(a, b, &t);
 }
 
@@ -1143,7 +1174,7 @@ IVPoint2D_i32 *iv_solve2_s2_InLine_v2i32(IVPoint2D_i32 *a,
    To be fast, use approximate magnitude instead.  Operating directly
    on the results of bit-scan reverse is fastest since you can add
    rather than multiply.  */
-IVint32 iv_prequalfac_s2_Eqs_v2i32(IVSys2_Eqs_v2i32 *a)
+IVint32q16 iv_prequalfac_i32q16_s2_Eqs_v2i32(IVSys2_Eqs_v2i32 *a)
 {
   /* Tags: SCALAR-ARITHMETIC */
   IVVec2D_i32 vt;
@@ -1282,9 +1313,8 @@ IVMatNxM_i32 *iv_xpose2_mnxm_i32(IVMatNxM_i32 *a, IVMatNxM_i32 *b)
 
    If there is a memory allocation error, the system of equation's
    entries are all set to IVINT32_MIN (and IVINT64_MIN).  */
-IVSys2_Eqs_v2i32 *iv_pack_linreg_s2_Eqs_v2i32(IVSys2_Eqs_v2i32 *sys,
-					      IVPoint2D_i32_array *data,
-					      IVuint8 q)
+IVSys2_Eqs_v2i32q16 *iv_pack_linreg_s2_Eqs_v2i32q16_v2i32
+  (IVSys2_Eqs_v2i32q16 *sys, IVPoint2D_i32_array *data, IVuint8 q)
 {
   IVPoint2D_i32 *data_d = data->d;
   IVuint16 data_len = data->len;
@@ -1391,9 +1421,9 @@ IVSys2_Eqs_v2i32 *iv_pack_linreg_s2_Eqs_v2i32(IVSys2_Eqs_v2i32 *sys,
   return sys;
 
  dirty_cleanup:
-  iv_nosol_v2i32(&sys->d[0].v);
+  iv_nosol_v2i32((IVVec2D_i32*)&sys->d[0].v);
   sys->d[0].offset = IVINT64_MIN;
-  iv_nosol_v2i32(&sys->d[1].v);
+  iv_nosol_v2i32((IVVec2D_i32*)&sys->d[1].v);
   sys->d[1].offset = IVINT64_MIN;
   if (mat_a.d != NULL) free (mat_a.d);
   if (mat_a_t.d != NULL) free (mat_a_t.d);
