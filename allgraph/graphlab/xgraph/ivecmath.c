@@ -66,24 +66,24 @@ if c > 32-bit
 IVVec2D_i32 *iv_neg2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b)
 {
   /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
-  a->d[IX] = -b->d[IX];
-  a->d[IY] = -b->d[IY];
+  a->x = -b->x;
+  a->y = -b->y;
   return a;
 }
 
 IVVec2D_i32 *iv_add3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c)
 {
   /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
-  a->d[IX] = b->d[IX] + c->d[IX];
-  a->d[IY] = b->d[IY] + c->d[IY];
+  a->x = b->x + c->x;
+  a->y = b->y + c->y;
   return a;
 }
 
 IVVec2D_i32 *iv_sub3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c)
 {
   /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
-  a->d[IX] = b->d[IX] - c->d[IX];
-  a->d[IY] = b->d[IY] - c->d[IY];
+  a->x = b->x - c->x;
+  a->y = b->y - c->y;
   return a;
 }
 
@@ -92,8 +92,8 @@ IVVec2D_i32 *iv_muldiv4_v2i32_i32(IVVec2D_i32 *a, IVVec2D_i32 *b,
 				  IVint32 c, IVint32 d)
 {
   /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
-  a->d[IX] = (IVint32)((IVint64)b->d[IX] * c / d);
-  a->d[IY] = (IVint32)((IVint64)b->d[IY] * c / d);
+  a->x = (IVint32)((IVint64)b->x * c / d);
+  a->y = (IVint32)((IVint64)b->y * c / d);
   return a;
 }
 
@@ -114,8 +114,8 @@ IVVec2D_i32 *iv_muldiv4_v2i32_i64(IVVec2D_i32 *a, IVVec2D_i32 *b,
       /* Fold `c / d` together before multiplying to avoid underflow
 	 since `d` is insignificant.  */
       c /= d;
-      a->d[IX] = (IVint32)((IVint64)b->d[IX] * c);
-      a->d[IY] = (IVint32)((IVint64)b->d[IY] * c);
+      a->x = (IVint32)((IVint64)b->x * c);
+      a->y = (IVint32)((IVint64)b->y * c);
       return a;
     }
     /* else */
@@ -133,8 +133,8 @@ IVVec2D_i32 *iv_muldiv4_v2i32_i64(IVVec2D_i32 *a, IVVec2D_i32 *b,
     /\* No solution.  *\/
     return iv_nosol_v2i32(a);
   } */
-  a->d[IX] = (IVint32)((IVint64)b->d[IX] * c / d);
-  a->d[IY] = (IVint32)((IVint64)b->d[IY] * c / d);
+  a->x = (IVint32)((IVint64)b->x * c / d);
+  a->y = (IVint32)((IVint64)b->y * c / d);
   return a;
 }
 
@@ -158,8 +158,8 @@ IVVec2D_i32 *iv_shldiv4_v2i32_i32(IVVec2D_i32 *a, IVVec2D_i32 *b,
 				  IVuint8 c, IVint32 d)
 {
   /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
-  a->d[IX] = (IVint32)((IVint64)b->d[IX] << c / d);
-  a->d[IY] = (IVint32)((IVint64)b->d[IY] << c / d);
+  a->x = (IVint32)((IVint64)b->x << c / d);
+  a->y = (IVint32)((IVint64)b->y << c / d);
   return a;
 }
 
@@ -169,16 +169,16 @@ IVVec2D_i32 *iv_mulshr4_v2i32_i32(IVVec2D_i32 *a, IVVec2D_i32 *b,
 				  IVint32 c, IVuint8 q)
 {
   /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
-  IVint64 tx = b->d[IX] * c;
-  IVint64 ty = b->d[IY] * c;
+  IVint64 tx = b->x * c;
+  IVint64 ty = b->y * c;
   /* Due to asymmetric two's complement, we must pre-increment one if
      less than zero.  */
   if (q != 0) {
     if (tx < 0) tx++;
     if (ty < 0) ty++;
   }
-  a->d[IX] = (IVint32)(tx >> q);
-  a->d[IY] = (IVint32)(ty >> q);
+  a->x = (IVint32)(tx >> q);
+  a->y = (IVint32)(ty >> q);
   return a;
 }
 
@@ -186,8 +186,8 @@ IVVec2D_i32 *iv_mulshr4_v2i32_i32(IVVec2D_i32 *a, IVVec2D_i32 *b,
 IVVec2D_i32 *iv_shl3_v2i32_u32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint8 c)
 {
   /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
-  a->d[IX] = b->d[IX] << c;
-  a->d[IY] = b->d[IY] << c;
+  a->x = b->x << c;
+  a->y = b->y << c;
   return a;
 }
 
@@ -195,29 +195,29 @@ IVVec2D_i32 *iv_shl3_v2i32_u32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint8 c)
 IVVec2D_i32 *iv_shr3_v2i32_u32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint8 c)
 {
   /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
-  IVint32 tx = b->d[IX], ty = b->d[IY];
+  IVint32 tx = b->x, ty = b->y;
   if (c == 0) {
-    a->d[IX] = tx;
-    a->d[IY] = ty;
+    a->x = tx;
+    a->y = ty;
     return a;
   }
   /* Due to asymmetric two's complement, we must pre-increment one if
      less than zero.  */
   if (tx < 0) tx++;
   if (ty < 0) ty++;
-  a->d[IX] = tx >> c;
-  a->d[IY] = ty >> c;
+  a->x = tx >> c;
+  a->y = ty >> c;
   return a;
 }
 
 IVint64 iv_dot2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b)
 {
   /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
-  return (IVint64)a->d[IX] * b->d[IX] + (IVint64)a->d[IY] * b->d[IY];
+  return (IVint64)a->x * b->x + (IVint64)a->y * b->y;
 }
 
 /* Magnitude squared of a vector.  */
-IVint64 iv_magn2q_v2i32(IVPoint2D_i32 *a)
+IVint64 iv_magn2q_v2i32(IVVec2D_i32 *a)
 {
   return iv_dot2_v2i32(a, a);
 }
@@ -227,8 +227,8 @@ IVint64 iv_magn2q_v2i32(IVPoint2D_i32 *a)
 IVVec2D_i32 *iv_perpen2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b)
 {
   /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
-  a->d[IX] = -b->d[IY];
-  a->d[IY] = b->d[IX];
+  a->x = -b->y;
+  a->y = b->x;
   return a;
 }
 
@@ -237,8 +237,8 @@ IVVec2D_i32 *iv_perpen2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b)
 IVVec2D_i32 *iv_nosol_v2i32(IVVec2D_i32 *a)
 {
   /* Tags: VEC-COMPONENTS */
-  a->d[IX] = IVINT32_MIN;
-  a->d[IY] = IVINT32_MIN;
+  a->x = IVINT32_MIN;
+  a->y = IVINT32_MIN;
   return a;
 }
 
@@ -246,8 +246,8 @@ IVVec2D_i32 *iv_nosol_v2i32(IVVec2D_i32 *a)
 IVuint8 iv_is_nosol_v2i32(IVVec2D_i32 *a)
 {
   /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
-  return (a->d[IX] == IVINT32_MIN &&
-	  a->d[IY] == IVINT32_MIN);
+  return (a->x == IVINT32_MIN &&
+	  a->y == IVINT32_MIN);
 }
 
 /********************************************************************/
@@ -263,12 +263,12 @@ IVVec3D_i32 *iv_crossproddiv4_v3i32(IVVec3D_i32 *a,
 				    IVint32 d)
 {
   /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
-  a->d[IX] = (IVint32)(((IVint64)b->d[IY] * c->d[IZ] -
-			(IVint64)b->d[IZ] * c->d[IY]) / d);
-  a->d[IY] = (IVint32)(((IVint64)b->d[IZ] * c->d[IX] -
-			(IVint64)b->d[IX] * c->d[IZ]) / d);
-  a->d[IZ] = (IVint32)(((IVint64)b->d[IX] * c->d[IY] -
-			(IVint64)b->d[IY] * c->d[IX]) / d);
+  a->x = (IVint32)(((IVint64)b->y * c->z -
+			(IVint64)b->z * c->y) / d);
+  a->y = (IVint32)(((IVint64)b->z * c->x -
+			(IVint64)b->x * c->z) / d);
+  a->z = (IVint32)(((IVint64)b->x * c->y -
+			(IVint64)b->y * c->x) / d);
   return a;
 }
 
@@ -279,12 +279,12 @@ IVVec3D_i32 *iv_crossprodshr4_v3i32(IVVec3D_i32 *a,
   /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
   /* TODO FIXME SYMMETRIC SHIFT BEHAVIOR */
   /* TODO VERIFY PRECISION */
-  a->d[IX] = (IVint32)(((IVint64)b->d[IY] * c->d[IZ] -
-			(IVint64)b->d[IZ] * c->d[IY]) >> q);
-  a->d[IY] = (IVint32)(((IVint64)b->d[IZ] * c->d[IX] -
-			(IVint64)b->d[IX] * c->d[IZ]) >> q);
-  a->d[IZ] = (IVint32)(((IVint64)b->d[IX] * c->d[IY] -
-			(IVint64)b->d[IY] * c->d[IX]) >> q);
+  a->x = (IVint32)(((IVint64)b->y * c->z -
+			(IVint64)b->z * c->y) >> q);
+  a->y = (IVint32)(((IVint64)b->z * c->x -
+			(IVint64)b->x * c->z) >> q);
+  a->z = (IVint32)(((IVint64)b->x * c->y -
+			(IVint64)b->y * c->x) >> q);
   return a;
 }
 
@@ -640,10 +640,9 @@ IVVec2D_i32q16 *iv_normalize2_i32q16_v2i32(IVVec2D_i32q16 *a, IVVec2D_i32 *b)
   IVint32 d = iv_magnitude_v2i32(b);
   if (d == 0) {
     /* No solution.  */
-    return (IVVec2D_i32q16*)iv_nosol_v2i32((IVVec2D_i32*)a);
+    return iv_nosol_v2i32(a);
   }
-  return (IVVec2D_i32q16*)iv_shldiv4_v2i32_i32((IVVec2D_i32*)a,
-					       (IVVec2D_i32*)a, 0x10, d);
+  return iv_shldiv4_v2i32_i32(a, b, 0x10, d);
 }
 
 /* Distance between two points.  */
@@ -765,8 +764,7 @@ IVint32 iv_adist2_v2i32_Eqs_v2i32(IVVec2D_i32 *a, IVEqs_v2i32 *b)
 IVint32q16 iv_dist2_v2i32_Eqs_v2i32q16(IVVec2D_i32 *a, IVEqs_v2i32q16 *b)
 {
   /* Tags: SCALAR-ARITHMETIC */
-  return (IVint32)((iv_dot2_v2i32(a, (IVVec2D_i32*)&b->v) >> 0x10) -
-		   b->offset);
+  return (IVint32q16)((iv_dot2_v2i32(a, &b->v) >> 0x10) - b->offset);
 }
 
 /* Alternatively, rather than using a scalar `d`, you can define a
@@ -1180,7 +1178,7 @@ IVint32q16 iv_prequalfac_i32q16_s2_Eqs_v2i32(IVSys2_Eqs_v2i32 *a)
   IVVec2D_i32 vt;
   IVint64 vt_dot_v2;
   IVint32 magn_vt, magn_v2;
-  IVint32 norm_vt_dot_v2;
+  IVint32q16 norm_vt_dot_v2;
   iv_perpen2_v2i32(&vt, &a->d[0].v);
   vt_dot_v2 = iv_abs_i64(iv_dot2_v2i32(&vt, &a->d[1].v));
   magn_vt = iv_magnitude_v2i32(&vt);
@@ -1197,14 +1195,14 @@ IVint32q16 iv_prequalfac_i32q16_s2_Eqs_v2i32(IVSys2_Eqs_v2i32 *a)
        obtain the fixed-point result.  */
     if (magn_v2 < magn_vt) {
       vt_dot_v2 /= magn_v2;
-      norm_vt_dot_v2 = (IVint32)((vt_dot_v2 << 0x10) / magn_vt);
+      norm_vt_dot_v2 = (IVint32q16)((vt_dot_v2 << 0x10) / magn_vt);
     } else {
       vt_dot_v2 /= magn_vt;
-      norm_vt_dot_v2 = (IVint32)((vt_dot_v2 << 0x10) / magn_v2);
+      norm_vt_dot_v2 = (IVint32q16)((vt_dot_v2 << 0x10) / magn_v2);
     }
   } else {
     IVint64 magn_vt_v2 = (IVint64)magn_vt * magn_v2;
-    norm_vt_dot_v2 = (IVint32)((vt_dot_v2 << 0x10) / magn_vt_v2);
+    norm_vt_dot_v2 = (IVint32q16)((vt_dot_v2 << 0x10) / magn_vt_v2);
   }
   return norm_vt_dot_v2;
 }
@@ -1357,19 +1355,19 @@ IVSys2_Eqs_v2i32q16 *iv_pack_linreg_s2_Eqs_v2i32q16_v2i32
   mat_a_t_a.d = mat_a_t_a_stor.d;
   col_a_t_b.width = 1;
   col_a_t_b.height = 2;
-  col_a_t_b.d = col_a_t_b_stor.d;
+  col_a_t_b.d = (IVint32*)&col_a_t_b_stor;
 
   /* Pack into the coefficient matrix `A`.  */
   for (i = 0; i < data_len; i++) {
     mat_a.d[mat_a.width*i+0] = 1 << q;
-    mat_a.d[mat_a.width*i+1] = data_d[i].d[IX];
+    mat_a.d[mat_a.width*i+1] = data_d[i].x;
   }
   /* Compute `A^T`.  */
   iv_xpose2_mnxm_i32(&mat_a_t, &mat_a);
 
   /* Pack into the coefficient matrix `b`.  */
   for (i = 0; i < data_len; i++) {
-    col_b.d[i] = data_d[i].d[IY];
+    col_b.d[i] = data_d[i].y;
   }
 
   /* Compute `A^T * A`.  */
@@ -1379,11 +1377,11 @@ IVSys2_Eqs_v2i32q16 *iv_pack_linreg_s2_Eqs_v2i32q16_v2i32
   iv_mulshr4_mnxm_i32(&col_a_t_b, &mat_a_t, &col_b, q);
 
   /* Pack into IVSys2_Eqs_v2i32 representational form.  */
-  sys->d[0].v.d[IX] = mat_a_t_a.d[0];
-  sys->d[0].v.d[IY] = mat_a_t_a.d[1];
+  sys->d[0].v.x = mat_a_t_a.d[0];
+  sys->d[0].v.y = mat_a_t_a.d[1];
   sys->d[0].offset = col_a_t_b.d[0];
-  sys->d[1].v.d[IX] = mat_a_t_a.d[2];
-  sys->d[1].v.d[IY] = mat_a_t_a.d[3];
+  sys->d[1].v.x = mat_a_t_a.d[2];
+  sys->d[1].v.y = mat_a_t_a.d[3];
   sys->d[1].offset = col_a_t_b.d[1];
 
   /* Here's what we're doing here.  Since we'll need a fixed-point
@@ -1397,16 +1395,16 @@ IVSys2_Eqs_v2i32q16 *iv_pack_linreg_s2_Eqs_v2i32q16_v2i32
      of an entry that is similar to the median value of the
      entries.  */
   {
-    IVint32 test_value = sys->d[0].v.d[IY];
+    IVint32 test_value = sys->d[0].v.y;
     IVuint8 shr_div = iv_msbidx_i64(test_value);
     IVuint8 num_shr;
     if (shr_div > 0x10)
       shr_div = 0x10;
     num_shr = 0x10 - shr_div;
-    sys->d[0].v.d[IX] <<= num_shr;
-    sys->d[0].v.d[IY] <<= num_shr;
-    sys->d[1].v.d[IX] <<= num_shr;
-    sys->d[1].v.d[IY] <<= num_shr;
+    sys->d[0].v.x <<= num_shr;
+    sys->d[0].v.y <<= num_shr;
+    sys->d[1].v.x <<= num_shr;
+    sys->d[1].v.y <<= num_shr;
     /* `offset` must be shifted twice as many bits.  */
     num_shr = 0x20 - shr_div;
     sys->d[0].offset <<= num_shr;
@@ -1421,9 +1419,9 @@ IVSys2_Eqs_v2i32q16 *iv_pack_linreg_s2_Eqs_v2i32q16_v2i32
   return sys;
 
  dirty_cleanup:
-  iv_nosol_v2i32((IVVec2D_i32*)&sys->d[0].v);
+  iv_nosol_v2i32(&sys->d[0].v);
   sys->d[0].offset = IVINT64_MIN;
-  iv_nosol_v2i32((IVVec2D_i32*)&sys->d[1].v);
+  iv_nosol_v2i32(&sys->d[1].v);
   sys->d[1].offset = IVINT64_MIN;
   if (mat_a.d != NULL) free (mat_a.d);
   if (mat_a_t.d != NULL) free (mat_a_t.d);

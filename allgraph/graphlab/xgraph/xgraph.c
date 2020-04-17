@@ -14,10 +14,10 @@
 
 char title[] = "Graphics Lab";
 
-IVPoint2D_i32 p1 = {{ 50, 50 }};
-IVPoint2D_i32 p2 = {{ 200, 150 }};
-IVPoint2D_i32 p3 = {{ 150, 200 }};
-IVPoint2D_i32 p4 = {{ 150, 190 }};
+IVPoint2D_i32 p1 = { 50, 50 };
+IVPoint2D_i32 p2 = { 200, 150 };
+IVPoint2D_i32 p3 = { 150, 200 };
+IVPoint2D_i32 p4 = { 150, 190 };
 
 IVPoint2D_i32 reg_pts_stor[32];
 IVPoint2D_i32_array reg_pts = { reg_pts_stor, 0 };
@@ -45,17 +45,17 @@ draw_geom (Display *display, Window window, GC mygc)
   iv_sub3_v2i32 (&v3, &p4, &p3);
 
   XDrawLine (display, window, mygc,
-	     p1.d[IX], p1.d[IY], p2.d[IX], p2.d[IY]);
+	     p1.x, p1.y, p2.x, p2.y);
   XDrawLine (display, window, mygc,
-	     p2.d[IX], p2.d[IY], p3.d[IX], p3.d[IY]);
+	     p2.x, p2.y, p3.x, p3.y);
   XDrawLine (display, window, mygc,
-	     p3.d[IX], p3.d[IY], p4.d[IX], p4.d[IY]);
+	     p3.x, p3.y, p4.x, p4.y);
 
   /* Now we're getting interesting.  Project p3 onto the line p1 - p2,
      through the shortest-distance perpendicular, and draw the
      line.  */
   {
-    IVVec2D_i32 vt = {{ -v1.d[IY], v1.d[IX] }}; /* Perpendicular */
+    IVVec2D_i32 vt = { -v1.y, v1.x }; /* Perpendicular */
     IVPoint2D_i32 pp; /* projected perpendicular point on line */
     IVNLine_v2i32 plane = { vt, p1 };
     IVRay_v2i32 v3_ray = { v3, p3 };
@@ -65,16 +65,16 @@ draw_geom (Display *display, Window window, GC mygc)
     iv_proj3_p2i32_NLine_v2i32 (&pp, &p3, &plane);
     if (!iv_is_nosol_v2i32 (&pp)) {
       XDrawLine (display, window, mygc,
-		 p3.d[IX], p3.d[IY], pp.d[IX], pp.d[IY]);
+		 p3.x, p3.y, pp.x, pp.y);
       /* XFillRectangle (display, window, mygc,
-		      pp.d[IX] - 5, pp.d[IY] - 5, 10, 10); */
+		      pp.x - 5, pp.y - 5, 10, 10); */
     }
 
     iv_isect3_Ray_NLine_v2i32 (&pp, &v3_ray, &plane);
 
     if (!iv_is_nosol_v2i32 (&pp)) {
       XFillRectangle (display, window, mygc,
-		      pp.d[IX] - 5, pp.d[IY] - 5, 10, 10);
+		      pp.x - 5, pp.y - 5, 10, 10);
     }
 
     if (qf_view == 1) {
@@ -93,8 +93,8 @@ draw_geom (Display *display, Window window, GC mygc)
     IVuint16 i;
     for (i = 0; i < reg_pts.len; i++) {
       XFillRectangle (display, window, mygc,
-		      reg_pts.d[i].d[IX] - 5,
-		      reg_pts.d[i].d[IY] - 5,
+		      reg_pts.d[i].x - 5,
+		      reg_pts.d[i].y - 5,
 		      10, 10);
     }
   }
@@ -107,26 +107,26 @@ draw_geom (Display *display, Window window, GC mygc)
     IVPoint2D_i32 coeffs;
     IVPoint2D_i32 r_p1, r_p2;
     iv_pack_linreg_s2_Eqs_v2i32q16_v2i32 (&sys, &reg_pts, 0);
-    qualfac = iv_prequalfac_i32q16_s2_Eqs_v2i32 ((IVSys2_Eqs_v2i32*)&sys);
-    iv_solve2_s2_Eqs_v2i32 (&coeffs, (IVSys2_Eqs_v2i32*)&sys);
-    r_p1.d[IX] = 0;
-    r_p1.d[IY] = (coeffs.d[1] * (r_p1.d[IX] - 0) + coeffs.d[0]) >> 0x10;
-    r_p2.d[IX] = 600;
-    r_p2.d[IY] = (coeffs.d[1] * (r_p2.d[IX] - 0) + coeffs.d[0]) >> 0x10;
+    qualfac = iv_prequalfac_i32q16_s2_Eqs_v2i32 (&sys);
+    iv_solve2_s2_Eqs_v2i32 (&coeffs, &sys);
+    r_p1.x = 0;
+    r_p1.y = (coeffs.y * (r_p1.x - 0) + coeffs.x) >> 0x10;
+    r_p2.x = 600;
+    r_p2.y = (coeffs.y * (r_p2.x - 0) + coeffs.x) >> 0x10;
     XDrawLine (display, window, mygc,
-	       r_p1.d[IX], r_p1.d[IY], r_p2.d[IX], r_p2.d[IY]);
+	       r_p1.x, r_p1.y, r_p2.x, r_p2.y);
 
     if (qf_view == 2) {
       /* Show the quality factor of the internal system of equations
 	 built to compute the linear regression coefficients.  */
       sprintf (linreg_qf_str, "linreg qf = %f", (float)qualfac / 0x10000);
       sprintf (mat_line1, "[ %f %f %f",
-	       (float)sys.d[0].v.d[IX] / 0x10000,
-	       (float)sys.d[0].v.d[IY] / 0x10000,
+	       (float)sys.d[0].v.x / 0x10000,
+	       (float)sys.d[0].v.y / 0x10000,
 	       (float)sys.d[0].offset / 0x100000000LL);
       sprintf (mat_line2, "  %f %f %f ]",
-	       (float)sys.d[1].v.d[IX] / 0x10000,
-	       (float)sys.d[1].v.d[IY] / 0x10000,
+	       (float)sys.d[1].v.x / 0x10000,
+	       (float)sys.d[1].v.y / 0x10000,
 	       (float)sys.d[1].offset / 0x100000000LL);
     }
   }
@@ -188,7 +188,7 @@ pick_point (IVint64 *result_dist_2,
 void
 drag_point (Display *display, Window window, GC mygc, int x, int y)
 {
-  IVPoint2D_i32 mouse_pt = {{ x, y }};
+  IVPoint2D_i32 mouse_pt = { x, y };
 
   if (isect_drag_idx == (IVuint16)-1 && reg_drag_idx == (IVuint16)-1) {
     /* Find out which point we should select.  */
@@ -209,25 +209,25 @@ drag_point (Display *display, Window window, GC mygc, int x, int y)
     switch (isect_drag_idx) {
     case 0:
       /* Drag p1 */
-      p1.d[IX] = mouse_pt.d[IX]; p1.d[IY] = mouse_pt.d[IY];
+      p1.x = mouse_pt.x; p1.y = mouse_pt.y;
       break;
     case 1:
       /* Drag p2 */
-      p2.d[IX] = mouse_pt.d[IX]; p2.d[IY] = mouse_pt.d[IY];
+      p2.x = mouse_pt.x; p2.y = mouse_pt.y;
       break;
     case 2:
       /* Drag p3 */
-      p3.d[IX] = mouse_pt.d[IX]; p3.d[IY] = mouse_pt.d[IY];
+      p3.x = mouse_pt.x; p3.y = mouse_pt.y;
       break;
     case 3:
       /* Drag p4 */
-      p4.d[IX] = mouse_pt.d[IX]; p4.d[IY] = mouse_pt.d[IY];
+      p4.x = mouse_pt.x; p4.y = mouse_pt.y;
       break;
     }
   }
   if (reg_drag_idx != (IVuint16)-1) {
-    reg_pts.d[reg_drag_idx].d[IX] = mouse_pt.d[IX];
-    reg_pts.d[reg_drag_idx].d[IY] = mouse_pt.d[IY];
+    reg_pts.d[reg_drag_idx].x = mouse_pt.x;
+    reg_pts.d[reg_drag_idx].y = mouse_pt.y;
   }
 
   /* TODO: Now invalidate the affected region of the drawing area.
@@ -337,8 +337,8 @@ main (int argc, char *argv[])
 		      mygc,
 		      myevent.xbutton.x, myevent.xbutton.y);
 	is_pressed = 1;
-	last_pt.d[IX] = myevent.xbutton.x;
-	last_pt.d[IY] = myevent.xbutton.y;
+	last_pt.x = myevent.xbutton.x;
+	last_pt.y = myevent.xbutton.y;
 	break;
 
       case ButtonRelease:
@@ -353,14 +353,14 @@ main (int argc, char *argv[])
 	    XDrawLine (myevent.xmotion.display,
 		       myevent.xmotion.window,
 		       mygc,
-		       last_pt.d[IX], last_pt.d[IY],
+		       last_pt.x, last_pt.y,
 		       myevent.xmotion.x, myevent.xmotion.y);
 	  else if ((myevent.xmotion.state & Button3Mask))
 	    drag_point (myevent.xmotion.display, myevent.xmotion.window,
 			mygc, myevent.xmotion.x, myevent.xmotion.y);
 	}
-	last_pt.d[IX] = myevent.xmotion.x;
-	last_pt.d[IY] = myevent.xmotion.y;
+	last_pt.x = myevent.xmotion.x;
+	last_pt.y = myevent.xmotion.y;
 	break;
 
       case KeyPress:
@@ -392,8 +392,8 @@ main (int argc, char *argv[])
 	  case 'p':
 	    /* Add a linear regression data point.  */
 	    if (reg_pts.len < 25) {
-	      reg_pts.d[reg_pts.len].d[IX] = myevent.xkey.x;
-	      reg_pts.d[reg_pts.len].d[IY] = myevent.xkey.y;
+	      reg_pts.d[reg_pts.len].x = myevent.xkey.x;
+	      reg_pts.d[reg_pts.len].y = myevent.xkey.y;
 	      reg_pts.len++;
 	    }
 	    redraw_geom (myevent.xkey.display, myevent.xkey.window, mygc);

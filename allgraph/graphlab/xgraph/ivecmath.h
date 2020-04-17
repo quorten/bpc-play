@@ -48,6 +48,7 @@ typedef IVint64 IVint64q32; /* Q32.32 fixed-point */
 #define IVINT32_MIN ((IVint32)0x80000000)
 #define IVINT64_MIN ((IVint64)0x8000000000000000LL)
 
+/* "Named array" (nar) of two IVint32 items */
 struct IVint32_nar2_tag
 {
   IVint32 x;
@@ -55,6 +56,7 @@ struct IVint32_nar2_tag
 };
 typedef struct IVint32_nar2_tag IVint32_nar2;
 
+/* "Named array" (nar) of three IVint32 items */
 struct IVint32_nar3_tag
 {
   IVint32 x;
@@ -64,16 +66,16 @@ struct IVint32_nar3_tag
 typedef struct IVint32_nar3_tag IVint32_nar3;
 
 FFA_TYPE(IVint32, 2);
-FFA_TYPE(IVint32q16, 2);
 FFA_TYPE(IVint32, 3);
 FFA_TYPE(IVint32, 4);
 FFA_TYPE(IVint32, 9);
 /* {2,3}-dimensional vectors and points */
-typedef IVint32_ar2 IVVec2D_i32;
-typedef IVint32q16_ar2 IVVec2D_i32q16;
-typedef IVint32_ar2 IVPoint2D_i32;
-typedef IVint32_ar3 IVVec3D_i32;
-typedef IVint32_ar3 IVPoint3D_i32;
+typedef IVint32_nar2 IVVec2D_i32;
+typedef IVint32_nar2 IVVec2D_i32q16;
+typedef IVint32_nar2 IVPoint2D_i32;
+typedef IVint32_nar3 IVVec3D_i32;
+typedef IVint32_nar3 IVVec3D_i32q16;
+typedef IVint32_nar3 IVPoint3D_i32;
 /* {2,3}x{2,3} matrices */
 typedef IVint32_ar4 IVMat2x2_i32;
 typedef IVint32_ar9 IVMat3x3_i32;
@@ -81,41 +83,25 @@ typedef IVint32_ar9 IVMat3x3_i32;
 typedef IVint32_ar4 IVTMat2x2_i32;
 typedef IVint32_ar9 IVTMat3x3_i32;
 
-FFA_TYPE(IVPoint2D_i32, 2);
-FFA_TYPE(IVPoint3D_i32, 2);
-FFA_TYPE(IVPoint3D_i32, 3);
-/* Line segment */
-typedef IVPoint2D_i32_ar2 IVLineSeg_p2i32;
-typedef IVPoint3D_i32_ar2 IVLineSeg_p3i32;
-/* Triangle */
-typedef IVPoint3D_i32_ar3 IVTri_p3i32;
-
-FFA_TYPE(IVuint32, 2);
-FFA_TYPE(IVuint32, 3);
-/* Line segment from indices */
-typedef IVuint32_ar2 IVLineSeg_u32;
-/* Triangle from indices */
-typedef IVuint32_ar3 IVTri_u32;
-
 /* Simple linear equation */
 struct IVEqs_v2i32_tag
 {
   IVVec2D_i32 v; /* "left" side of vector equation */
   IVint64 offset; /* "right" side of vector equation */
+  /* N.B.: If using fixed-point, make sure offset has double the
+     number of bits after the decimal.  */
 };
 typedef struct IVEqs_v2i32_tag IVEqs_v2i32;
-struct IVEqs_v2i32q16_tag
-{
-  IVVec2D_i32q16 v; /* "left" side of vector equation */
-  IVint64q32 offset; /* "right" side of vector equation */
-};
-typedef struct IVEqs_v2i32q16_tag IVEqs_v2i32q16;
+typedef IVEqs_v2i32 IVEqs_v2i32q16;
 struct IVEqs_v3i32_tag
 {
   IVVec3D_i32 v; /* "left" side of vector equation */
   IVint64 offset; /* "right" side of vector equation */
+  /* N.B.: If using fixed-point, make sure offset has double the
+     number of bits after the decimal.  */
 };
 typedef struct IVEqs_v3i32_tag IVEqs_v3i32;
+typedef IVEqs_v3i32 IVEqs_v3i32q16;
 
 /* N.B. A simple linear equation can also function as the equation of
    a line, the equation of a plane, etc.  */
@@ -158,19 +144,39 @@ typedef struct IVInPlane_v3i32_tag IVInPlane_v3i32;
 
 /* Dimensional systems of {2,3} equations */
 FFA_TYPE(IVEqs_v2i32, 2);
-FFA_TYPE(IVEqs_v2i32q16, 2);
 FFA_TYPE(IVEqs_v3i32, 3);
 FFA_TYPE(IVNLine_v2i32, 2);
 FFA_TYPE(IVInLine_v2i32, 2);
 FFA_TYPE(IVNPlane_v3i32, 3);
 FFA_TYPE(IVInPlane_v3i32, 3);
 typedef IVEqs_v2i32_ar2 IVSys2_Eqs_v2i32;
-typedef IVEqs_v2i32q16_ar2 IVSys2_Eqs_v2i32q16;
+typedef IVEqs_v2i32_ar2 IVSys2_Eqs_v2i32q16;
 typedef IVEqs_v3i32_ar3 IVSys3_Eqs_v3i32;
+typedef IVEqs_v3i32_ar3 IVSys3_Eqs_v3i32q16;
 typedef IVNLine_v2i32_ar2 IVSys2_NLine_v2i32;
 typedef IVInLine_v2i32_ar2 IVSys2_InLine_v2i32;
 typedef IVNPlane_v3i32_ar3 IVSys3_NPlane_v3i32;
 typedef IVInPlane_v3i32_ar3 IVSys3_InPlane_v3i32;
+
+/********************************************************************/
+
+/* Common fixed-length array types */
+
+FFA_TYPE(IVPoint2D_i32, 2);
+FFA_TYPE(IVPoint3D_i32, 2);
+FFA_TYPE(IVPoint3D_i32, 3);
+/* Line segment */
+typedef IVPoint2D_i32_ar2 IVLineSeg_p2i32;
+typedef IVPoint3D_i32_ar2 IVLineSeg_p3i32;
+/* Triangle */
+typedef IVPoint3D_i32_ar3 IVTri_p3i32;
+
+FFA_TYPE(IVuint32, 2);
+FFA_TYPE(IVuint32, 3);
+/* Line segment from indices */
+typedef IVuint32_ar2 IVLineSeg_u32;
+/* Triangle from indices */
+typedef IVuint32_ar3 IVTri_u32;
 
 /********************************************************************/
 
@@ -225,7 +231,7 @@ IVVec2D_i32 *iv_mulshr4_v2i32_i32(IVVec2D_i32 *a, IVVec2D_i32 *b,
 IVVec2D_i32 *iv_shl3_v2i32_u32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint8 c);
 IVVec2D_i32 *iv_shr3_v2i32_u32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint8 c);
 IVint64 iv_dot2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b);
-IVint64 iv_magn2q_v2i32(IVPoint2D_i32 *a);
+IVint64 iv_magn2q_v2i32(IVVec2D_i32 *a);
 IVVec2D_i32 *iv_perpen2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b);
 IVVec2D_i32 *iv_nosol_v2i32(IVVec2D_i32 *a);
 IVuint8 iv_is_nosol_v2i32(IVVec2D_i32 *a);
