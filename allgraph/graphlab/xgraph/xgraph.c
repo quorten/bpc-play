@@ -398,6 +398,21 @@ main (int argc, char *argv[])
 	    }
 	    redraw_geom (myevent.xkey.display, myevent.xkey.window, mygc);
 	    break;
+	  case 'x':
+	    if (reg_pts.len > 0) {
+	      /* Delete a linear regression data point.  */
+	      IVPoint2D_i32 mouse_pt = { myevent.xkey.x, myevent.xkey.y };
+	      IVint64 result_dist_2;
+	      IVuint16 pick_idx =
+		pick_point(&result_dist_2, &reg_pts, &mouse_pt);
+	      /* Overwrite the deleted point with the last point since
+		 the order of the array is not important, plus this is
+		 faster and easier to code than moving all elements
+		 over.  */
+	      reg_pts.d[pick_idx] = reg_pts.d[--reg_pts.len];
+	      redraw_geom (myevent.xkey.display, myevent.xkey.window, mygc);
+	    }
+	    break;
 	  case 'v':
 	    /* Change quality factor view mode.  */
 	    qf_view++;
