@@ -164,7 +164,16 @@ redraw_geom (Display *display, Window window, GC mygc)
 
 /* Find out which point we're selecting with the mouse based off of
    the closest match.  N.B.: We compare the distance squared so that
-   we don't have to compute the square root.  */
+   we don't have to compute the square root.
+
+   Actually, we don't even need to use fancy vector math to pick the
+   point with the mouse, just check if the mouse point is within a
+   bounding box around the test point, and pick the first such
+   matching point.
+
+   Admittedly, however, it does make for an easier user interface if
+   you don't have to be within the bounding box to click and drag a
+   point.  */
 IVuint16
 pick_point (IVint64 *result_dist_2,
 	    IVPoint2D_i32_array *pts, IVPoint2D_i32 *mouse_pt)
@@ -172,16 +181,34 @@ pick_point (IVint64 *result_dist_2,
   IVPoint2D_i32 *pts_d = pts->d;
   IVuint16 pts_len = pts->len;
   IVint64 pick_dist_2 = 0x0fffffffffffffffLL;
-  IVuint16 pick;
+  IVuint16 pick = (IVuint16)-1;
+  const IVuint8 fancy_pick_math = 1;
   IVuint16 i;
   for (i = 0; i < pts_len; i++) {
-    IVint64 i_dist_2 = iv_dist2q2_p2i32 (mouse_pt, &pts_d[i]);
-    if (i_dist_2 < pick_dist_2) {
-      pick_dist_2 = i_dist_2;
-      pick = i;
+    if (fancy_pick_math) {
+      IVint64 i_dist_2 = iv_dist2q2_p2i32 (mouse_pt, &pts_d[i]);
+      if (i_dist_2 < pick_dist_2) {
+	pick_dist_2 = i_dist_2;
+	pick = i;
+      }
+    } else {
+      IVVec2D_i32 diff;
+      iv_sub3_v2i32 (&diff, mouse_pt, &pts_d[i]);
+      if (iv_abs_i32 (diff.x) <= 5 &&
+	  iv_abs_i32 (diff.y) <= 5) {
+	pick = i;
+	break;
+      }
     }
   }
-  *result_dist_2 = pick_dist_2;
+  if (fancy_pick_math)
+    *result_dist_2 = pick_dist_2;
+  else {
+    if (pick != (IVuint16)-1)
+      *result_dist_2 = 0;
+    else
+      *result_dist_2 = 0x0fffffffffffffffLL;
+  }
   return pick;
 }
 

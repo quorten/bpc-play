@@ -212,6 +212,7 @@ typedef struct IVTris_p2u32_tag IVTris_p2u32;
 
 /********************************************************************/
 
+IVint32 iv_abs_i32(IVint32 a);
 IVint64 iv_abs_i64(IVint64 a);
 IVuint8 iv_msbidx_i64(IVint64 a);
 

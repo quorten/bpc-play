@@ -20,6 +20,12 @@
 
 #include "ivecmath.h"
 
+IVint32 iv_abs_i32(IVint32 a)
+{
+  if (a < 0) return -a;
+  return a;
+}
+
 IVint64 iv_abs_i64(IVint64 a)
 {
   if (a < 0) return -a;
