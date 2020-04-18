@@ -1027,6 +1027,13 @@ main (int argc, char *argv[])
 	break;
       }
   }
+  XFreeColors (mydisplay, DefaultColormap (mydisplay, myscreen),
+	       &red.pixel, 1, 0);
+  /* Set data to NULL before calling `XDestroyImage()' since this was
+     not allocated on the heap and should not be freed.  */
+  myimage->data = NULL;
+  XDestroyImage (myimage);
+  XFreePixmap (mydisplay, mypixmap);
   XFreeGC (mydisplay, mygc);
   XDestroyWindow (mydisplay, mywindow);
 #ifdef DEBUG

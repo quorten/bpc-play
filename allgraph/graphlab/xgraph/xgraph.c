@@ -470,6 +470,8 @@ main (int argc, char *argv[])
 	break;
       }
   }
+  XFreeColors (mydisplay, DefaultColormap (mydisplay, myscreen),
+	       &red.pixel, 1, 0);
   XFreeGC (mydisplay, mygc);
   XDestroyWindow (mydisplay, mywindow);
 #ifdef DEBUG
