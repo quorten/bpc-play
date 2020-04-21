@@ -15,9 +15,6 @@
 
 #include <X11/bitmaps/stipple>
 
-char hello[] = "Hello, World.";
-char hi[] = "Hi!";
-
 struct Point2D_tag
 {
   int x;
@@ -60,6 +57,18 @@ typedef struct RTImageBuf_tag RTImageBuf;
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
+void
+bg_clear_img (RTImageBuf *rti)
+{
+  /* Clear the framebuffer.  */
+  unsigned char *fbdata = rti->image_data;
+  unsigned long image_size = rti->image_size;
+  unsigned i;
+    for (i = 0; i < image_size; i++) {
+      fbdata[i] = 0xff;
+    }
+}
+
 /* DISCUSSION: How will the code be designed to be reasonably generic
    but still optimal?  Here is the idea I will put forward.  I will
    use code templating using `sed' substitutions to avoid defining
@@ -78,18 +87,6 @@ typedef struct RTImageBuf_tag RTImageBuf;
    Uncommon combinations take the slow path.
 
 */
-
-void
-bg_clear_img (RTImageBuf *rti)
-{
-  /* Clear the framebuffer.  */
-  unsigned char *fbdata = rti->image_data;
-  unsigned long image_size = rti->image_size;
-  unsigned i;
-    for (i = 0; i < image_size; i++) {
-      fbdata[i] = 0xff;
-    }
-}
 
 void
 bg_put_pixel (RTImageBuf *rti,
@@ -744,42 +741,32 @@ int
 main (int argc, char *argv[])
 {
   Display *mydisplay;
-  Window   mywindow;
-  GC mygc;
-  XGCValues mygcvalues;
-  XEvent myevent;
-  KeySym mykey;
-  XSizeHints myhint;
   int myscreen;
   unsigned long myforeground, mybackground;
-  int i;
-  char text[10];
-  int done;
-  XColor red;
+  XSizeHints myhint;
+  Window   mywindow;
+  char title[] = "Hello, World.";
   Cursor mycursor;
-  Pixmap mypixmap;
   Atom wmDeleteMessage;
-  int is_pressed = 0;
-  int line_start = 0;
-  Point2D last_pt, line_pt;
 
-  XImage *myimage;
   XVisualInfo myvisinfo;
+  GC mygc;
+  Pixmap mypixmap;
+  XGCValues mygcvalues;
+  XColor red;
 
   int fbwidth = 320;
   int fbheight = 240;
   /* ??? We request 24-bit, but we must plot 32-bit data.  Pixels in
      BGRA format.  Scan lines are in top-down order.  */
   char fbdata[4*320*240];
+  XImage *myimage;
   RTImageBuf rti;
 
-  rti.image_data = fbdata;
-  rti.image_size = fbwidth * fbheight * 4;
-  rti.pitch = fbwidth * 4;
-  rti.hdr.width = fbwidth;
-  rti.hdr.height = fbheight;
-  rti.hdr.bpp = 32;
-  rti.hdr.image_desc = TOP_LEFT;
+  int done;
+  int is_pressed = 0;
+  int line_start = 0;
+  Point2D last_pt, line_pt;
 
   /* { /\* Test patterns to determine the parameters of the image.  *\/
     unsigned i;
@@ -792,10 +779,6 @@ main (int argc, char *argv[])
       }
     }
   } */
-
-  bg_clear_img (&rti);
-
-  draw_geom (&rti);
 
   mydisplay = XOpenDisplay ("");
   myscreen = DefaultScreen (mydisplay);
@@ -810,33 +793,11 @@ main (int argc, char *argv[])
 				  DefaultRootWindow (mydisplay),
 				  myhint.x, myhint.y, myhint.width, myhint.height,
 				  5, myforeground, mybackground);
-  XSetStandardProperties (mydisplay, mywindow, hello, hello,
+  XSetStandardProperties (mydisplay, mywindow, title, title,
 			  None, argv, argc, &myhint);
 
   mycursor = XCreateFontCursor (mydisplay, XC_left_ptr);
   XDefineCursor (mydisplay, mywindow, mycursor);
-
-  mygc = XCreateGC (mydisplay, mywindow, 0, 0);
-  mypixmap = XCreateBitmapFromData (mydisplay, mywindow, 
-				    stipple_bits, stipple_width, stipple_height);
-
-  if (XMatchVisualInfo (mydisplay, myscreen, 24, TrueColor, &myvisinfo) == 0)
-    fprintf (stderr, "error: no visuals\n");
-  myimage = XCreateImage (mydisplay, myvisinfo.visual, 24, ZPixmap, 0, fbdata, fbwidth, fbheight, 8, 0);
-  if (myimage == NULL)
-    fprintf (stderr, "error: could not create image\n");
-
-  mygcvalues.foreground = myforeground;
-  mygcvalues.background = mybackground;
-  mygcvalues.fill_style = FillSolid;
-  /* mygcvalues.fill_style = FillStippled; */
-  /* mygcvalues.stipple = mypixmap; */
-  XChangeGC (mydisplay, mygc,
-	     GCForeground | GCBackground | GCFillStyle /* | GCStipple */, &mygcvalues);
-
-  XAllocNamedColor (mydisplay,
-		    DefaultColormap (mydisplay, myscreen),
-		    "red", &red, &red);
 
   wmDeleteMessage = XInternAtom(mydisplay, "WM_DELETE_WINDOW", False);
   XSetWMProtocols(mydisplay, mywindow, &wmDeleteMessage, 1);
@@ -850,10 +811,49 @@ main (int argc, char *argv[])
 		| EnterWindowMask
 		| LeaveWindowMask);
 
+  mygc = XCreateGC (mydisplay, mywindow, 0, 0);
+  mypixmap = XCreateBitmapFromData (mydisplay, mywindow, 
+				    stipple_bits, stipple_width, stipple_height);
+
+  if (XMatchVisualInfo (mydisplay, myscreen, 24, TrueColor, &myvisinfo) == 0)
+    fprintf (stderr, "error: no visuals\n");
+
+  mygcvalues.foreground = myforeground;
+  mygcvalues.background = mybackground;
+  mygcvalues.fill_style = FillSolid;
+  /* mygcvalues.fill_style = FillStippled; */
+  /* mygcvalues.stipple = mypixmap; */
+  XChangeGC (mydisplay, mygc,
+	     GCForeground | GCBackground | GCFillStyle /* | GCStipple */, &mygcvalues);
+
+  XAllocNamedColor (mydisplay,
+		    DefaultColormap (mydisplay, myscreen),
+		    "red", &red, &red);
+
+  myimage = XCreateImage (mydisplay, myvisinfo.visual, 24, ZPixmap, 0, fbdata, fbwidth, fbheight, 8, 0);
+  if (myimage == NULL)
+    fprintf (stderr, "error: could not create image\n");
+
+  rti.image_data = fbdata;
+  rti.image_size = fbwidth * fbheight * 4;
+  rti.pitch = fbwidth * 4;
+  rti.hdr.width = fbwidth;
+  rti.hdr.height = fbheight;
+  rti.hdr.bpp = 32;
+  rti.hdr.image_desc = TOP_LEFT;
+
+  bg_clear_img (&rti);
+  draw_geom (&rti);
+
   XMapRaised (mydisplay, mywindow);
 
   done = 0;
   while (done == 0) {
+    XEvent myevent;
+    char hi[] = "Hi!";
+    char text[10];
+    KeySym mykey;
+    int i;
 
     /* fvwm(); */
     /* if (!XPending(mydisplay)) continue; */
@@ -894,7 +894,7 @@ main (int argc, char *argv[])
 			      myevent.xexpose.window,
 			      mygc,
 			      50, 50,
-			      hello, strlen (hello));
+			      title, strlen (title));
 	    XDrawRectangle (myevent.xexpose.display,
 			    myevent.xexpose.window,
 			    mygc,
@@ -1027,12 +1027,12 @@ main (int argc, char *argv[])
 	break;
       }
   }
-  XFreeColors (mydisplay, DefaultColormap (mydisplay, myscreen),
-	       &red.pixel, 1, 0);
   /* Set data to NULL before calling `XDestroyImage()' since this was
      not allocated on the heap and should not be freed.  */
   myimage->data = NULL;
   XDestroyImage (myimage);
+  XFreeColors (mydisplay, DefaultColormap (mydisplay, myscreen),
+	       &red.pixel, 1, 0);
   XFreePixmap (mydisplay, mypixmap);
   XFreeGC (mydisplay, mygc);
   XDestroyWindow (mydisplay, mywindow);
@@ -1040,7 +1040,7 @@ main (int argc, char *argv[])
   _XPrintTree (mydisplay, DefaultRootWindow (mydisplay), 0);
 #endif
   XCloseDisplay (mydisplay);
-  exit (0);
+  return 0;
 }
 
 /*

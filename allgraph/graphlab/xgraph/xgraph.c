@@ -307,6 +307,15 @@ main (int argc, char *argv[])
   wmDeleteMessage = XInternAtom(mydisplay, "WM_DELETE_WINDOW", False);
   XSetWMProtocols(mydisplay, mywindow, &wmDeleteMessage, 1);
 
+  XSelectInput (mydisplay, mywindow,
+		ButtonPressMask
+		| ButtonReleaseMask
+		| PointerMotionMask
+		| KeyPressMask
+		| ExposureMask
+		| EnterWindowMask
+		| LeaveWindowMask);
+
   mygc = XCreateGC (mydisplay, mywindow, 0, 0);
 
   if (XMatchVisualInfo (mydisplay, myscreen, 24, TrueColor, &myvisinfo) == 0)
@@ -321,15 +330,6 @@ main (int argc, char *argv[])
   XAllocNamedColor (mydisplay,
 		    DefaultColormap (mydisplay, myscreen),
 		    "red", &red, &red);
-
-  XSelectInput (mydisplay, mywindow,
-		ButtonPressMask
-		| ButtonReleaseMask
-		| PointerMotionMask
-		| KeyPressMask
-		| ExposureMask
-		| EnterWindowMask
-		| LeaveWindowMask);
 
   XMapRaised (mydisplay, mywindow);
 
@@ -477,5 +477,5 @@ main (int argc, char *argv[])
   _XPrintTree (mydisplay, DefaultRootWindow (mydisplay), 0);
 #endif
   XCloseDisplay (mydisplay);
-  exit (0);
+  return 0;
 }
