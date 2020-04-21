@@ -12,8 +12,6 @@
 
 #include "ivecmath.h"
 
-char title[] = "Graphics Lab";
-
 IVPoint2D_i32 p1 = { 50, 50 };
 IVPoint2D_i32 p2 = { 200, 150 };
 IVPoint2D_i32 p3 = { 150, 200 };
@@ -268,25 +266,22 @@ int
 main (int argc, char *argv[])
 {
   Display *mydisplay;
-  Window   mywindow;
-  GC mygc;
-  XGCValues mygcvalues;
-  XEvent myevent;
-  KeySym mykey;
-  XSizeHints myhint;
   int myscreen;
   unsigned long myforeground, mybackground;
-  int i;
-  char text[10];
-  int done;
-  XColor red;
+  XSizeHints myhint;
+  Window   mywindow;
+  char title[] = "Graphics Lab";
   Cursor mycursor;
   Atom wmDeleteMessage;
-  int is_pressed = 0;
-  int line_start = 0;
-  IVPoint2D_i32 last_pt;
 
   XVisualInfo myvisinfo;
+  GC mygc;
+  XGCValues mygcvalues;
+  XColor red;
+
+  int done;
+  int is_pressed = 0;
+  IVPoint2D_i32 last_pt;
 
   mydisplay = XOpenDisplay ("");
   myscreen = DefaultScreen (mydisplay);
@@ -309,6 +304,9 @@ main (int argc, char *argv[])
   mycursor = XCreateFontCursor (mydisplay, XC_left_ptr);
   XDefineCursor (mydisplay, mywindow, mycursor);
 
+  wmDeleteMessage = XInternAtom(mydisplay, "WM_DELETE_WINDOW", False);
+  XSetWMProtocols(mydisplay, mywindow, &wmDeleteMessage, 1);
+
   mygc = XCreateGC (mydisplay, mywindow, 0, 0);
 
   if (XMatchVisualInfo (mydisplay, myscreen, 24, TrueColor, &myvisinfo) == 0)
@@ -324,9 +322,6 @@ main (int argc, char *argv[])
 		    DefaultColormap (mydisplay, myscreen),
 		    "red", &red, &red);
 
-  wmDeleteMessage = XInternAtom(mydisplay, "WM_DELETE_WINDOW", False);
-  XSetWMProtocols(mydisplay, mywindow, &wmDeleteMessage, 1);
-
   XSelectInput (mydisplay, mywindow,
 		ButtonPressMask
 		| ButtonReleaseMask
@@ -340,6 +335,10 @@ main (int argc, char *argv[])
 
   done = 0;
   while (done == 0) {
+    XEvent myevent;
+    char text[10];
+    KeySym mykey;
+    int i;
 
     /* fvwm(); */
     /* if (!XPending(mydisplay)) continue; */
