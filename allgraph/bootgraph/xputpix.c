@@ -69,6 +69,10 @@ bg_clear_img (RTImageBuf *rti)
     }
 }
 
+/* TODO: Define both clipped and unclipped requests.  Why?
+   Particularly, when we embed in higher-level primitives, we've
+   already performed clipping so it doesn't need to be done twice.  */
+
 /* DISCUSSION: How will the code be designed to be reasonably generic
    but still optimal?  Here is the idea I will put forward.  I will
    use code templating using `sed' substitutions to avoid defining
@@ -105,6 +109,80 @@ bg_put_pixel (RTImageBuf *rti,
   if (bpp == 32)
     *(unsigned long*)(fbdata + addr) = (unsigned long)color;
 }
+
+#define SWAP_PTS(p1, p2) \
+  { \
+    Point2D temp = { p1.x, p1.y }; \
+    p1.x = p2.x; p1.y = p2.y; \
+    p2.x = temp.x; p2.y = temp.y; \
+  }
+
+/* Fill a scan line up to, but not including, the last point.  */
+void
+bg_fill_scanline_len (RTImageBuf *rti, Point2D pt, unsigned int len,
+		      unsigned long color)
+{
+  if (pt.y < 0 || pt.y >= rti->hdr.height)
+    return; /* Clip out of bounds requests.  */
+  if (pt.x < 0) {
+    if (-pt.x >= len)
+      return;
+    len += pt.x;
+    pt.x = 0;
+  }
+  if (pt.x + len >= rti->hdr.width) {
+    len = rti->hdr.width - pt.x;
+  }
+
+  while (len > 0) {
+    len--;
+    bg_put_pixel (rti, pt, color);
+    pt.x++;
+  }
+}
+
+void
+bg_fill_scanline_pt (RTImageBuf *rti, Point2D p1, Point2D p2,
+		     unsigned long color)
+{
+  if (p2.x < p1.x)
+    SWAP_PTS(p1, p2);
+  bg_fill_scanline_len (rti, p1, p2.x - p1.x, color);
+}
+
+/* TODO: Copy scanline.  */
+
+/* TODO: Define line iterator subroutines.  That is, we want things
+   like GetFirstPoint(), GetNextPoint().  These can be easily embedded
+   within higher level functions like DrawTriangle().  In all cases of
+   use thus far for graphics, we step vertically, filling scanlines as
+   we go.  */
+
+/*
+
+So, how many different dimensions of variables do we have?
+
+* Scalar format: int8, int16, int32, int64, etc.  Always equal to
+  int16 if targeting simple computers.
+
+* Dimension is always equal to 2 for screen drawing primitives.
+
+* Unclipped versus clipped drawing primitives.
+
+* Color: Monochrome, solid-filled colors at bit-depth N (8, 16, 24,
+  32, etc), Goraud smooth shading, texture filling, lookup table color
+  blending, etc.
+
+Okay, so that's not too bad.  Clipping can be done independently of
+the underlying data format, so that can be implemented in a single
+independent set of functions.  So it really just comes down to
+different functions for different color formats.
+
+With clever segmentation of fundamental features and functions,
+polymorphism can be avoided while still providing a powerful range of
+features.
+
+ */
 
 /* Plot a cubic curve using a similar technique to the parabola curve.
    The scale factor is similar to the parabola case.  If you want
@@ -499,13 +577,6 @@ plot_line_fast2 (RTImageBuf *rti, unsigned long color,
     }
   }
 }
-
-#define SWAP_PTS(p1, p2) \
-  { \
-    Point2D temp = { p1.x, p1.y }; \
-    p1.x = p2.x; p1.y = p2.y; \
-    p2.x = temp.x; p2.y = temp.y; \
-  }
 
 void
 plot_tri_fast2 (RTImageBuf *rti, unsigned long color, unsigned char filled,

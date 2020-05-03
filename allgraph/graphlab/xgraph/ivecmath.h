@@ -168,6 +168,10 @@ FFA_TYPE(IVPoint3D_i32, 3);
 /* Line segment */
 typedef IVPoint2D_i32_ar2 IVLineSeg_p2i32;
 typedef IVPoint3D_i32_ar2 IVLineSeg_p3i32;
+/* 2D rectangle region */
+typedef IVPoint2D_i32_ar2 IVRect_p2i32;
+/* 3D rectangular prism region */
+typedef IVPoint3D_i32_ar2 IVRect_p3i32;
 /* Triangle */
 typedef IVPoint3D_i32_ar3 IVTri_p3i32;
 
