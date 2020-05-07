@@ -1165,11 +1165,7 @@ IVPoint2D_i32 *iv_solve2_s2_InLine_v2i32(IVPoint2D_i32 *a,
 
    The result is in Q16.16 fixed-point format.  Note that since we're
    dividing by truncated square roots, sometimes the result is greater
-   than 1.0 in Q16.16.
-
-   To be fast, use approximate magnitude instead.  Operating directly
-   on the results of bit-scan reverse is fastest since you can add
-   rather than multiply.  */
+   than 1.0 in Q16.16.  */
 IVint32q16 iv_prequalfac_i32q16_s2_Eqs_v2i32(IVSys2_Eqs_v2i32 *a)
 {
   /* Tags: SCALAR-ARITHMETIC */
@@ -1203,6 +1199,49 @@ IVint32q16 iv_prequalfac_i32q16_s2_Eqs_v2i32(IVSys2_Eqs_v2i32 *a)
     norm_vt_dot_v2 = (IVint32q16)((vt_dot_v2 << 0x10) / magn_vt_v2);
   }
   return norm_vt_dot_v2;
+}
+
+/* Approximate quality factor check on system of equations before
+   solving.  This is computed as follows:
+
+   Let A = plane 1 surface normal vector,
+       B = plane 2 surface normal vector
+
+   abs(dot_product(perpendicular(A), B)) / (magnitude(A) * magnitude(B))
+
+   If either vector magnitude is zero, the returned quality factor is
+   zero.
+
+   The result is in Q16.16 fixed-point format.  Note that since we're
+   dividing by truncated approximate square roots, sometimes the
+   result is greater than 1.0 in Q16.16, often times up to a factor of
+   2.0.
+
+   To be fast, use approximate magnitude instead.  Operating directly
+   on the results of bit-scan reverse is fastest since you can add
+   rather than multiply.  */
+IVint32q16 iv_aprequalfac_i32q16_s2_Eqs_v2i32(IVSys2_Eqs_v2i32 *a)
+{
+  /* Tags: SCALAR-ARITHMETIC */
+  IVVec2D_i32 vt;
+  IVint64 vt_dot_v2;
+  IVint64 magn2q_vt, magn2q_v2;
+  IVint8 shift_factor;
+  iv_perpen2_v2i32(&vt, &a->d[0].v);
+  vt_dot_v2 = iv_abs_i64(iv_dot2_v2i32(&vt, &a->d[1].v));
+  magn2q_vt = iv_magn2q_v2i32(&vt);
+  if (magn2q_vt == 0)
+    return 0;
+  magn2q_v2 = iv_magn2q_v2i32(&a->d[1].v);
+  if (magn2q_v2 == 0)
+    return 0;
+  shift_factor = 0x10 - (((IVint8)soft_bsr_i64(magn2q_vt) +
+			  (IVint8)soft_bsr_i64(magn2q_v2))
+			 >> 1);
+  if (shift_factor < 0)
+    return (IVint32q16)(vt_dot_v2 >> -shift_factor);
+  /* else */
+  return (IVint32q16)(vt_dot_v2 << shift_factor);;
 }
 
 /********************************************************************/
@@ -1628,6 +1667,40 @@ IVVec3D_i32 *iv_crossprodshr4_v3i32(IVVec3D_i32 *a,
   a->z = (IVint32)iv_fsyshr2_i64((IVint64)b->x * c->y -
 				 (IVint64)b->y * c->x, q);
   return a;
+}
+
+/* Approximate quality factor check after computing a surface normal
+   vector via a cross product.
+
+   Let A = InPlane vector 1,
+       B = InPlane vector 2,
+       C = cross product result vector
+
+   quality = sin(theta) = magnitude(C) / (magnitude(A) * magnitude(B))
+
+   We can use bit-shifting techniques instead to compute the
+   approximate magnitudes and approximate quality factor.  We can also
+   save the final approximate square root computation until last.  And
+   finally, we can use "cheap normalization" to avoid division when
+   computing the fixed-point quality factor.
+
+   Because of the approximate calculations, the result may smaller
+   than the actual result by a factor of two.  */
+IVint32q16 iv_apostqualfac4_i32q16_v3i32
+  (IVVec3D_i32 *c, IVVec3D_i32 *a, IVVec3D_i32 *b, IVuint8 q)
+{
+  /* Tags: SCALAR-ARITHMETIC */
+  IVint64 wqualfac = iv_magn2q_v3i32(c);
+  IVuint8 q2 = q << 1;
+  /* Shift +32 bits for Q32.32, if necessary.  */
+  IVint8 shift_factor = 0x20 - (IVint8)q2 -
+    ((IVint8)soft_bsr_i64(iv_magn2q_v3i32(a)) - (IVint8)q2 +
+     (IVint8)soft_bsr_i64(iv_magn2q_v3i32(b)) - (IVint8)q2);
+  if (shift_factor < 0)
+    wqualfac >>= -shift_factor;
+  else
+    wqualfac <<= shift_factor;
+  return (IVint32q16)iv_aprx_sqrt_i64(wqualfac);
 }
 
 /* Assign the "no solution" value IVINT32_MIN to all components of the
@@ -2177,9 +2250,6 @@ IVInPlane_v3i32 *iv_rfbh5_InPlane_NPlane_v3i32
 {
   /* Tags: SCALAR-ARITHMETIC */
   IVEqs_v3i32 pp; /* projection plane */
-  IVint64 v1_wqualfac;
-  IVuint8 q2;
-  IVint8 shift_factor;
   IVint32 v1_qualfac;
   pp.v = b->v; pp.offset = 0;
 
@@ -2190,30 +2260,16 @@ IVInPlane_v3i32 *iv_rfbh5_InPlane_NPlane_v3i32
   iv_proj3_p3i32_Eqs_v3i32(&a->v0, h0, &pp);
   iv_crossprodshr4_v3i32(&a->v1, &b->v, &a->v0, q);
 
-  /* TODO FIXME: Put the cross product post quality factor code in a
-     separate subroutine.  */
   /* Check the quality of the vector cross product using fast
-     approximate math.
+     approximate math.  */
+  v1_qualfac = iv_apostqualfac4_i32q16_v3i32(&a->v1, &b->v, &a->v0, q);
 
-     Exact: sin(theta) = magnitude(v1) / (magnitude(v) * magnitude(v0))
-
-     So, we can use bit-shifting techniques instead to compute the
-     magnitudes and approximate quality factor, that is `sin(theta)`.
-     We can also save the final approximate square root computation
-     until last.  And finally, we can use "cheap normalization" to
-     avoid division when computing the fixed-point quality factor.  */
-  v1_wqualfac = iv_magn2q_v3i32(&a->v1);
-  /* Shift +32 bits for Q32.32, if necessary.  */
-  q2 = q << 1;
-  shift_factor = 0x20 - (IVint8)q2 -
-    ((IVint8)soft_bsr_i64(iv_magn2q_v3i32(&b->v)) - (IVint8)q2 +
-     (IVint8)soft_bsr_i64(iv_magn2q_v3i32(&a->v0)) - (IVint8)q2);
-  if (shift_factor < 0)
-    v1_wqualfac >>= -shift_factor;
-  else
-    v1_wqualfac <<= shift_factor;
-  v1_qualfac = iv_aprx_sqrt_i64(v1_wqualfac);
-
+  /* N.B.: Less than 1/8 is actually pretty bad quality but we can
+     still get reasonable results.  We set our threshold even lower so
+     that we will be sure to reject only extremely poor quality
+     choices, so that the other choice is pretty much guaranteed to
+     have sufficient quality.  Alternatively, computing both quality
+     metrics would guarantee more robust choices.  */
   if (v1_qualfac >= 0x0100) { /* 1/256 in Q16.16 */
     /* Sufficient quality, return this result.  */
     return a;

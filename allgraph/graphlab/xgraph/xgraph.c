@@ -81,7 +81,7 @@ draw_geom (Display *display, Window window, GC mygc)
       IVint32 qualfac;
       sys.d[0].v = v1;
       sys.d[1].v = v3;
-      qualfac = iv_prequalfac_i32q16_s2_Eqs_v2i32 (&sys);
+      qualfac = iv_aprequalfac_i32q16_s2_Eqs_v2i32 (&sys);
       sprintf (isect_qf_str, "isect qf = %f", (float)qualfac / 0x10000);
     }
   }

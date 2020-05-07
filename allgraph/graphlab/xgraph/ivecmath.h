@@ -299,6 +299,7 @@ IVPoint2D_i32 *iv_solve2_s2_NLine_v2i32(IVPoint2D_i32 *a,
 IVPoint2D_i32 *iv_solve2_s2_InLine_v2i32(IVPoint2D_i32 *a,
 					 IVSys2_InLine_v2i32 *b);
 IVint32q16 iv_prequalfac_i32q16_s2_Eqs_v2i32(IVSys2_Eqs_v2i32 *a);
+IVint32q16 iv_aprequalfac_i32q16_s2_Eqs_v2i32(IVSys2_Eqs_v2i32 *a);
 
 IVMatNxM_i32 *iv_mulshr4_mnxm_i32(IVMatNxM_i32 *a,
 				  IVMatNxM_i32 *b, IVMatNxM_i32 *c,
@@ -333,6 +334,8 @@ IVVec3D_i32 *iv_crossproddiv4_v3i32(IVVec3D_i32 *a,
 IVVec3D_i32 *iv_crossprodshr4_v3i32(IVVec3D_i32 *a,
 				    IVVec3D_i32 *b, IVVec3D_i32 *c,
 				    IVuint8 q);
+IVint32q16 iv_apostqualfac4_i32q16_v3i32
+  (IVVec3D_i32 *c, IVVec3D_i32 *a, IVVec3D_i32 *b, IVuint8 q);
 IVVec3D_i32 *iv_nosol_v3i32(IVVec3D_i32 *a);
 IVuint8 iv_is_nosol_v3i32(IVVec3D_i32 *a);
 
