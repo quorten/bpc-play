@@ -250,8 +250,8 @@ IVVec2D_i32 *iv_perpen2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b);
 IVVec2D_i32 *iv_nosol_v2i32(IVVec2D_i32 *a);
 IVuint8 iv_is_nosol_v2i32(IVVec2D_i32 *a);
 
-IVuint8 soft_bsr_i64(IVint64 a);
-IVuint8 soft_ns_bsr_i64(IVint64 a);
+IVuint8 soft_fls_i64(IVint64 a);
+IVuint8 soft_ns_fls_i64(IVint64 a);
 int init_sqrt_lut(void);
 void destroy_sqrt_lut(void);
 IVint32 iv_sqrt_u32(IVuint32 a);
@@ -334,7 +334,7 @@ IVVec3D_i32 *iv_crossproddiv4_v3i32(IVVec3D_i32 *a,
 IVVec3D_i32 *iv_crossprodshr4_v3i32(IVVec3D_i32 *a,
 				    IVVec3D_i32 *b, IVVec3D_i32 *c,
 				    IVuint8 q);
-IVint32q16 iv_apostqualfac4_i32q16_v3i32
+IVint32q16 iv_apostqualfac_cps4_i32q16_v3i32
   (IVVec3D_i32 *c, IVVec3D_i32 *a, IVVec3D_i32 *b, IVuint8 q);
 IVVec3D_i32 *iv_nosol_v3i32(IVVec3D_i32 *a);
 IVuint8 iv_is_nosol_v3i32(IVVec3D_i32 *a);

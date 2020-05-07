@@ -37,8 +37,8 @@ IVint64 iv_abs_i64(IVint64 a)
 IVuint8 iv_msbidx_i64(IVint64 a)
 {
   if (a < 0)
-    return soft_bsr_i64(-a);
-  return soft_bsr_i64(a);
+    return soft_fls_i64(-a);
+  return soft_fls_i64(a);
 }
 
 /* Shift right with symmetric positive/negative shift behavior.  `q`
@@ -149,7 +149,7 @@ IVVec2D_i32 *iv_muldiv4_v2i32_i64(IVVec2D_i32 *a, IVVec2D_i32 *b,
   /* If `c` is too large, shift away all the low bits from both the
      numerator and the denominator, they are insignificant.  */
   if (c >= 0x100000000LL) {
-    IVint8 num_sig_bits_c = soft_bsr_i64(c);
+    IVint8 num_sig_bits_c = soft_fls_i64(c);
     IVint8 num_sig_bits_d = iv_msbidx_i64(d);
     IVuint8 shr_div;
     if (num_sig_bits_c - num_sig_bits_d >= 32) {
@@ -164,7 +164,7 @@ IVVec2D_i32 *iv_muldiv4_v2i32_i64(IVVec2D_i32 *a, IVVec2D_i32 *b,
     /* Since `c` is too large and `d` is significantly large, shift
        away all the low bits from both the numerator and the
        denominator because they are insignificant.  */
-    shr_div = soft_bsr_i64(c) - 32;
+    shr_div = soft_fls_i64(c) - 32;
     if (d < 0) d++; /* avoid asymmetric two's complement behavior */
     c >>= shr_div;
     d >>= shr_div;
@@ -241,6 +241,7 @@ IVVec2D_i32 *iv_shr3_v2i32_u32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint8 c)
   return a;
 }
 
+/* dot product of two vectors */
 IVint64 iv_dot2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b)
 {
   /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
@@ -300,7 +301,7 @@ There are plenty of tricks that are used to optimize performance.
   This is quite similar to Bresenham's circle plotting algorithm.
 
 * An approximate square root can be quickly and efficiently computed
-  using the bit-scan reverse CPU instruction (`bsr` in x86 CPUs) and
+  using the find last bit set CPU instruction (`bsr` in x86 CPUs) and
   dividing the number of significant bits by two.  A software fallback
   that does a binary search for the most significant bit in an integer
   is still fairly fast and efficient, even on CPUs that may lack any
@@ -322,7 +323,7 @@ There are plenty of tricks that are used to optimize performance.
 
   `x` is the running total of the guessed square root, `n` is the
   current bit value being guessed and tested.  The starting estimate
-  is initialized using the bit-scan reverse method to determine the
+  is initialized using the find last bit set method to determine the
   approximate square root.
 
 All methods are designed to truncate the result, as is standard with
@@ -333,8 +334,8 @@ available.
 
 static IVuint32 *sqrt_lut = NULL;
 
-/* Fallback implementation of bit-scan reverse in software.  */
-IVuint8 soft_bsr_i64(IVint64 a)
+/* Fallback implementation of find last bit set in software.  */
+IVuint8 soft_fls_i64(IVint64 a)
 {
   /* Use a binary search tree of AND masks to determine where the most
      significant bit is located.  Note that with 16 bits or less, a
@@ -375,11 +376,11 @@ IVuint8 soft_bsr_i64(IVint64 a)
   return pos;
 }
 
-/* Fallback implementation of bit-scan reverse in software, but
+/* Fallback implementation of find last bit set in software, but
    doesn't use any shifting instructions at all!  This is useful if
    your CPU does not have bit-shifting instructions (Gigatron), or it
    doesn't support multi-bit shifts (i.e. 6502).  */
-IVuint8 soft_ns_bsr_i64(IVint64 a)
+IVuint8 soft_ns_fls_i64(IVint64 a)
 {
   /* Use a binary search tree of AND masks to determine where the most
      significant bit is located.  Note that with 16 bits or less, a
@@ -560,8 +561,8 @@ IVint32 iv_sqrt_i32(IVint32 a)
   return iv_sqrt_u32((IVuint32)a);
 }
 
-/* Compute a 64-bit integer approximate square root by using bit-scan
-   reverse and dividing the number of significant bits by two.  Yes,
+/* Compute a 64-bit integer approximate square root by using find last
+   bit set and dividing the number of significant bits by two.  Yes,
    we shift right to divide by two.  If the operand is negative,
    IVINT32_MIN is returned since there is no solution.  */
 IVint32 iv_aprx_sqrt_i64(IVint64 a)
@@ -571,7 +572,7 @@ IVint32 iv_aprx_sqrt_i64(IVint64 a)
     return 0;
   if (a < 0)
     return IVINT32_MIN;
-  num_sig_bits = soft_bsr_i64(a);
+  num_sig_bits = soft_fls_i64(a);
   return (IVint32)1 << (num_sig_bits >> 1);
 }
 
@@ -590,7 +591,7 @@ IVint32 iv_sqrt_i64(IVint64 a)
   if (a <= 0xffffffff && sqrt_lut != NULL) {
     return iv_sqrt_u32((IVuint32)a);
   }
-  pos = soft_bsr_i64(a) >> 1;
+  pos = soft_fls_i64(a) >> 1;
   x = (IVint32)1 << pos;
   x2 = (IVint64)1 << (pos << 1);
   pos--;
@@ -1218,7 +1219,7 @@ IVint32q16 iv_prequalfac_i32q16_s2_Eqs_v2i32(IVSys2_Eqs_v2i32 *a)
    2.0.
 
    To be fast, use approximate magnitude instead.  Operating directly
-   on the results of bit-scan reverse is fastest since you can add
+   on the results of find last bit set is fastest since you can add
    rather than multiply.  */
 IVint32q16 iv_aprequalfac_i32q16_s2_Eqs_v2i32(IVSys2_Eqs_v2i32 *a)
 {
@@ -1235,13 +1236,13 @@ IVint32q16 iv_aprequalfac_i32q16_s2_Eqs_v2i32(IVSys2_Eqs_v2i32 *a)
   magn2q_v2 = iv_magn2q_v2i32(&a->d[1].v);
   if (magn2q_v2 == 0)
     return 0;
-  shift_factor = 0x10 - (((IVint8)soft_bsr_i64(magn2q_vt) +
-			  (IVint8)soft_bsr_i64(magn2q_v2))
+  shift_factor = 0x10 - (((IVint8)soft_fls_i64(magn2q_vt) +
+			  (IVint8)soft_fls_i64(magn2q_v2))
 			 >> 1);
   if (shift_factor < 0)
     return (IVint32q16)(vt_dot_v2 >> -shift_factor);
   /* else */
-  return (IVint32q16)(vt_dot_v2 << shift_factor);;
+  return (IVint32q16)(vt_dot_v2 << shift_factor);
 }
 
 /********************************************************************/
@@ -1522,7 +1523,7 @@ IVVec3D_i32 *iv_muldiv4_v3i32_i64(IVVec3D_i32 *a, IVVec3D_i32 *b,
   /* If `c` is too large, shift away all the low bits from both the
      numerator and the denominator, they are insignificant.  */
   if (c >= 0x100000000LL) {
-    IVint8 num_sig_bits_c = soft_bsr_i64(c);
+    IVint8 num_sig_bits_c = soft_fls_i64(c);
     IVint8 num_sig_bits_d = iv_msbidx_i64(d);
     IVuint8 shr_div;
     if (num_sig_bits_c - num_sig_bits_d >= 32) {
@@ -1538,7 +1539,7 @@ IVVec3D_i32 *iv_muldiv4_v3i32_i64(IVVec3D_i32 *a, IVVec3D_i32 *b,
     /* Since `c` is too large and `d` is significantly large, shift
        away all the low bits from both the numerator and the
        denominator because they are insignificant.  */
-    shr_div = soft_bsr_i64(c) - 32;
+    shr_div = soft_fls_i64(c) - 32;
     if (d < 0) d++; /* avoid asymmetric two's complement behavior */
     c >>= shr_div;
     d >>= shr_div;
@@ -1621,6 +1622,7 @@ IVVec3D_i32 *iv_shr3_v3i32_u32(IVVec3D_i32 *a, IVVec3D_i32 *b, IVuint8 c)
   return a;
 }
 
+/* dot product of two vectors */
 IVint64 iv_dot2_v3i32(IVVec3D_i32 *a, IVVec3D_i32 *b)
 {
   /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
@@ -1686,7 +1688,7 @@ IVVec3D_i32 *iv_crossprodshr4_v3i32(IVVec3D_i32 *a,
 
    Because of the approximate calculations, the result may smaller
    than the actual result by a factor of two.  */
-IVint32q16 iv_apostqualfac4_i32q16_v3i32
+IVint32q16 iv_apostqualfac_cps4_i32q16_v3i32
   (IVVec3D_i32 *c, IVVec3D_i32 *a, IVVec3D_i32 *b, IVuint8 q)
 {
   /* Tags: SCALAR-ARITHMETIC */
@@ -1694,8 +1696,8 @@ IVint32q16 iv_apostqualfac4_i32q16_v3i32
   IVuint8 q2 = q << 1;
   /* Shift +32 bits for Q32.32, if necessary.  */
   IVint8 shift_factor = 0x20 - (IVint8)q2 -
-    ((IVint8)soft_bsr_i64(iv_magn2q_v3i32(a)) - (IVint8)q2 +
-     (IVint8)soft_bsr_i64(iv_magn2q_v3i32(b)) - (IVint8)q2);
+    ((IVint8)soft_fls_i64(iv_magn2q_v3i32(a)) - (IVint8)q2 +
+     (IVint8)soft_fls_i64(iv_magn2q_v3i32(b)) - (IVint8)q2);
   if (shift_factor < 0)
     wqualfac >>= -shift_factor;
   else
@@ -2262,7 +2264,7 @@ IVInPlane_v3i32 *iv_rfbh5_InPlane_NPlane_v3i32
 
   /* Check the quality of the vector cross product using fast
      approximate math.  */
-  v1_qualfac = iv_apostqualfac4_i32q16_v3i32(&a->v1, &b->v, &a->v0, q);
+  v1_qualfac = iv_apostqualfac_cps4_i32q16_v3i32(&a->v1, &b->v, &a->v0, q);
 
   /* N.B.: Less than 1/8 is actually pretty bad quality but we can
      still get reasonable results.  We set our threshold even lower so
