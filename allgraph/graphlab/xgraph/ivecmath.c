@@ -41,6 +41,42 @@ IVuint8 iv_msbidx_i64(IVint64 a)
   return soft_bsr_i64(a);
 }
 
+/* Shift right with symmetric positive/negative shift behavior.  `q`
+   must not be equal to zero, or else the results will be
+   inaccurate.  "f' is for "faster."  */
+IVint32 iv_fsyshr2_i32(IVint32 a, IVuint8 q)
+{
+  if (a < 0) a++; /* avoid asymmetric two's complement behavior */
+  return a >> q;
+}
+
+/* Shift right with symmetric positive/negative shift behavior.  `q`
+   must not be equal to zero, or else the results will be
+   inaccurate.  "f' is for "faster."  */
+IVint64 iv_fsyshr2_i64(IVint64 a, IVuint8 q)
+{
+  if (a < 0) a++; /* avoid asymmetric two's complement behavior */
+  return a >> q;
+}
+
+/* Shift right with symmetric positive/negative shift behavior.  `q`
+   must not be equal to zero, or else the results will be
+   inaccurate.  "f' is for "faster."  */
+IVint32 iv_symshr2_i32(IVint32 a, IVuint8 q)
+{
+  if (q != 0 && a < 0) a++; /* avoid asymmetric two's complement behavior */
+  return a >> q;
+}
+
+/* Shift right with symmetric positive/negative shift behavior.  `q`
+   must not be equal to zero, or else the results will be
+   inaccurate.  "f' is for "faster."  */
+IVint64 iv_symshr2_i64(IVint64 a, IVuint8 q)
+{
+  if (q != 0 && a < 0) a++; /* avoid asymmetric two's complement behavior */
+  return a >> q;
+}
+
 /*
 
 Should we implement muldiv_i64 using a 128-bit intermediate?  Here's
@@ -170,21 +206,13 @@ IVVec2D_i32 *iv_shldiv4_v2i32_i32(IVVec2D_i32 *a, IVVec2D_i32 *b,
 }
 
 /* multiply, shift right, with symmetric positive/negative shift
-   behavior */
+   behavior.  `q` must not be zero.  */
 IVVec2D_i32 *iv_mulshr4_v2i32_i32(IVVec2D_i32 *a, IVVec2D_i32 *b,
 				  IVint32 c, IVuint8 q)
 {
   /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
-  IVint64 tx = b->x * c;
-  IVint64 ty = b->y * c;
-  /* Due to asymmetric two's complement, we must pre-increment one if
-     less than zero.  */
-  if (q != 0) {
-    if (tx < 0) tx++;
-    if (ty < 0) ty++;
-  }
-  a->x = (IVint32)(tx >> q);
-  a->y = (IVint32)(ty >> q);
+  a->x = (IVint32)iv_fsyshr2_i64((IVint64)b->x * c, q);
+  a->y = (IVint32)iv_fsyshr2_i64((IVint64)b->y * c, q);
   return a;
 }
 
@@ -197,7 +225,8 @@ IVVec2D_i32 *iv_shl3_v2i32_u32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint8 c)
   return a;
 }
 
-/* shift right, with symmetric positive/negative shift behavior */
+/* shift right, with symmetric positive/negative shift behavior.  `q`
+   must not be zero.  */
 IVVec2D_i32 *iv_shr3_v2i32_u32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint8 c)
 {
   /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
@@ -207,12 +236,8 @@ IVVec2D_i32 *iv_shr3_v2i32_u32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint8 c)
     a->y = ty;
     return a;
   }
-  /* Due to asymmetric two's complement, we must pre-increment one if
-     less than zero.  */
-  if (tx < 0) tx++;
-  if (ty < 0) ty++;
-  a->x = tx >> c;
-  a->y = ty >> c;
+  a->x = iv_fsyshr2_i32(tx, c);
+  a->x = iv_fsyshr2_i32(ty, c);
   return a;
 }
 
@@ -254,44 +279,6 @@ IVuint8 iv_is_nosol_v2i32(IVVec2D_i32 *a)
   /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
   return (a->x == IVINT32_MIN &&
 	  a->y == IVINT32_MIN);
-}
-
-/********************************************************************/
-
-/*
-   cross_product(A, B) =
-               [ A_y * B_z - A_z * B_y,
-                 A_z * B_x - A_x * B_z,
-                 A_x * B_y - A_y * B_x ]
-*/
-IVVec3D_i32 *iv_crossproddiv4_v3i32(IVVec3D_i32 *a,
-				    IVVec3D_i32 *b, IVVec3D_i32 *c,
-				    IVint32 d)
-{
-  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
-  a->x = (IVint32)(((IVint64)b->y * c->z -
-			(IVint64)b->z * c->y) / d);
-  a->y = (IVint32)(((IVint64)b->z * c->x -
-			(IVint64)b->x * c->z) / d);
-  a->z = (IVint32)(((IVint64)b->x * c->y -
-			(IVint64)b->y * c->x) / d);
-  return a;
-}
-
-IVVec3D_i32 *iv_crossprodshr4_v3i32(IVVec3D_i32 *a,
-				    IVVec3D_i32 *b, IVVec3D_i32 *c,
-				    IVuint8 q)
-{
-  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
-  /* TODO FIXME SYMMETRIC SHIFT BEHAVIOR */
-  /* TODO VERIFY PRECISION */
-  a->x = (IVint32)(((IVint64)b->y * c->z -
-			(IVint64)b->z * c->y) >> q);
-  a->y = (IVint32)(((IVint64)b->z * c->x -
-			(IVint64)b->x * c->z) >> q);
-  a->z = (IVint32)(((IVint64)b->x * c->y -
-			(IVint64)b->y * c->x) >> q);
-  return a;
 }
 
 /********************************************************************/
@@ -641,7 +628,8 @@ IVint32 iv_magn_v2i32(IVVec2D_i32 *a)
 
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.  */
-IVVec2D_i32q16 *iv_normalize2_i32q16_v2i32(IVVec2D_i32q16 *a, IVVec2D_i32 *b)
+IVNVec2D_i32q16 *iv_normalize2_nv2i32q16_v2i32(IVNVec2D_i32q16 *a,
+					       IVVec2D_i32 *b)
 {
   IVint32 d = iv_magnitude_v2i32(b);
   if (d == 0) {
@@ -727,7 +715,7 @@ IVVec2D_i32 *iv_aelim3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c)
 
    If there is no solution, IVINT32_MIN is returned.
 */
-IVint32 iv_dist2_v2i32_Eqs_v2i32(IVVec2D_i32 *a, IVEqs_v2i32 *b)
+IVint32 iv_dist2_p2i32_Eqs_v2i32(IVPoint2D_i32 *a, IVEqs_v2i32 *b)
 {
   /* Tags: SCALAR-ARITHMETIC */
   IVint32 d = iv_magnitude_v2i32(&b->v);
@@ -748,7 +736,7 @@ IVint32 iv_dist2_v2i32_Eqs_v2i32(IVVec2D_i32 *a, IVEqs_v2i32 *b)
 
    If there is no solution, IVINT32_MIN is returned.
 */
-IVint32 iv_adist2_v2i32_Eqs_v2i32(IVVec2D_i32 *a, IVEqs_v2i32 *b)
+IVint32 iv_adist2_p2i32_Eqs_v2i32(IVPoint2D_i32 *a, IVEqs_v2i32 *b)
 {
   /* Tags: SCALAR-ARITHMETIC */
   IVint32 d = iv_magn_v2i32(&b->v);
@@ -767,10 +755,11 @@ IVint32 iv_adist2_v2i32_Eqs_v2i32(IVVec2D_i32 *a, IVEqs_v2i32 *b)
 
    dot_product(L, A) - d
 */
-IVint32q16 iv_dist2_v2i32_Eqs_v2i32q16(IVVec2D_i32 *a, IVEqs_v2i32q16 *b)
+IVint32q16 iv_dist2_p2i32_Eqs_nv2i32q16(IVPoint2D_i32 *a, IVEqs_nv2i32q16 *b)
 {
   /* Tags: SCALAR-ARITHMETIC */
-  return (IVint32q16)((iv_dot2_v2i32(a, &b->v) >> 0x10) - b->offset);
+  return (IVint32q16)
+    (iv_fsyshr2_i64(iv_dot2_v2i32(a, &b->v), 0x10) - b->offset);
 }
 
 /* Alternatively, rather than using a scalar `d`, you can define a
@@ -786,7 +775,7 @@ IVint32q16 iv_dist2_v2i32_Eqs_v2i32q16(IVVec2D_i32 *a, IVEqs_v2i32q16 *b)
 
    If there is no solution, IVINT32_MIN is returned.
 */
-IVint32 iv_dist2_v2i32_NRay_v2i32(IVVec2D_i32 *a, IVNLine_v2i32 *b)
+IVint32 iv_dist2_p2i32_NRay_v2i32(IVPoint2D_i32 *a, IVNLine_v2i32 *b)
 {
   /* Tags: SCALAR-ARITHMETIC */
   IVint32 d;
@@ -799,8 +788,8 @@ IVint32 iv_dist2_v2i32_NRay_v2i32(IVVec2D_i32 *a, IVNLine_v2i32 *b)
 }
 
 /* Approximate variant of distance to point in plane, like the
-   subroutine `iv_dist3_v2i32_NRay_v2i32()`.  */
-IVint32 iv_adist2_v2i32_NRay_v2i32(IVVec2D_i32 *a, IVNLine_v2i32 *b)
+   subroutine `iv_dist2_p2i32_NRay_v2i32()`.  */
+IVint32 iv_adist2_p2i32_NRay_v2i32(IVPoint2D_i32 *a, IVNLine_v2i32 *b)
 {
   /* Tags: SCALAR-ARITHMETIC */
   IVint32 d;
@@ -1053,6 +1042,8 @@ IVPoint2D_i32 *iv_isect3_Ray_NLine_v2i32(IVPoint2D_i32 *a, IVRay_v2i32 *b,
   return iv_add3_v2i32(a, &b->p0, &t);
 }
 
+/********************************************************************/
+
 /* Convert (reformat) Eqs representational form to NLine.
 
    If there is no solution, the resulting point's coordinates are all
@@ -1109,11 +1100,12 @@ IVNLine_v2i32 *iv_rf2_NLine_InLine_v2i32(IVNLine_v2i32 *a, IVInLine_v2i32 *b)
 }
 
 /* Convert (reformat) NLine representational form to InLine.  */
-IVNLine_v2i32 *iv_rf2_InLine_NLine_v2i32(IVInLine_v2i32 *a, IVNLine_v2i32 *b)
+IVInLine_v2i32 *iv_rf2_InLine_NLine_v2i32(IVInLine_v2i32 *a, IVNLine_v2i32 *b)
 {
   /* Exactly the same code as the reverse conversion, just different
      types.  */
-  return iv_rf2_NLine_InLine_v2i32((IVNLine_v2i32*)a, (IVInLine_v2i32*)b);
+  return (IVInLine_v2i32*)
+    iv_rf2_NLine_InLine_v2i32((IVNLine_v2i32*)a, (IVInLine_v2i32*)b);
 }
 
 /* Solve a system of two simple linear equations, i.e. Ax = b format.
@@ -1254,8 +1246,7 @@ IVMatNxM_i32 *iv_mulshr4_mnxm_i32(IVMatNxM_i32 *a,
 	for (k = 0; k < inner; k++) {
 	  IVint64 intermed =
 	    (IVint64)b_d[inner_i+k] * c_d[a_width_k+j];
-	  if (q != 0 && intermed < 0) intermed++;
-	  accum += intermed >> q;
+	  accum += iv_symshr2_i64(intermed, q);
 	  a_width_k += a_width;
 	}
 	a_d[a_width_i+j] = accum;
@@ -1392,14 +1383,14 @@ IVSys2_Eqs_v2i32q16 *iv_pack_linreg_s2_Eqs_v2i32q16_v2i32
 
   /* Here's what we're doing here.  Since we'll need a fixed-point
      solution, our equation solver will operate with a Q16.16 decimal
-     point.  For large integers, they can just be passed in without
-     modification and it will all work, since in a system of equations
-     you can divide all entries by the same number and get the same
-     result.  However, if our inputs are small integers and we input
-     them as-is, some values may get shifted to zero in the
-     computations, so we adaptively shift all entries right based off
-     of an entry that is similar to the median value of the
-     entries.  */
+     point.  We use the "cheap normalization" technique.  For large
+     integers, they can just be passed in without modification and it
+     will all work, since in a system of equations you can divide all
+     entries by the same number and get the same result.  However, if
+     our inputs are small integers and we input them as-is, some
+     values may get shifted to zero in the computations, so we
+     adaptively shift all entries right based off of an entry that is
+     similar to the median value of the entries.  */
   {
     IVint32 test_value = sys->d[0].v.y;
     IVuint8 shr_div = iv_msbidx_i64(test_value);
@@ -1433,4 +1424,807 @@ IVSys2_Eqs_v2i32q16 *iv_pack_linreg_s2_Eqs_v2i32q16_v2i32
   if (mat_a_t.d != NULL) free (mat_a_t.d);
   if (col_b.d != NULL) free (col_b.d);
   return sys;
+}
+
+/********************************************************************/
+/********************************************************************/
+/* Now we copy-pasta code to reimplement everything all over again in
+   3D.  Copying code solely for the sake of making debugging easy in
+   the short-term.  Long-term I should use a code generator that emits
+   multiple C source code file, so that we can be debugger-friendly.
+   Rather than, say, do everything with C macros and the C
+   preprocessor.  */
+
+IVVec3D_i32 *iv_neg2_v3i32(IVVec3D_i32 *a, IVVec3D_i32 *b)
+{
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
+  a->x = -b->x;
+  a->y = -b->y;
+  a->z = -b->z;
+  return a;
+}
+
+IVVec3D_i32 *iv_add3_v3i32(IVVec3D_i32 *a, IVVec3D_i32 *b, IVVec3D_i32 *c)
+{
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
+  a->x = b->x + c->x;
+  a->y = b->y + c->y;
+  a->z = b->z + c->z;
+  return a;
+}
+
+IVVec3D_i32 *iv_sub3_v3i32(IVVec3D_i32 *a, IVVec3D_i32 *b, IVVec3D_i32 *c)
+{
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
+  a->x = b->x - c->x;
+  a->y = b->y - c->y;
+  a->z = b->z - c->z;
+  return a;
+}
+
+/* multiply, divide */
+IVVec3D_i32 *iv_muldiv4_v3i32_i32(IVVec3D_i32 *a, IVVec3D_i32 *b,
+				  IVint32 c, IVint32 d)
+{
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
+  a->x = (IVint32)((IVint64)b->x * c / d);
+  a->y = (IVint32)((IVint64)b->y * c / d);
+  a->z = (IVint32)((IVint64)b->z * c / d);
+  return a;
+}
+
+/* multiply, divide, 64-bit constants, with logic to try to avoid
+   overflows when possible while still using 64-bit intermediates */
+IVVec3D_i32 *iv_muldiv4_v3i32_i64(IVVec3D_i32 *a, IVVec3D_i32 *b,
+				  IVint64 c, IVint64 d)
+{
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
+  if (c < 0) { c = -c; d = -d; }
+  /* If `c` is too large, shift away all the low bits from both the
+     numerator and the denominator, they are insignificant.  */
+  if (c >= 0x100000000LL) {
+    IVint8 num_sig_bits_c = soft_bsr_i64(c);
+    IVint8 num_sig_bits_d = iv_msbidx_i64(d);
+    IVuint8 shr_div;
+    if (num_sig_bits_c - num_sig_bits_d >= 32) {
+      /* Fold `c / d` together before multiplying to avoid underflow
+	 since `d` is insignificant.  */
+      c /= d;
+      a->x = (IVint32)((IVint64)b->x * c);
+      a->y = (IVint32)((IVint64)b->y * c);
+      a->z = (IVint32)((IVint64)b->z * c);
+      return a;
+    }
+    /* else */
+    /* Since `c` is too large and `d` is significantly large, shift
+       away all the low bits from both the numerator and the
+       denominator because they are insignificant.  */
+    shr_div = soft_bsr_i64(c) - 32;
+    if (d < 0) d++; /* avoid asymmetric two's complement behavior */
+    c >>= shr_div;
+    d >>= shr_div;
+  }
+  /* This should never happen due to our previous logic only acting on
+     this path when `d` is significantly large.  */
+  /* if (d == 0) {
+    /\* No solution.  *\/
+    return iv_nosol_v3i32(a);
+  } */
+  a->x = (IVint32)((IVint64)b->x * c / d);
+  a->y = (IVint32)((IVint64)b->y * c / d);
+  a->z = (IVint32)((IVint64)b->z * c / d);
+  return a;
+}
+
+/* multiply 64-bit, divide 32-bit, with logic to try to avoid
+   overflows when possible while still using 64-bit intermediates */
+IVVec3D_i32 *iv_muldiv4_v3i32_i64_i32(IVVec3D_i32 *a, IVVec3D_i32 *b,
+				      IVint64 c, IVint32 d)
+{
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
+  /* N.B.: After some thought about numerical stability, it turns out
+     I don't currently have ideas for making a better muldiv_i64_i32
+     than what I have for muldiv_i64.  However, the C compiler can
+     generate more efficient code on 32-bit CPUs if we specify we're
+     dividing a 64-bit by a 32-bit, so we could just copy-paste the
+     same code implementation for that paritcular purpose.  */
+  return iv_muldiv4_v3i32_i64(a, b, c, (IVint64)d);
+}
+
+/* shift left, divide */
+IVVec3D_i32 *iv_shldiv4_v3i32_i32(IVVec3D_i32 *a, IVVec3D_i32 *b,
+				  IVuint8 c, IVint32 d)
+{
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
+  a->x = (IVint32)((IVint64)b->x << c / d);
+  a->y = (IVint32)((IVint64)b->y << c / d);
+  a->z = (IVint32)((IVint64)b->z << c / d);
+  return a;
+}
+
+/* multiply, shift right, with symmetric positive/negative shift
+   behavior.  `q` must not be zero.  */
+IVVec3D_i32 *iv_mulshr4_v3i32_i32(IVVec3D_i32 *a, IVVec3D_i32 *b,
+				  IVint32 c, IVuint8 q)
+{
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
+  a->x = (IVint32)iv_fsyshr2_i64((IVint64)b->x * c, q);
+  a->y = (IVint32)iv_fsyshr2_i64((IVint64)b->y * c, q);
+  a->z = (IVint32)iv_fsyshr2_i64((IVint64)b->z * c, q);
+  return a;
+}
+
+/* shift left */
+IVVec3D_i32 *iv_shl3_v3i32_u32(IVVec3D_i32 *a, IVVec3D_i32 *b, IVuint8 c)
+{
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
+  a->x = b->x << c;
+  a->y = b->y << c;
+  a->z = b->z << c;
+  return a;
+}
+
+/* shift right, with symmetric positive/negative shift behavior.  `q`
+   must not be zero.  */
+IVVec3D_i32 *iv_shr3_v3i32_u32(IVVec3D_i32 *a, IVVec3D_i32 *b, IVuint8 c)
+{
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
+  IVint32 tx = b->x, ty = b->y, tz = b->z;
+  if (c == 0) {
+    a->x = tx;
+    a->y = ty;
+    a->z = tz;
+    return a;
+  }
+  a->x = iv_fsyshr2_i32(tx, c);
+  a->y = iv_fsyshr2_i32(ty, c);
+  a->z = iv_fsyshr2_i32(tz, c);
+  return a;
+}
+
+IVint64 iv_dot2_v3i32(IVVec3D_i32 *a, IVVec3D_i32 *b)
+{
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
+  return (IVint64)a->x * b->x + (IVint64)a->y * b->y + (IVint64)a->z * b->z;
+}
+
+/* Magnitude squared of a vector.  */
+IVint64 iv_magn2q_v3i32(IVVec3D_i32 *a)
+{
+  return iv_dot2_v3i32(a, a);
+}
+
+/*
+   cross_product(A, B) =
+               [ A_y * B_z - A_z * B_y,
+                 A_z * B_x - A_x * B_z,
+                 A_x * B_y - A_y * B_x ]
+*/
+IVVec3D_i32 *iv_crossproddiv4_v3i32(IVVec3D_i32 *a,
+				    IVVec3D_i32 *b, IVVec3D_i32 *c,
+				    IVint32 d)
+{
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
+  a->x = (IVint32)(((IVint64)b->y * c->z -
+		    (IVint64)b->z * c->y) / d);
+  a->y = (IVint32)(((IVint64)b->z * c->x -
+		    (IVint64)b->x * c->z) / d);
+  a->z = (IVint32)(((IVint64)b->x * c->y -
+		    (IVint64)b->y * c->x) / d);
+  return a;
+}
+
+/* Cross product, shift right, with symmetric positive/negative shift
+   behavior.  `q` must not be zero.  */
+IVVec3D_i32 *iv_crossprodshr4_v3i32(IVVec3D_i32 *a,
+				    IVVec3D_i32 *b, IVVec3D_i32 *c,
+				    IVuint8 q)
+{
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
+  a->x = (IVint32)iv_fsyshr2_i64((IVint64)b->y * c->z -
+				 (IVint64)b->z * c->y, q);
+  a->y = (IVint32)iv_fsyshr2_i64((IVint64)b->z * c->x -
+				 (IVint64)b->x * c->z, q);
+  a->z = (IVint32)iv_fsyshr2_i64((IVint64)b->x * c->y -
+				 (IVint64)b->y * c->x, q);
+  return a;
+}
+
+/* Assign the "no solution" value IVINT32_MIN to all components of the
+   given vector.  */
+IVVec3D_i32 *iv_nosol_v3i32(IVVec3D_i32 *a)
+{
+  /* Tags: VEC-COMPONENTS */
+  a->x = IVINT32_MIN;
+  a->y = IVINT32_MIN;
+  a->z = IVINT32_MIN;
+  return a;
+}
+
+/* Test if a vector is equal to the "no solution" vector.  */
+IVuint8 iv_is_nosol_v3i32(IVVec3D_i32 *a)
+{
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
+  return (a->x == IVINT32_MIN &&
+	  a->y == IVINT32_MIN &&
+	  a->z == IVINT32_MIN);
+}
+
+/********************************************************************/
+/* Operators that require a square root computation */
+
+IVint32 iv_magnitude_v3i32(IVVec3D_i32 *a)
+{
+  return iv_sqrt_i64(iv_magn2q_v3i32(a));
+}
+
+/* Approximate magnitude, faster but less accurate.  */
+IVint32 iv_magn_v3i32(IVVec3D_i32 *a)
+{
+  return iv_aprx_sqrt_i64(iv_magn2q_v3i32(a));
+}
+
+/* Vector normalization, convert to a Q16.16 fixed-point
+   representation.
+
+   If there is no solution, the resulting point's coordinates are all
+   set to IVINT32_MIN.  */
+IVNVec3D_i32q16 *iv_normalize2_nv3i32q16_v3i32(IVNVec3D_i32q16 *a,
+					       IVVec3D_i32 *b)
+{
+  IVint32 d = iv_magnitude_v3i32(b);
+  if (d == 0) {
+    /* No solution.  */
+    return iv_nosol_v3i32(a);
+  }
+  return iv_shldiv4_v3i32_i32(a, b, 0x10, d);
+}
+
+/* Distance between two points.  */
+IVint32 iv_dist2_p3i32(IVPoint3D_i32 *a, IVPoint3D_i32 *b)
+{
+  IVVec3D_i32 t;
+  iv_sub3_v3i32(&t, a, b);
+  return iv_magnitude_v3i32(&t);
+}
+
+/* Approximate distance between two points.  */
+IVint32 iv_adist2_p3i32(IVPoint3D_i32 *a, IVPoint3D_i32 *b)
+{
+  IVVec3D_i32 t;
+  iv_sub3_v3i32(&t, a, b);
+  return iv_magn_v3i32(&t);
+}
+
+/* Eliminate one vector component from another like "A - B".
+
+   vec_elim(A, B) =  A - B * dot_product(A, B) / magnitude(B)
+
+   If there is no solution, the resulting point's coordinates are all
+   set to IVINT32_MIN.
+*/
+IVVec3D_i32 *iv_elim3_v3i32(IVVec3D_i32 *a, IVVec3D_i32 *b, IVVec3D_i32 *c)
+{
+  IVint32 d;
+  IVVec3D_i32 t;
+  d = iv_magnitude_v3i32(c);
+  if (d == 0) {
+    /* No solution.  */
+    return iv_nosol_v3i32(a);
+  }
+  iv_sub3_v3i32
+    (a, b,
+     iv_muldiv4_v3i32_i64_i32
+       (&t, c, iv_dot2_v3i32(b, c), d)
+    );
+  return a;
+}
+
+/* Approximate eliminate one vector component from another like "A - B".
+
+   vec_elim(A, B) =  A - B * dot_product(A, B) / magnitude(B)
+
+   If there is no solution, the resulting point's coordinates are all
+   set to IVINT32_MIN.
+*/
+IVVec3D_i32 *iv_aelim3_v3i32(IVVec3D_i32 *a, IVVec3D_i32 *b, IVVec3D_i32 *c)
+{
+  IVint32 d;
+  IVVec3D_i32 t;
+  d = iv_magn_v3i32(c);
+  if (d == 0) {
+    /* No solution.  */
+    return iv_nosol_v3i32(a);
+  }
+  iv_sub3_v3i32
+    (a, b,
+     iv_muldiv4_v3i32_i64_i32
+       (&t, c, iv_dot2_v3i32(b, c), d)
+    );
+  return a;
+}
+
+/* Shortest path distance from point to plane (line in 3D).
+
+   Let L = location vector of point,
+       A = plane surface normal vector,
+       d = plane offset from origin times magnitude(A),
+       plane equation = Ax - d = 0
+
+   dot_product(L, A) / magnitude(A) - d / magnitude(A)
+   = (dot_product(L, A) - d) / magnitude(A)
+
+   If there is no solution, IVINT32_MIN is returned.
+*/
+IVint32 iv_dist2_p3i32_Eqs_v3i32(IVPoint3D_i32 *a, IVEqs_v3i32 *b)
+{
+  /* Tags: SCALAR-ARITHMETIC */
+  IVint32 d = iv_magnitude_v3i32(&b->v);
+  if (d == 0)
+    return IVINT32_MIN;
+  return (IVint32)((iv_dot2_v3i32(a, &b->v) - b->offset) / d);
+}
+
+/* Approximate shortest path distance from point to plane (line in 3D).
+
+   Let L = location vector of point,
+       A = plane surface normal vector,
+       d = plane offset from origin times magnitude(A),
+       plane equation = Ax - d = 0
+
+   dot_product(L, A) / magnitude(A) - d / magnitude(A)
+   = (dot_product(L, A) - d) / magnitude(A)
+
+   If there is no solution, IVINT32_MIN is returned.
+*/
+IVint32 iv_adist2_p3i32_Eqs_v3i32(IVPoint3D_i32 *a, IVEqs_v3i32 *b)
+{
+  /* Tags: SCALAR-ARITHMETIC */
+  IVint32 d = iv_magn_v3i32(&b->v);
+  if (d == 0)
+    return IVINT32_MIN;
+  return (IVint32)((iv_dot2_v3i32(a, &b->v) - b->offset) / d);
+}
+
+/* Shortest path distance from point to plane (line in 3D), normalized
+   plane surface normal vector, Q16.16 fixed-point.
+
+   Let L = location vector of point,
+       A = normalized plane surface normal vector,
+       d = plane offset from origin
+       plane equation = Ax - d = 0
+
+   dot_product(L, A) - d
+*/
+IVint32q16 iv_dist2_p3i32_Eqs_nv3i32q16(IVPoint3D_i32 *a, IVEqs_nv3i32q16 *b)
+{
+  /* Tags: SCALAR-ARITHMETIC */
+  return (IVint32q16)
+    (iv_fsyshr2_i64(iv_dot2_v3i32(a, &b->v), 0x10) - b->offset);
+}
+
+/* Alternatively, rather than using a scalar `d`, you can define a
+   point in the plane as a vector and subtract it from L before
+   computing.
+
+   Let L = location vector of point,
+       A = plane surface normal vector,
+       P = plane location vector
+
+   L_rel_P = L - P;
+   dot_product(L_rel_P, A) / magnitude(A);
+
+   If there is no solution, IVINT32_MIN is returned.
+*/
+IVint32 iv_dist2_p3i32_NRay_v3i32(IVPoint3D_i32 *a, IVNPlane_v3i32 *b)
+{
+  /* Tags: SCALAR-ARITHMETIC */
+  IVint32 d;
+  IVVec3D_i32 l_rel_p;
+  d = iv_magnitude_v3i32(&b->v);
+  if (d == 0)
+    return IVINT32_MIN;
+  iv_sub3_v3i32(&l_rel_p, a, &b->p0);
+  return (IVint32)(iv_dot2_v3i32(&l_rel_p, &b->v) / d);
+}
+
+/* Approximate variant of distance to point in plane, like the
+   subroutine `iv_dist2_p3i32_NRay_v3i32()`.  */
+IVint32 iv_adist2_p3i32_NRay_v3i32(IVPoint3D_i32 *a, IVNPlane_v3i32 *b)
+{
+  /* Tags: SCALAR-ARITHMETIC */
+  IVint32 d;
+  IVVec3D_i32 l_rel_p;
+  d = iv_magn_v3i32(&b->v);
+  if (d == 0)
+    return IVINT32_MIN;
+  iv_sub3_v3i32(&l_rel_p, a, &b->p0);
+  return (IVint32)(iv_dot2_v3i32(&l_rel_p, &b->v) / d);
+}
+
+/********************************************************************/
+
+/* Distance squared between two points.  */
+IVint64 iv_dist2q2_p3i32(IVPoint3D_i32 *a, IVPoint3D_i32 *b)
+{
+  IVVec3D_i32 t;
+  iv_sub3_v3i32(&t, a, b);
+  return iv_magn2q_v3i32(&t);
+}
+
+/* Project a point to a plane along the perpendicular:
+
+   Let L = location vector of point,
+       A = plane surface normal vector,
+       d = plane offset from origin
+       plane equation = Ax - d = 0
+
+   L - A * dist_point_to_plane(L, A, d) / magnitude(A)
+
+   Because we are dividing by magnitude twice, the division quantity
+   is squared so we therefore can avoid computing the square root and
+   simplify as follows:
+
+   L - A * (dot_product(L, A) - d) / dot_product(A, A)
+
+   If there is no solution, the resulting point's coordinates are all
+   set to IVINT32_MIN.
+*/
+IVPoint3D_i32 *iv_proj3_p3i32_Eqs_v3i32(IVPoint3D_i32 *a, IVPoint3D_i32 *b,
+					IVEqs_v3i32 *c)
+{
+  /* Tags: SCALAR-ARITHMETIC */
+  IVVec3D_i32 t;
+  IVint64 d;
+  d = iv_magn2q_v3i32(&c->v);
+  if (d == 0) {
+    /* No solution.  */
+    return iv_nosol_v3i32(a);
+  }
+  iv_muldiv4_v3i32_i64(&t, &c->v, iv_dot2_v3i32(b, &c->v) - c->offset, d);
+  return iv_sub3_v3i32(a, b, &t);
+}
+
+/* Project a point to a plane along the perpendicular:
+
+   Let L = location vector of point,
+       A = plane surface normal vector,
+       P = plane location vector
+
+   L - A * dist_point_to_plane(L, P, A) / magnitude(A)
+
+   Because we are dividing by magnitude twice, the division quantity
+   is squared so we therefore can avoid computing the square root and
+   simplify as follows:
+
+   L_rel_P = L - P;
+   L - A * dot_product(L_rel_P, A) / dot_product(A, A);
+
+   If there is no solution, the resulting point's coordinates are all
+   set to IVINT32_MIN.
+*/
+IVPoint3D_i32 *iv_proj3_p3i32_NPlane_v3i32(IVPoint3D_i32 *a, IVPoint3D_i32 *b,
+					   IVNPlane_v3i32 *c)
+{
+  IVVec3D_i32 l_rel_p;
+  IVVec3D_i32 t;
+  IVint64 d;
+  iv_sub3_v3i32(&l_rel_p, b, &c->p0);
+  d = iv_magn2q_v3i32(&c->v);
+  if (d == 0) {
+    /* No solution.  */
+    return iv_nosol_v3i32(a);
+  }
+  iv_muldiv4_v3i32_i64(&t, &c->v, iv_dot2_v3i32(&l_rel_p, &c->v), d);
+  return iv_sub3_v3i32(a, b, &t);
+}
+
+/* Bi-directional intersection of line with plane:
+
+   Let D = line direction vector,
+       L = line location vector,
+       A = plane surface normal vector,
+       d = plane offset from origin
+       plane equation = Ax - d = 0
+
+   Fully simplified equation:
+
+   L - D * (dot_product(L, A) - d) / dot_product(D, A)
+
+   Parameters:
+   a = resulting point
+   b = ray
+   c = plane
+
+   If there is no solution, the resulting point's coordinates are all
+   set to IVINT32_MIN.
+*/
+IVPoint3D_i32 *iv_isect3_InLine_Eqs_v3i32(IVPoint3D_i32 *a,
+					  IVInLine_v3i32 *b,
+					  IVEqs_v3i32 *c)
+{
+  /* Tags: SCALAR-ARITHMETIC */
+  IVVec3D_i32 t;
+  IVint64 d;
+  d = iv_dot2_v3i32(&b->v, &c->v);
+  if (d == 0) {
+    /* No solution.  */
+    return iv_nosol_v3i32(a);
+  }
+  iv_muldiv4_v3i32_i64(&t, &b->v,
+		       iv_dot2_v3i32(&b->p0, &c->v) - c->offset, d);
+  return iv_sub3_v3i32(a, &b->p0, &t);
+}
+
+/* Bi-directional intersection of line with plane:
+
+   Let D = line direction vector,
+       L = line location vector,
+       A = plane surface normal vector,
+       P = plane location vector
+
+   Fully simplified equations:
+
+   L_rel_P = L - P;
+   result = L - D * dot_product(L_rel_P, A) / dot_product(D, A);
+
+   Parameters:
+   a = resulting point
+   b = ray
+   c = plane
+
+   If there is no solution, the resulting point's coordinates are all
+   set to IVINT32_MIN.
+*/
+IVPoint3D_i32 *iv_isect3_InLine_NPlane_v3i32(IVPoint3D_i32 *a,
+					     IVInLine_v3i32 *b,
+					     IVNPlane_v3i32 *c)
+{
+  IVVec3D_i32 l_rel_p;
+  IVVec3D_i32 t;
+  IVint64 d;
+  d = iv_dot2_v3i32(&b->v, &c->v);
+  if (d == 0) {
+    /* No solution.  */
+    return iv_nosol_v3i32(a);
+  }
+  iv_sub3_v3i32(&l_rel_p, &b->p0, &c->p0);
+  iv_muldiv4_v3i32_i64(&t, &b->v, iv_dot2_v3i32(&l_rel_p, &c->v), d);
+  return iv_sub3_v3i32(a, &b->p0, &t);
+}
+
+/* Directional intersection of ray with plane:
+
+   Let D = ray direction vector,
+       L = ray location vector,
+       A = plane surface normal vector,
+       d = plane offset from origin
+       plane equation = Ax - d = 0
+
+   Fully simplified equation:
+
+   numer = -(dot_product(L, A) - d);
+   denom = dot_product(D, A);
+   if (numer / denom < 0) then no solution;
+   L + D * numer / denom;
+
+   Parameters:
+   a = resulting point
+   b = ray
+   c = plane
+
+   If there is no solution, the resulting point's coordinates are all
+   set to IVINT32_MIN.
+*/
+IVPoint3D_i32 *iv_isect3_Ray_Eqs_v3i32(IVPoint3D_i32 *a, IVRay_v3i32 *b,
+				       IVEqs_v3i32 *c)
+{
+  /* Tags: SCALAR-ARITHMETIC */
+  IVVec3D_i32 t;
+  IVint64 n, d;
+  d = iv_dot2_v3i32(&b->v, &c->v);
+  if (d == 0) {
+    /* No solution.  */
+    return iv_nosol_v3i32(a);
+  }
+  n = -iv_dot2_v3i32(&b->p0, &c->v) + c->offset;
+  /* Bit-wise equivalent of (n / d) < 0 */
+  if (((n & 0x8000000000000000LL) ^ (d & 0x8000000000000000LL)) != 0) {
+    /* No solution.  */
+    return iv_nosol_v3i32(a);
+  }
+  iv_muldiv4_v3i32_i64(&t, &b->v, n, d);
+  return iv_add3_v3i32(a, &b->p0, &t);
+}
+
+/* Directional intersection of ray with plane:
+
+   Let D = ray direction vector,
+       L = ray location vector,
+       A = plane surface normal vector,
+       P = plane location vector
+
+   Fully simplified equations:
+
+   L_rel_P = L - P;
+   numer = -dot_product(L_rel_P, A);
+   denom = dot_product(D, A);
+   if (numer / denom < 0) then no solution;
+   result = L + D * numer / denom;
+
+   Parameters:
+   a = resulting point
+   b = ray
+   c = plane
+
+   If there is no solution, the resulting point's coordinates are all
+   set to IVINT32_MIN.
+*/
+IVPoint3D_i32 *iv_isect3_Ray_NPlane_v3i32(IVPoint3D_i32 *a, IVRay_v3i32 *b,
+					  IVNPlane_v3i32 *c)
+{
+  /* Tags: SCALAR-ARITHMETIC */
+  IVVec3D_i32 l_rel_p;
+  IVVec3D_i32 t;
+  IVint64 n, d;
+  d = iv_dot2_v3i32(&b->v, &c->v);
+  if (d == 0) {
+    /* No solution.  */
+    return iv_nosol_v3i32(a);
+  }
+  iv_sub3_v3i32(&l_rel_p, &b->p0, &c->p0);
+  n = -iv_dot2_v3i32(&l_rel_p, &c->v);
+  /* Bit-wise equivalent of (n / d) < 0 */
+  if (((n & 0x8000000000000000LL) ^ (d & 0x8000000000000000LL)) != 0) {
+    /* No solution.  */
+    return iv_nosol_v3i32(a);
+  }
+  iv_muldiv4_v3i32_i64(&t, &b->v, n, d);
+  return iv_add3_v3i32(a, &b->p0, &t);
+}
+
+/********************************************************************/
+
+/* Convert (reformat) Eqs representational form to NPlane.
+
+   If there is no solution, the resulting point's coordinates are all
+   set to IVINT32_MIN.  */
+IVNPlane_v3i32 *iv_rf2_NPlane_Eqs_v3i32(IVNPlane_v3i32 *a, IVEqs_v3i32 *b)
+{
+  /* Convert the origin offset to a point.  */
+  IVint64 d = iv_magn2q_v3i32(&b->v);
+  if (d == 0) {
+    /* No solution.  */
+    iv_nosol_v3i32(&a->p0);
+    iv_nosol_v3i32(&a->v);
+    return a;
+  }
+  iv_muldiv4_v3i32_i64
+    (&a->p0, &b->v, b->offset, d);
+  /* Copy the perpendicular vector.  */
+  a->v = b->v;
+  return a;
+}
+
+/* Convert (reformat) NPlane representational form to Eqs.  */
+IVEqs_v3i32 *iv_rf2_Eqs_NPlane_v3i32(IVEqs_v3i32 *a, IVNPlane_v3i32 *b)
+{
+  IVVec3D_i32 t;
+  /* Copy the perpendicular vector.  */
+  a->v = b->v;
+  /* Essentially, computing the origin offset is computing the
+     distance from the origin point to the plane, and then multiplying
+     by the length of the surface normal vector.  Therefore, we
+     happily avoid computing a square root in a magnitude computation.
+
+     L = 0;
+     L_rel_P = L - P;
+     dot_product(L_rel_P, A) / magnitude(A)
+     = dot_product(-P, A) / magnitude(A);
+
+     Multiply by magnitude(A):
+     dot_product(-P, A)
+  */
+  iv_neg2_v3i32(&t, &b->p0);
+  a->offset = iv_dot2_v3i32(&t, &b->v);
+  return a;
+}
+
+/* Convert (reformat) InPlane representational form to NPlane.
+
+   `q` = shift right factor, bits after decimal for fixed-point
+   operands */
+IVNPlane_v3i32 *iv_rf3_NPlane_InPlane_v3i32(IVNPlane_v3i32 *a,
+					    IVInPlane_v3i32 *b, IVuint8 q)
+{
+  /* Copy the location.  */
+  a->p0 = b->p0;
+  /* Compute the perpendicular vector to use for the NPlane.  */
+  iv_crossprodshr4_v3i32(&a->v, &b->v0, &b->v1, q);
+  return a;
+}
+
+/* Convert (reformat) NPlane representational form to InPlane, by
+   projecting two hint vectors to determine the two InPlane vectors to
+   use.  It is up to you to determine hint vectors that will produce a
+   well-formed result.  */
+IVInPlane_v3i32 *iv_rfh4_InPlane_NPlane_v3i32
+  (IVInPlane_v3i32 *a, IVNPlane_v3i32 *b, IVVec3D_i32 *h0, IVVec3D_i32 *h1)
+{
+  IVEqs_v3i32 pp; /* projection plane */
+  pp.v = b->v; pp.offset = 0;
+
+  /* Copy the location.  */
+  a->p0 = b->p0;
+
+  /* Project the two hint vectors to form the InPlane vectors.  */
+  iv_proj3_p3i32_Eqs_v3i32(&a->v0, h0, &pp);
+  iv_proj3_p3i32_Eqs_v3i32(&a->v1, h1, &pp);
+  return a;
+}
+
+/* Convert (reformat) NPlane representational form to InPlane, by by
+   projecting and picking the best of the two given hint vectors and
+   using the cross product to compute the other InPlane vector.  If
+   the two hint vectors themselves are perpendicular to each other,
+   you are guaranteed to always get a good result.
+
+   `q` = shift right factor, bits after decimal for fixed-point
+   operands */
+IVInPlane_v3i32 *iv_rfbh5_InPlane_NPlane_v3i32
+  (IVInPlane_v3i32 *a, IVNPlane_v3i32 *b,
+   IVVec3D_i32 *h0, IVVec3D_i32 *h1, IVuint8 q)
+{
+  /* Tags: SCALAR-ARITHMETIC */
+  IVEqs_v3i32 pp; /* projection plane */
+  IVint64 v1_wqualfac;
+  IVuint8 q2;
+  IVint8 shift_factor;
+  IVint32 v1_qualfac;
+  pp.v = b->v; pp.offset = 0;
+
+  /* Copy the location.  */
+  a->p0 = b->p0;
+
+  /* Try using the first hint vector `h0`.  */
+  iv_proj3_p3i32_Eqs_v3i32(&a->v0, h0, &pp);
+  iv_crossprodshr4_v3i32(&a->v1, &b->v, &a->v0, q);
+
+  /* TODO FIXME: Put the cross product post quality factor code in a
+     separate subroutine.  */
+  /* Check the quality of the vector cross product using fast
+     approximate math.
+
+     Exact: sin(theta) = magnitude(v1) / (magnitude(v) * magnitude(v0))
+
+     So, we can use bit-shifting techniques instead to compute the
+     magnitudes and approximate quality factor, that is `sin(theta)`.
+     We can also save the final approximate square root computation
+     until last.  And finally, we can use "cheap normalization" to
+     avoid division when computing the fixed-point quality factor.  */
+  v1_wqualfac = iv_magn2q_v3i32(&a->v1);
+  /* Shift +32 bits for Q32.32, if necessary.  */
+  q2 = q << 1;
+  shift_factor = 0x20 - (IVint8)q2 -
+    ((IVint8)soft_bsr_i64(iv_magn2q_v3i32(&b->v)) - (IVint8)q2 +
+     (IVint8)soft_bsr_i64(iv_magn2q_v3i32(&a->v0)) - (IVint8)q2);
+  if (shift_factor < 0)
+    v1_wqualfac >>= -shift_factor;
+  else
+    v1_wqualfac <<= shift_factor;
+  v1_qualfac = iv_aprx_sqrt_i64(v1_wqualfac);
+
+  if (v1_qualfac >= 0x0100) { /* 1/256 in Q16.16 */
+    /* Sufficient quality, return this result.  */
+    return a;
+  }
+
+  /* Since the first hint was of insufficient quality, we must use the
+     second hint instead.  Don't bother computing the quality factor
+     on this one since it should be unnecessary if the user is using
+     this subroutine correctly.  */
+  iv_proj3_p3i32_Eqs_v3i32(&a->v0, h1, &pp);
+  iv_crossprodshr4_v3i32(&a->v1, &b->v, &a->v0, q);
+
+  return a;
 }

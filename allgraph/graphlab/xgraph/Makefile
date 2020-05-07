@@ -8,7 +8,7 @@ LIBS = -lGL -lGLU -lX11
 all: xgraph glgraph$(X)
 
 ivecmath.o: ivecmath.c ivecmath.h
-	cc -c $<
+	cc -Wmissing-prototypes -Wmissing-declarations -c $<
 
 xgraph.o: xgraph.c ivecmath.h
 	cc -c $<
