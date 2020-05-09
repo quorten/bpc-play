@@ -1,0 +1,15 @@
+Okay, I'm at the point where I should create a general math library,
+but better broken up into subject categories.
+
+What main categories of math are there?
+
+* 2D graphics drawing math primitives.  Line, circle, ellipse,
+  and polynomial curve iterators.
+
+* 2D GUI implementation math primitives.  Graphics hit testing.
+
+* Square matrix and point vector math.
+
+* Geometric equation solvers.
+
+* Audio frequency analysis and related math primitives.
