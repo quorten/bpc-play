@@ -20,6 +20,10 @@
    power of two approximation, always use the base 2 logarithm and bit
    shifting rather than dividing by the literal.
 
+   TODO FIXME: Evaluate.  Should abs() return unsigned?  Double-check
+   all arithmetic so that automatic conversions will still give
+   correct results, and use casting where warranted.
+
    TODO FIXME: Add all the various optimized routines for working with
    normalized vectors, rather than just providing the divide routines
    for non-normalized vector operations.
@@ -59,6 +63,22 @@
    * Convert a line segment and a triangle to a bounded equation.
 
    * Convert a line segment or triangle from indices to vertex form.
+
+   TODO: Often times we need to do an identical operation across all
+   vector components.  For this we should define a single "for each
+   component" macro and use that, rather than repeating the scalar
+   code.
+
+   TODO: Definitely we should use symbolic defines for various lengths
+   of arrays, i.e. 2D versus 3D length extents.  Just like we do in
+   our setup of the 3D scanner API code.
+
+   TODO FIXME: An idea to think about.  For floating point
+   compatibility: define a special subroutine for "fast divide by
+   two."  Worst comes to worst, we just use a division operator when
+   we can't do bit shifting.  Specifically, we only need to rig our
+   code for the unsigned subroutine, the signed subroutine is
+   unambiguous.
 
 */
 
@@ -1562,6 +1582,34 @@ IVMatNxM_i32 *iv_xpose2_mnxm_i32(IVMatNxM_i32 *a, IVMatNxM_i32 *b)
 }
 
 /********************************************************************/
+/* Statistical routines */
+
+/* Compute the mean point coordinate of a set of points.  Division
+   is performed at the very end as follows:
+
+   sum(i = 1 to n, x_i) / n
+
+   The intermediate sum computation uses the same precision as the
+   final result.  */
+IVVec2D_i32 *iv_mean2_v2i32_arn_v2i32(IVPoint2D_i32 *a,
+				      IVPoint2D_i32_array *data)
+{
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
+  IVPoint2D_i32 *data_d = data->d;
+  IVPoint2D_i32 w = { 0, 0 };
+  IVuint16 data_len = data->len;
+  IVuint16 i;
+
+  for (i = 0; i < data_len; i++) {
+    w.x += data_d[i].x;
+    w.y += data_d[i].y;
+  }
+  w.x /= data_len;
+  w.y /= data_len;
+
+  *a = w;
+  return a;
+}
 
 /* Set up system of equations to compute a linear regression of the "y
    = m*x + b" representational form.  When the system is solved, the
@@ -1574,7 +1622,7 @@ IVMatNxM_i32 *iv_xpose2_mnxm_i32(IVMatNxM_i32 *a, IVMatNxM_i32 *b)
 
    If there is a memory allocation error, the system of equation's
    entries are all set to IVINT32_MIN (and IVINT64_MIN).  */
-IVSys2_Eqs_v2i32q16 *iv_pack_linreg_s2_Eqs_v2i32q16_v2i32
+IVSys2_Eqs_v2i32q16 *iv_pack_linreg3_s2_Eqs_v2i32q16_arn_v2i32
   (IVSys2_Eqs_v2i32q16 *sys, IVPoint2D_i32_array *data, IVuint8 q)
 {
   IVPoint2D_i32 *data_d = data->d;
@@ -1882,17 +1930,17 @@ IVVec3D_i32 *iv_crossproddiv4_v3i32(IVVec3D_i32 *a,
 }
 
 /* Cross product, shift right, with symmetric positive/negative shift
-   behavior.  `q` must not be zero.  */
+   behavior.  */
 IVVec3D_i32 *iv_crossprodshr4_v3i32(IVVec3D_i32 *a,
 				    IVVec3D_i32 *b, IVVec3D_i32 *c,
 				    IVuint8 q)
 {
   /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
-  a->x = (IVint32)iv_fsyshr2_i64((IVint64)b->y * c->z -
+  a->x = (IVint32)iv_symshr2_i64((IVint64)b->y * c->z -
 				 (IVint64)b->z * c->y, q);
-  a->y = (IVint32)iv_fsyshr2_i64((IVint64)b->z * c->x -
+  a->y = (IVint32)iv_symshr2_i64((IVint64)b->z * c->x -
 				 (IVint64)b->x * c->z, q);
-  a->z = (IVint32)iv_fsyshr2_i64((IVint64)b->x * c->y -
+  a->z = (IVint32)iv_symshr2_i64((IVint64)b->x * c->y -
 				 (IVint64)b->y * c->x, q);
   return a;
 }
@@ -2945,6 +2993,36 @@ IVint32q16 iv_aprequalfac_i32q16_s3_Eqs_v3i32(IVSys3_Eqs_v3i32 *a)
 }
 
 /********************************************************************/
+/* Statistical routines */
+
+/* Compute the mean point coordinate of a set of points.  Division
+   is performed at the very end as follows:
+
+   sum(i = 1 to n, x_i) / n
+
+   The intermediate sum computation uses the same precision as the
+   final result.  */
+IVVec3D_i32 *iv_mean2_v3i32_arn_v3i32(IVPoint3D_i32 *a,
+				      IVPoint3D_i32_array *data)
+{
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
+  IVPoint3D_i32 *data_d = data->d;
+  IVPoint3D_i32 w = { 0, 0 };
+  IVuint16 data_len = data->len;
+  IVuint16 i;
+
+  for (i = 0; i < data_len; i++) {
+    w.x += data_d[i].x;
+    w.y += data_d[i].y;
+    w.z += data_d[i].z;
+  }
+  w.x /= data_len;
+  w.y /= data_len;
+  w.z /= data_len;
+
+  *a = w;
+  return a;
+}
 
 /* Set up system of equations to compute a linear regression of the "y
    = m*x + b" representational form.  When the system is solved, the
@@ -2957,7 +3035,7 @@ IVint32q16 iv_aprequalfac_i32q16_s3_Eqs_v3i32(IVSys3_Eqs_v3i32 *a)
 
    If there is a memory allocation error, the system of equation's
    entries are all set to IVINT32_MIN (and IVINT64_MIN).  */
-IVSys3_Eqs_v3i32q16 *iv_pack_linreg_s3_Eqs_v3i32q16_v3i32
+IVSys3_Eqs_v3i32q16 *iv_pack_linreg3_s3_Eqs_v3i32q16_arn_v3i32
   (IVSys3_Eqs_v3i32q16 *sys, IVPoint2D_i32_array *data, IVuint8 q)
 {
   IVPoint2D_i32 *data_d = data->d;
@@ -3089,3 +3167,80 @@ IVSys3_Eqs_v3i32q16 *iv_pack_linreg_s3_Eqs_v3i32q16_v3i32
   if (col_b.d != NULL) free (col_b.d);
   return sys;
 }
+
+/********************************************************************/
+/* Surface area and volume routines */
+
+/* Compute the area of a 2D triangle using the determinant of two
+   non-normalized edge vectors.
+
+   abs(det([A, B])) / 2 = abs(A_x * B_y - B_x * A_y) / 2
+
+   `q` = shift right factor, bits after decimal for fixed-point
+   operands
+*/
+IVuint64 iv_triarea2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint8 q)
+{
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
+  /* Add one to the symmetric shift right factor to also divide by two
+     at the same time.  */
+  return iv_abs_i64(iv_fsyshr2_i64((IVint64)a->x * b->y -
+				   (IVint64)b->x * a->y, q + 1));
+}
+
+/* Compute the area of a 3D triangle using the cross product of two
+   non-normalized edge vectors.
+
+   magnitude(A) * magnitude(B) * sin(theta) / 2
+   = magnitude(cross_product(A, B)) / 2
+
+   `q` = shift right factor, bits after decimal for fixed-point
+   operands
+*/
+IVuint64 iv_triarea2_v3i32(IVVec3D_i32 *a, IVVec3D_i32 *b, IVuint8 q)
+{
+  IVVec3D_i32 t;
+  /* TODO FIXME: Numeric overflow control is needed here.  */
+  iv_crossprodshr4_v3i32(&t, a, b, q);
+  return iv_fsyshr2_i64(iv_magnitude_v3i32(&t), 1);
+}
+
+/* Compute the volume of a pyramid.  `a` = area of base, `b` =
+   height.  */
+IVuint64 iv_pyrvol2_u64_u32(IVuint64 a, IVuint32 b)
+{
+  /* TODO FIXME: Numeric overflow control is needed here.  */
+  return a * b / 3;
+}
+
+/* NOTE: To compute the volume of an arbitrary convex polyhedron:
+
+   1. Find some sort of center point.  For ease of computation, just
+      take the mean value of all the vertices, all the face centers,
+      or similar.
+
+   2. Compute the area of each face.  Do this tessellating each convex
+      polygon face into triangles via the "triangle fan" technique for
+      simplicity.  Otherwise, you could use the central vertex
+      technique again as another way to tessellate.
+
+   3. Compute the perpendicular height from each face to the
+      polyhedron center point.
+
+   4. Compute the pyramid volume for each face and add up the result.
+
+   Now if you want to compute the volume of an arbitrary triangle
+   mesh, one way is to tessellate it into a collection of convex
+   polyhedra, then add up the volumes of each.  But how do you compute
+   that tessellation?
+
+   I'll throw out one idea.  Deflate the faces until the center is
+   filled.  This helps in the simplification function because often
+   times, deflating will result in some faces getting trimmed off
+   before the center is reached.  Then for those faces that extend
+   beyond the center before trimming into a pyramid, it's merely a
+   matter of figuring out where you need to chop off early the top to
+   make it into a "frustum"-like solid.  In concave regions, you'll
+   have an opening frustum rather than a closing pyramid.
+
+*/

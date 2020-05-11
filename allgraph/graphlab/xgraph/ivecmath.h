@@ -348,7 +348,9 @@ IVMatNxM_i32 *iv_mulshr4_mnxm_i32(IVMatNxM_i32 *a,
 				  IVuint8 q);
 IVMatNxM_i32 *iv_xpose2_mnxm_i32(IVMatNxM_i32 *a, IVMatNxM_i32 *b);
 
-IVSys2_Eqs_v2i32q16 *iv_pack_linreg_s2_Eqs_v2i32q16_v2i32
+IVVec2D_i32 *iv_mean2_v2i32_arn_v2i32(IVPoint2D_i32 *a,
+				      IVPoint2D_i32_array *data);
+IVSys2_Eqs_v2i32q16 *iv_pack_linreg3_s2_Eqs_v2i32q16_arn_v2i32
   (IVSys2_Eqs_v2i32q16 *sys, IVPoint2D_i32_array *data, IVuint8 q);
 
 /********************************************************************/
@@ -452,7 +454,13 @@ IVPoint3D_i32 *iv_solve2_s3_InPlane_v3i32(IVPoint3D_i32 *a,
 IVint32q16 iv_prequalfac_i32q16_s3_Eqs_v3i32(IVSys3_Eqs_v3i32 *a);
 IVint32q16 iv_aprequalfac_i32q16_s3_Eqs_v3i32(IVSys3_Eqs_v3i32 *a);
 
-IVSys3_Eqs_v3i32q16 *iv_pack_linreg_s3_Eqs_v3i32q16_v3i32
+IVVec3D_i32 *iv_mean2_v3i32_arn_v3i32(IVPoint3D_i32 *a,
+				      IVPoint3D_i32_array *data);
+IVSys3_Eqs_v3i32q16 *iv_pack_linreg3_s3_Eqs_v3i32q16_arn_v3i32
   (IVSys3_Eqs_v3i32q16 *sys, IVPoint2D_i32_array *data, IVuint8 q);
+
+IVuint64 iv_triarea2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint8 q);
+IVuint64 iv_triarea2_v3i32(IVVec3D_i32 *a, IVVec3D_i32 *b, IVuint8 q);
+IVuint64 iv_pyrvol2_u64_u32(IVuint64 a, IVuint32 b);
 
 #endif /* not IVECMATH_H */

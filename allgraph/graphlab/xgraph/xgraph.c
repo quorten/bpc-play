@@ -104,7 +104,7 @@ draw_geom (Display *display, Window window, GC mygc)
     IVint32 qualfac;
     IVPoint2D_i32 coeffs;
     IVPoint2D_i32 r_p1, r_p2;
-    iv_pack_linreg_s2_Eqs_v2i32q16_v2i32 (&sys, &reg_pts, 0);
+    iv_pack_linreg3_s2_Eqs_v2i32q16_arn_v2i32 (&sys, &reg_pts, 0);
     qualfac = iv_prequalfac_i32q16_s2_Eqs_v2i32 (&sys);
     iv_solve2_s2_Eqs_v2i32 (&coeffs, &sys);
     r_p1.x = 0;
