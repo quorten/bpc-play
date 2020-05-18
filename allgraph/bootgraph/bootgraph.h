@@ -257,14 +257,10 @@ void bg_pit_flush (BgPixIter *pit, unsigned char blk);
 void bg_pit_flush_all (BgPixIter *pit);
 void bg_pit_cload (BgPixIter *pit, unsigned char blk);
 void bg_pit_cload_all (BgPixIter *pit);
-void bg_pit_twoblk_inc (BgPixIter *pit, unsigned char cblk_inc,
-			unsigned char bit_offset);
-void bg_pit_twoblk_dec (BgPixIter *pit, unsigned char cblk_dec,
-			unsigned char bit_offset);
-void bg_pit_cblk_inc (BgPixIter *pit, unsigned char cblk_inc,
-		      unsigned char bit_offset);
-void bg_pit_cblk_dec (BgPixIter *pit, unsigned char cblk_dec,
-		      unsigned char bit_offset);
+void bg_pit_twoblk_inc (BgPixIter *pit, unsigned char cblk_inc);
+void bg_pit_twoblk_dec (BgPixIter *pit, unsigned char cblk_dec);
+void bg_pit_cblk_inc (BgPixIter *pit, unsigned char cblk_inc);
+void bg_pit_cblk_dec (BgPixIter *pit, unsigned char cblk_dec);
 void bg_pit_moveto (BgPixIter *pit, IPoint2D pt);
 void bg_pit_next_scanln (BgPixIter *pit);
 void bg_pit_next_scanln_cl (BgPixIter *pit);

@@ -273,8 +273,7 @@ bg_pit_cload_all (BgPixIter *pit)
 
 /* For two-block mode only: Flush the low memory block and shift.  */
 void
-bg_pit_twoblk_inc (BgPixIter *pit, unsigned char cblk_inc,
-		   unsigned char bit_offset)
+bg_pit_twoblk_inc (BgPixIter *pit, unsigned char cblk_inc)
 {
   unsigned char cache_bsz;
   if (!pit->twoblk)
@@ -282,7 +281,6 @@ bg_pit_twoblk_inc (BgPixIter *pit, unsigned char cblk_inc,
   cache_bsz = pit->cache_bsz;
   bg_pit_flush (pit, 1);
   pit->cblk_addr += cblk_inc;
-  pit->bit_addr = bit_offset;
   /* TODO FIXME: Ideally we would just shift here, but with many
      platforms and compilers we can't be sure if the correct code will
      be generated without a test.  */
@@ -294,8 +292,7 @@ bg_pit_twoblk_inc (BgPixIter *pit, unsigned char cblk_inc,
 
 /* For two-block mode only: Flush the high memory block and shift.  */
 void
-bg_pit_twoblk_dec (BgPixIter *pit, unsigned char cblk_dec,
-		   unsigned char bit_offset)
+bg_pit_twoblk_dec (BgPixIter *pit, unsigned char cblk_dec)
 {
   unsigned char cache_bsz;
   if (!pit->twoblk)
@@ -303,7 +300,6 @@ bg_pit_twoblk_dec (BgPixIter *pit, unsigned char cblk_dec,
   cache_bsz = pit->cache_bsz;
   bg_pit_flush (pit, 2);
   pit->cblk_addr -= cblk_dec;
-  pit->bit_addr = bit_offset;
   /* TODO FIXME: Ideally we would just shift here, but with many
      platforms and compilers we can't be sure if the correct code will
      be generated without a test.  */
@@ -315,31 +311,27 @@ bg_pit_twoblk_dec (BgPixIter *pit, unsigned char cblk_dec,
 
 /* Move forward by one cache block.  */
 void
-bg_pit_cblk_inc (BgPixIter *pit, unsigned char cblk_inc,
-		 unsigned char bit_offset)
+bg_pit_cblk_inc (BgPixIter *pit, unsigned char cblk_inc)
 {
   if (pit->twoblk)
-    /* return */ bg_pit_twoblk_inc (pit, cblk_inc, bit_offset);
+    /* return */ bg_pit_twoblk_inc (pit, cblk_inc);
   else {
     bg_pit_flush (pit, 1);
     pit->valid0 = 0;
     pit->cblk_addr += cblk_inc;
-    pit->bit_addr = bit_offset;
   }
 }
 
 /* Move backward by one cache block.  */
 void
-bg_pit_cblk_dec (BgPixIter *pit, unsigned char cblk_dec,
-		 unsigned char bit_offset)
+bg_pit_cblk_dec (BgPixIter *pit, unsigned char cblk_dec)
 {
   if (pit->twoblk)
-    /* return */ bg_pit_twoblk_dec (pit, cblk_dec, bit_offset);
+    /* return */ bg_pit_twoblk_dec (pit, cblk_dec);
   else {
     bg_pit_flush (pit, 1);
     pit->valid0 = 0;
     pit->cblk_addr -= cblk_dec;
-    pit->bit_addr = bit_offset;
   }
 }
 
@@ -474,27 +466,22 @@ bg_pit_prev_scanln_cl (BgPixIter *pit)
 void
 bg_pit_inc_x (BgPixIter *pit)
 {
-  unsigned char bpp;
-  unsigned char cache_bsz;
-
   pit->pos.x++;
-
-  bpp = pit->rti.hdr.bpp;
-  cache_bsz = pit->cache_bsz;
 
   if (pit->uncached) {
     pit->cblk_addr += pit->bpp_cblks;
   } else {
     /* Compute the incremented address and check if we need to
        flush.  */
+    unsigned char bpp = pit->rti.hdr.bpp;
+    unsigned char cache_bsz = pit->cache_bsz;
     unsigned char cache_bsz_8 = cache_bsz << 3;
     signed char bit_offset = pit->bit_addr + bpp;
     if (bit_offset >= cache_bsz_8) {
       bit_offset -= cache_bsz_8;
-      bg_pit_cblk_inc (pit, cache_bsz, bit_offset);
+      bg_pit_cblk_inc (pit, cache_bsz);
     }
-    else
-      pit->bit_addr = bit_offset;
+    pit->bit_addr = bit_offset;
   }
 }
 
@@ -511,27 +498,22 @@ bg_pit_inc_x_cl (BgPixIter *pit)
 void
 bg_pit_dec_x (BgPixIter *pit)
 {
-  unsigned char bpp;
-  unsigned char cache_bsz;
-
   pit->pos.x--;
-
-  bpp = pit->rti.hdr.bpp;
-  cache_bsz = pit->cache_bsz;
 
   if (pit->uncached) {
     pit->cblk_addr -= pit->bpp_cblks;
   } else {
     /* Compute the decremented address and check if we need to
        flush.  */
+    unsigned char bpp = pit->rti.hdr.bpp;
+    unsigned char cache_bsz = pit->cache_bsz;
     unsigned char cache_bsz_8 = cache_bsz << 3;
     signed char bit_offset = pit->bit_addr - bpp;
     if (bit_offset < 0) {
       bit_offset += cache_bsz_8;
-      bg_pit_cblk_dec (pit, cache_bsz, bit_offset);
+      bg_pit_cblk_dec (pit, cache_bsz);
     }
-    else
-      pit->bit_addr = bit_offset;
+    pit->bit_addr = bit_offset;
   }
 }
 
