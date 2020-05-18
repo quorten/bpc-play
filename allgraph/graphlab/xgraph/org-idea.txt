@@ -3,6 +3,25 @@ but better broken up into subject categories.
 
 What main categories of math are there?
 
+* "Necessary evil" integer data format conversions: byte swap, bit
+  swap.
+
+* Integer scalar math primitives, basic 2D math: add, subtract,
+  multiply, divide, modulus, divide-modulus, multiply-divide, shift
+  left, asymmetric truncate shift right, absolute value, min, max.
+
+  Swap?  Maybe, show both swap in place and swap with temp variable.
+
+* Integer scalar math primitives, advanced 2D/3D math: symmetric
+  truncate shift right, multiply-shift right, shift left-divide, find
+  first set, find last set, square root, approximate square root (2
+  levels), inverse square root, inverse approximate square root (2
+  levels).
+
+* Logarithms: Compute number e, compute tables of logarithms for
+  fixed-point, maybe even adding support for generating floating point
+  tables of logarithms.
+
 * 2D graphics drawing math primitives.  Line, circle, ellipse,
   and polynomial curve iterators.
 
@@ -12,4 +31,5 @@ What main categories of math are there?
 
 * Geometric equation solvers.
 
-* Audio frequency analysis and related math primitives.
+* Audio frequency analysis and related math primitives.  JPEG
+  compression/decompression, maybe even MPEG codecs.

@@ -243,6 +243,10 @@ IVuint8 iv_max2_u8(IVuint8 a, IVuint8 b);
 IVuint8 iv_max3_u8(IVuint8 a, IVuint8 b, IVuint8 c);
 IVuint8 iv_msbidx_i32(IVint32 a);
 IVuint8 iv_msbidx_i64(IVint64 a);
+IVint32 iv_shl_i32(IVint32 a, IVuint8 q);
+IVint64 iv_shl_i64(IVint64 a, IVuint8 q);
+IVint32 iv_shr_i32(IVint32 a, IVuint8 q);
+IVint64 iv_shr_i64(IVint64 a, IVuint8 q);
 IVint32 iv_fsyshr2_i32(IVint32 a, IVuint8 q);
 IVint64 iv_fsyshr2_i64(IVint64 a, IVuint8 q);
 IVint32 iv_symshr2_i32(IVint32 a, IVuint8 q);
@@ -294,6 +298,11 @@ IVint32 iv_along2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b);
 IVVec2D_i32 *iv_proj3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c);
 IVVec2D_i32 *iv_elim3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c);
 IVVec2D_i32 *iv_aelim3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c);
+IVPoint2D_i32 *iv_proj3_p2i32_InLine_v2i32(IVPoint2D_i32 *a,
+					   IVPoint2D_i32 *b,
+					   IVInLine_v2i32 *c);
+IVint64 iv_dist2q2_p2i32_InLine_v2i32(IVPoint2D_i32 *a, IVInLine_v2i32 *b);
+IVint32 iv_dist2_p2i32_InLine_v2i32(IVPoint2D_i32 *a, IVInLine_v2i32 *b);
 IVint32 iv_dist2_p2i32_Eqs_v2i32(IVPoint2D_i32 *a, IVEqs_v2i32 *b);
 IVint32 iv_adist2_p2i32_Eqs_v2i32(IVPoint2D_i32 *a, IVEqs_v2i32 *b);
 IVint32q16 iv_dist2_p2i32_Eqs_nv2i32q16(IVPoint2D_i32 *a, IVEqs_nv2i32q16 *b);

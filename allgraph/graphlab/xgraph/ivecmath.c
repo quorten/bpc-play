@@ -80,6 +80,13 @@
    code for the unsigned subroutine, the signed subroutine is
    unambiguous.
 
+   TODO: Provide approximate methods that use one iteration of
+   Newton's Method (or similar in a more "bit-wise" manner) after
+   computing approximations using wholly bit-wise techniques.
+   Approximate inverse square root works quite well for vector
+   normalization.  You can also generalize to n iterations of Newton's
+   Method.
+
 */
 
 /* Only used for `NULL` and `malloc()` for the square root lookup
@@ -116,18 +123,54 @@ IVuint8 iv_max3_u8(IVuint8 a, IVuint8 b, IVuint8 c)
    future.  */
 IVuint8 iv_msbidx_i32(IVint32 a)
 {
-  if (a < 0)
-    return soft_fls_i64(-a);
-  return soft_fls_i64(a);
+  return soft_fls_i64(iv_abs_i64(a));
 }
 
 /* Get the index of the most significant bit.  To process negative
    numbers, they are inverted and then leading zeros are skipped.  */
 IVuint8 iv_msbidx_i64(IVint64 a)
 {
-  if (a < 0)
-    return soft_fls_i64(-a);
-  return soft_fls_i64(a);
+  return soft_fls_i64(iv_abs_i64(a));
+}
+
+/* Shift left abstraction.  Defined since we may not have an
+   equivalent C operator for floating point shift left/right, nor do
+   most instruction set architectures have an efficient machine
+   instruction for that matter.  It's kind of silly because it really
+   is almost trivial with floating point.  */
+IVint32 iv_shl_i32(IVint32 a, IVuint8 q)
+{
+  return a << q;
+}
+
+/* Shift left abstraction.  Defined since we may not have an
+   equivalent C operator for floating point shift left/right, nor do
+   most instruction set architectures have an efficient machine
+   instruction for that matter.  It's kind of silly because it really
+   is almost trivial with floating point.  */
+IVint64 iv_shl_i64(IVint64 a, IVuint8 q)
+{
+  return a << q;
+}
+
+/* Shift right abstraction.  Defined since we may not have an
+   equivalent C operator for floating point shift left/right, nor do
+   most instruction set architectures have an efficient machine
+   instruction for that matter.  It's kind of silly because it really
+   is almost trivial with floating point.  */
+IVint32 iv_shr_i32(IVint32 a, IVuint8 q)
+{
+  return a >> q;
+}
+
+/* Shift right abstraction.  Defined since we may not have an
+   equivalent C operator for floating point shift left/right, nor do
+   most instruction set architectures have an efficient machine
+   instruction for that matter.  It's kind of silly because it really
+   is almost trivial with floating point.  */
+IVint64 iv_shr_i64(IVint64 a, IVuint8 q)
+{
+  return a >> q;
 }
 
 /* Shift right with symmetric positive/negative shift behavior.  `q`
@@ -289,8 +332,8 @@ IVVec2D_i32 *iv_shldiv4_v2i32_i32(IVVec2D_i32 *a, IVVec2D_i32 *b,
 				  IVuint8 c, IVint32 d)
 {
   /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
-  a->x = (IVint32)((IVint64)b->x << c / d);
-  a->y = (IVint32)((IVint64)b->y << c / d);
+  a->x = (IVint32)(iv_shl_i64((IVint64)b->x, c) / d);
+  a->y = (IVint32)(iv_shl_i64((IVint64)b->y, c) / d);
   return a;
 }
 
@@ -309,8 +352,8 @@ IVVec2D_i32 *iv_mulshr4_v2i32_i32(IVVec2D_i32 *a, IVVec2D_i32 *b,
 IVVec2D_i32 *iv_shl3_v2i32_u32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint8 c)
 {
   /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
-  a->x = b->x << c;
-  a->y = b->y << c;
+  a->x = iv_shl_i32(b->x, c);
+  a->y = iv_shl_i32(b->y, c);
   return a;
 }
 
@@ -841,11 +884,8 @@ IVVec2D_i32 *iv_elim3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c)
     /* No solution.  */
     return iv_nosol_v2i32(a);
   }
-  iv_sub3_v2i32
-    (a, b,
-     iv_muldiv4_v2i32_i64_i32
-       (&t, c, iv_dot2_v2i32(b, c), d)
-    );
+  iv_muldiv4_v2i32_i64_i32(&t, c, iv_dot2_v2i32(b, c), d);
+  iv_sub3_v2i32(a, b, &t);
   return a;
 }
 
@@ -865,12 +905,81 @@ IVVec2D_i32 *iv_aelim3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c)
     /* No solution.  */
     return iv_nosol_v2i32(a);
   }
-  iv_sub3_v2i32
-    (a, b,
-     iv_muldiv4_v2i32_i64_i32
-       (&t, c, iv_dot2_v2i32(b, c), d)
-    );
+  iv_muldiv4_v2i32_i64_i32(&t, c, iv_dot2_v2i32(b, c), d);
+  iv_sub3_v2i32(a, b, &t);
   return a;
+}
+
+/* Project a point onto a line.
+
+   Let L = location vector of point,
+       D = line direction vector,
+       P = line location vector
+
+   L_rel_P = L - P;
+   proj_L = proj_a_on_b(L_rel_P, D);
+   P + proj_L
+
+   If there is no solution, the resulting point's coordinates are all
+   set to IVINT32_MIN.
+*/
+IVPoint2D_i32 *iv_proj3_p2i32_InLine_v2i32(IVPoint2D_i32 *a,
+					   IVPoint2D_i32 *b,
+					   IVInLine_v2i32 *c)
+{
+  IVVec2D_i32 t, u;
+  iv_sub3_v2i32(&t, b, &c->p0);
+  iv_proj3_v2i32(&u, &t, &c->v);
+  if (iv_is_nosol_v2i32(&u)) {
+    /* No solution.  */
+    return iv_nosol_v2i32(a);
+  }
+  iv_add3_v2i32(a, &c->p0, &u);
+  return a;
+}
+
+/* Shortest path distance squared from point to line.
+
+   Let L = location vector of point,
+       D = line direction vector,
+       P = line location vector
+
+   L_rel_P = L - P;
+   proj_L = proj_a_on_b(L_rel_P, D);
+   magnitude^2(L_rel_P - proj_L);
+
+   If there is no solution, IVINT64_MIN is returned.
+*/
+IVint64 iv_dist2q2_p2i32_InLine_v2i32(IVPoint2D_i32 *a, IVInLine_v2i32 *b)
+{
+  IVVec2D_i32 t, u;
+  iv_sub3_v2i32(&t, a, &b->p0);
+  iv_proj3_v2i32(&u, &t, &b->v);
+  if (iv_is_nosol_v2i32(&u))
+    return IVINT32_MIN;
+  return iv_dist2q2_p2i32(&t, &u);
+}
+
+/* Shortest path distance from point to line.
+
+   Let L = location vector of point,
+       D = line direction vector,
+       P = line location vector
+
+   L_rel_P = L - P;
+   proj_L = proj_a_on_b(L_rel_P, D);
+   magnitude(L_rel_P - proj_L);
+
+   If there is no solution, IVINT32_MIN is returned.
+*/
+IVint32 iv_dist2_p2i32_InLine_v2i32(IVPoint2D_i32 *a, IVInLine_v2i32 *b)
+{
+  IVVec2D_i32 t, u;
+  iv_sub3_v2i32(&t, a, &b->p0);
+  iv_proj3_v2i32(&u, &t, &b->v);
+  if (iv_is_nosol_v2i32(&u))
+    return IVINT32_MIN;
+  return iv_dist2_p2i32(&t, &u);
 }
 
 /* Shortest path distance from point to plane (line in 2D).
@@ -1850,9 +1959,9 @@ IVVec3D_i32 *iv_shldiv4_v3i32_i32(IVVec3D_i32 *a, IVVec3D_i32 *b,
 				  IVuint8 c, IVint32 d)
 {
   /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
-  a->x = (IVint32)((IVint64)b->x << c / d);
-  a->y = (IVint32)((IVint64)b->y << c / d);
-  a->z = (IVint32)((IVint64)b->z << c / d);
+  a->x = (IVint32)(iv_shl_i64((IVint64)b->x, c) / d);
+  a->y = (IVint32)(iv_shl_i64((IVint64)b->y, c) / d);
+  a->z = (IVint32)(iv_shl_i64((IVint64)b->z, c) / d);
   return a;
 }
 
@@ -1872,9 +1981,9 @@ IVVec3D_i32 *iv_mulshr4_v3i32_i32(IVVec3D_i32 *a, IVVec3D_i32 *b,
 IVVec3D_i32 *iv_shl3_v3i32_u32(IVVec3D_i32 *a, IVVec3D_i32 *b, IVuint8 c)
 {
   /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
-  a->x = b->x << c;
-  a->y = b->y << c;
-  a->z = b->z << c;
+  a->x = iv_shl_i32(b->x, c);
+  a->y = iv_shl_i32(b->y, c);
+  a->z = iv_shl_i32(b->z, c);
   return a;
 }
 
@@ -2163,11 +2272,8 @@ IVVec3D_i32 *iv_elim3_v3i32(IVVec3D_i32 *a, IVVec3D_i32 *b, IVVec3D_i32 *c)
     /* No solution.  */
     return iv_nosol_v3i32(a);
   }
-  iv_sub3_v3i32
-    (a, b,
-     iv_muldiv4_v3i32_i64_i32
-       (&t, c, iv_dot2_v3i32(b, c), d)
-    );
+  iv_muldiv4_v3i32_i64_i32(&t, c, iv_dot2_v3i32(b, c), d);
+  iv_sub3_v3i32(a, b, &t);
   return a;
 }
 
@@ -2187,11 +2293,8 @@ IVVec3D_i32 *iv_aelim3_v3i32(IVVec3D_i32 *a, IVVec3D_i32 *b, IVVec3D_i32 *c)
     /* No solution.  */
     return iv_nosol_v3i32(a);
   }
-  iv_sub3_v3i32
-    (a, b,
-     iv_muldiv4_v3i32_i64_i32
-       (&t, c, iv_dot2_v3i32(b, c), d)
-    );
+  iv_muldiv4_v3i32_i64_i32(&t, c, iv_dot2_v3i32(b, c), d);
+  iv_sub3_v3i32(a, b, &t);
   return a;
 }
 

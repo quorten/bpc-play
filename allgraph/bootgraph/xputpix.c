@@ -583,7 +583,6 @@ plot_tri_fast2 (RTImageBuf *rti, unsigned long color, unsigned char filled,
 		Point2D p1, Point2D p2, Point2D p3)
 {
   /* First sort the points in vertical ascending order.  */
-  Point2D s1, s2, s3;
   if (p2.y < p1.y) {
     SWAP_PTS(p1, p2);
   }
