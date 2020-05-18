@@ -15,47 +15,7 @@
 
 #include <X11/bitmaps/stipple>
 
-struct Point2D_tag
-{
-  int x;
-  int y;
-};
-typedef struct Point2D_tag Point2D;
-
-/* Note that this is actually a compatible subset of a full Truevision
-   TGA TARGA header.  */
-struct ImageBufHdr_tag
-{
-  unsigned short width;
-  unsigned short height;
-  unsigned char bpp;
-  /* Image flags, most important are orientation.  */
-  unsigned char image_desc;
-};
-typedef struct ImageBufHdr_tag ImageBufHdr;
-
-/* Pixel data transfer from file to screen:
-   These masks are AND'd with the imageDesc in the TGA header,
-   bit 4 is left-to-right ordering
-   bit 5 is top-to-bottom */
-#define BOTTOM_LEFT  0x00	/* first pixel is bottom left corner */
-#define BOTTOM_RIGHT 0x10	/* first pixel is bottom right corner */
-#define TOP_LEFT     0x20	/* first pixel is top left corner */
-#define TOP_RIGHT    0x30	/* first pixel is top right corner */
-
-/* Runtime image buffer.  */
-struct RTImageBuf_tag
-{
-  unsigned char *image_data;
-  unsigned long image_size;
-  unsigned short pitch; /* size in bytes of one scanline */
-  ImageBufHdr hdr;
-};
-typedef struct RTImageBuf_tag RTImageBuf;
-
-#define ABS(x) (((x) >= 0) ? (x) : -(x))
-#define MIN(a, b) (((a) < (b)) ? (a) : (b))
-#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+#include "bootgraph.h"
 
 void
 bg_clear_img (RTImageBuf *rti)
@@ -108,46 +68,6 @@ bg_put_pixel (RTImageBuf *rti,
   addr = pitch * pt.y + (bpp >> 3) * pt.x;
   if (bpp == 32)
     *(unsigned long*)(fbdata + addr) = (unsigned long)color;
-}
-
-#define SWAP_PTS(p1, p2) \
-  { \
-    Point2D temp = { p1.x, p1.y }; \
-    p1.x = p2.x; p1.y = p2.y; \
-    p2.x = temp.x; p2.y = temp.y; \
-  }
-
-/* Fill a scan line up to, but not including, the last point.  */
-void
-bg_fill_scanline_len (RTImageBuf *rti, Point2D pt, unsigned int len,
-		      unsigned long color)
-{
-  if (pt.y < 0 || pt.y >= rti->hdr.height)
-    return; /* Clip out of bounds requests.  */
-  if (pt.x < 0) {
-    if (-pt.x >= len)
-      return;
-    len += pt.x;
-    pt.x = 0;
-  }
-  if (pt.x + len >= rti->hdr.width) {
-    len = rti->hdr.width - pt.x;
-  }
-
-  while (len > 0) {
-    len--;
-    bg_put_pixel (rti, pt, color);
-    pt.x++;
-  }
-}
-
-void
-bg_fill_scanline_pt (RTImageBuf *rti, Point2D p1, Point2D p2,
-		     unsigned long color)
-{
-  if (p2.x < p1.x)
-    SWAP_PTS(p1, p2);
-  bg_fill_scanline_len (rti, p1, p2.x - p1.x, color);
 }
 
 /* TODO: Copy scanline.  */
@@ -714,6 +634,10 @@ draw_geom (RTImageBuf *rti)
 {
   unsigned long color = 0x00000000;
 
+  BgPixIter pit;
+
+  bg_pit_bind (&pit, rti, 0, 0);
+
   /* { /\* Now plot our line, safe and intuitive way.  *\/ */
   /*   Point2D p1 = { 10, 17 }; */
   /*   Point2D p2 = { 130, 210 }; */
@@ -744,28 +668,32 @@ draw_geom (RTImageBuf *rti)
     Point2D p1 = { 10, 17 };
     Point2D p2 = { 130, 210 };
 
-    plot_line_fast2 (rti, color, p1, p2);
+    bg_pit_moveto (&pit, *(IPoint2D*)&p1);
+    bg_pit_lineto64 (&pit, *(IPoint2D*)&p2, color);
   }
 
   { /* Plot our line the fast way.  */
     Point2D p1 = { 10, 210 };
     Point2D p2 = { 200, 170 };
 
-    plot_line_fast2 (rti, color, p1, p2);
+    bg_pit_moveto (&pit, *(IPoint2D*)&p1);
+    bg_pit_lineto64 (&pit, *(IPoint2D*)&p2, color);
   }
 
   { /* Plot our line the fast way.  */
     Point2D p1 = { 10, 150 };
     Point2D p2 = { 200, 150 };
 
-    plot_line_fast2 (rti, color, p1, p2);
+    bg_pit_moveto (&pit, *(IPoint2D*)&p1);
+    bg_pit_lineto64 (&pit, *(IPoint2D*)&p2, color);
   }
 
   { /* Plot our line the fast way.  */
     Point2D p1 = { 280, 50 };
     Point2D p2 = { 280, 190 };
 
-    plot_line_fast2 (rti, color, p1, p2);
+    bg_pit_moveto (&pit, *(IPoint2D*)&p1);
+    bg_pit_lineto64 (&pit, *(IPoint2D*)&p2, color);
   }
 
   { /* Plot a triangle.  */
@@ -773,8 +701,38 @@ draw_geom (RTImageBuf *rti)
     Point2D p2 = { 20, 90 };
     Point2D p3 = { 150, 10 };
 
-    plot_tri_fast2 (rti, color, 1, p1, p2, p3);
+    //plot_tri_fast2 (rti, color, 1, p1, p2, p3);
+    /*bg_pit_tri_line64 (&pit,
+		       *(IPoint2D*)&p1,
+		       *(IPoint2D*)&p2,
+		       *(IPoint2D*)&p3,
+		       color);*/
+    bg_pit_tri_fill64 (&pit,
+		       *(IPoint2D*)&p1,
+		       *(IPoint2D*)&p2,
+		       *(IPoint2D*)&p3,
+		       color);
   }
+
+  { /* Plot a triangle.  */
+    Point2D p1 = { 20, 90 };
+    Point2D p2 = { 150, 10 };
+    Point2D p3 = { 130, 70 };
+
+    //plot_tri_fast2 (rti, color, 1, p1, p2, p3);
+    /*bg_pit_tri_line64 (&pit,
+		       *(IPoint2D*)&p1,
+		       *(IPoint2D*)&p2,
+		       *(IPoint2D*)&p3,
+		       color);*/
+    bg_pit_tri_fill64 (&pit,
+		       *(IPoint2D*)&p1,
+		       *(IPoint2D*)&p2,
+		       *(IPoint2D*)&p3,
+		       color);
+  }
+
+  bg_pit_flush_all (&pit);
 
   { /* Plot a circle.  */
     Point2D p1 = { 150, 120 };

@@ -611,7 +611,7 @@ unsigned long long
 bg_pit_read_slice64 (BgPixIter *pit, unsigned char bit_width)
 {
   unsigned long long cache_val;
-  unsigned char bw_mask = (1 << bit_width) - 1;
+  unsigned long long bw_mask = ((unsigned long long)1 << bit_width) - 1;
   unsigned char cache_sz;
   unsigned char cache_bit_ofs;
 
@@ -688,7 +688,7 @@ void
 bg_pit_write_slice64 (BgPixIter *pit, unsigned long long val,
 		      unsigned char bit_width)
 {
-  unsigned char bw_mask = (1 << bit_width) - 1;
+  unsigned long long bw_mask = ((unsigned long long)1 << bit_width) - 1;
   unsigned char cache_sz;
   unsigned char cache_bit_ofs;
   val &= bw_mask;
@@ -1074,14 +1074,20 @@ bg_pit_lineto64 (BgPixIter *pit, IPoint2D p2, unsigned long long val)
     /* The iterator computed the first point on the next scanline, so
        now we can compute the fill scanline parameters.  */
     short len = lit.cur.x - last_pt.x;
-    if (len == 0) len = 1;
-    if (len > 0) {
+    if (len == 0) {
+      bg_pit_write_pix64 (pit, val);
+    } else if (len > 0) {
       bg_pit_scanline_fill64 (pit, len, val);
     } else { /* (len < 0) */
       /* Adjust the fill parameters so that we include the first point
 	 but not the last point when stepping backwards.  */
       len = -len;
       bg_pit_scanline_arfill64 (pit, len, val);
+    }
+    /* Advance the y position accordingly.  */
+    switch (lit.signs.y) {
+    case 1: bg_pit_inc_y (pit); break;
+    case -1: bg_pit_dec_y (pit); break;
     }
     /* Update `last_pt`.  */
     last_pt.x = lit.cur.x;
@@ -1150,7 +1156,8 @@ bg_pit_tri_fill64 (BgPixIter *pit,
       /* Scan-fill the triangle between lines from first vertex, until
 	 we reach the height of the second vertex.  */
       bg_line_iter_y_start (&lit1, *(Point2D*)&p1, *(Point2D*)&p2);
-      if (p2.x > p3.x)
+      if ((p2.x == p3.x && p2.y > p3.y) ||
+	  p2.x > p3.x)
 	x_reverse = 1;
       else
 	x_reverse = 0;
@@ -1158,28 +1165,72 @@ bg_pit_tri_fill64 (BgPixIter *pit,
       /* Scan-fill the triangle between lines of the last vertex,
 	 until we reach the last vertex.  */
       bg_line_iter_y_start (&lit1, *(Point2D*)&p2, *(Point2D*)&p3);
-      if (p2.x > last_pt2.x)
+      if ((p2.x == last_pt2.x && p2.y > last_pt2.y) ||
+	  p2.x > last_pt2.x)
 	x_reverse = 1;
       else
 	x_reverse = 0;
     }
     while (bg_line_iter_y_step (&lit1)) {
+      unsigned short begin_x, end_x;
       short len;
       bg_line_iter_y_step (&lit2);
+      /* Verify we do not fill the very last scanline.  */
+      if (pit->pos.y == p3.y)
+	continue;
       /* The iterators computed the first point on the next scanline, so
 	 now we can compute the fill scanline parameters.  */
-      if (x_reverse)
-	len = lit1.cur.x - last_pt2.x;
-      else
-	len = lit2.cur.x - last_pt1.x;
+      if (x_reverse) {
+	begin_x = (lit2.signs.x > 0) ? last_pt2.x : lit2.cur.x;
+	end_x = (lit1.signs.x > 0) ? last_pt1.x : lit1.cur.x;
+	len = end_x - begin_x;
+      } else {
+	begin_x = (lit1.signs.x > 0) ? last_pt1.x : lit1.cur.x;
+	end_x = (lit2.signs.x > 0) ? last_pt2.x : lit2.cur.x;
+	len = end_x - begin_x;
+      }
+      if (len < 0)
+	len = 0; /* ???  It can happen in tight corners.  */
       /* TODO FIXME: Should we avoid zigzag scanfill?  If we wanted to
 	 avoid it, we'd have to compute the triangular next scanline
 	 skip factor.  */
-      if (zigzag_left)
+      if (zigzag_left) {
+	short i;
+	/* TODO FIXME: Shift into position for the scanline
+	   endpoint.  */
+	i = end_x - pit->pos.x;
+	while (i < 0) {
+	  i++;
+	  bg_pit_dec_x (pit);
+	}
+	while (i > 0) {
+	  i--;
+	  bg_pit_inc_x (pit);
+	}
 	bg_pit_scanline_rfill64 (pit, len, val);
-      else
+      } else {
+	short i;
+	/* TODO FIXME: Shift into position for the scanline
+	   beginning.  */
+	i = begin_x - pit->pos.x;
+	while (i < 0) {
+	  i++;
+	  bg_pit_dec_x (pit);
+	}
+	while (i > 0) {
+	  i--;
+	  bg_pit_inc_x (pit);
+	}
 	bg_pit_scanline_fill64 (pit, len, val);
+      }
       zigzag_left = ~zigzag_left;
+      /*{
+	IPoint2D mpt1 = { begin_x, last_pt2.y };
+	bg_pit_moveto (pit, mpt1);
+      }
+      bg_pit_scanline_fill64 (pit, len, val);*/
+      /* Advance the y position accordingly.  */
+      bg_pit_inc_y (pit);
       /* Update `last_pt1` and `last_pt2`.  */
       last_pt1.x = lit1.cur.x; last_pt1.y = lit1.cur.y;
       last_pt2.x = lit2.cur.x; last_pt2.y = lit2.cur.y;
