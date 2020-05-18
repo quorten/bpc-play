@@ -172,9 +172,11 @@ bg_pit_bind (BgPixIter *pit, RTImageBuf *rti, unsigned char cache_sz_log2,
   pit->bpp_cblks = (bpp >> 3) & ~(pit->cache_bsz - 1);
   pit->bpp_cbits = bpp & ((pit->cache_bsz << 3) - 1);
   {
-    unsigned int row_all_bits = bpp * pit->rti.hdr.width;
-    pit->pitch_pad_cblks = (row_all_bits >> 3) & ~(pit->cache_bsz - 1);
-    pit->pitch_pad_cbits = row_all_bits & ((pit->cache_bsz << 3) - 1);
+    unsigned int row_pad_bits =
+      ((unsigned int)pit->rti.pitch << 3) + pit->rti.pitch_bits -
+      bpp * pit->rti.hdr.width;
+    pit->pitch_pad_cblks = (row_pad_bits >> 3) & ~(pit->cache_bsz - 1);
+    pit->pitch_pad_cbits = row_pad_bits & ((pit->cache_bsz << 3) - 1);
   }
 
   /* Uncached mode: 8-bit divisible, cache block divisible bit depths
@@ -320,6 +322,7 @@ bg_pit_cblk_inc (BgPixIter *pit, unsigned char cblk_inc,
     /* return */ bg_pit_twoblk_inc (pit, cblk_inc, bit_offset);
   else {
     bg_pit_flush (pit, 1);
+    pit->valid0 = 0;
     pit->cblk_addr += cblk_inc;
     pit->bit_addr = bit_offset;
   }
@@ -334,6 +337,7 @@ bg_pit_cblk_dec (BgPixIter *pit, unsigned char cblk_dec,
     /* return */ bg_pit_twoblk_dec (pit, cblk_dec, bit_offset);
   else {
     bg_pit_flush (pit, 1);
+    pit->valid0 = 0;
     pit->cblk_addr -= cblk_dec;
     pit->bit_addr = bit_offset;
   }
@@ -366,7 +370,8 @@ bg_pit_moveto (BgPixIter *pit, IPoint2D pt)
     */
     {
       unsigned char cache_bsz_8_log2 = 3 + pit->cache_bsz_log2;
-      cblk_offset += bit_offset >> cache_bsz_8_log2;
+      cblk_offset +=
+	(bit_offset >> 3) & ~((unsigned int)pit->cache_bsz - 1);
       bit_offset &= ((1 << cache_bsz_8_log2) - 1);
     }
     /* ...end } */
@@ -395,6 +400,8 @@ bg_pit_next_scanln (BgPixIter *pit)
        scanline is narrower than the cache, it may not always be
        necessary to flush the entire cache.  */
     bg_pit_flush_all (pit);
+    pit->valid0 = 0;
+    pit->valid1 = 0;
 
     cache_bsz = pit->cache_bsz;
     cache_bsz_8 = cache_bsz << 3;
@@ -438,6 +445,8 @@ bg_pit_prev_scanln (BgPixIter *pit)
        scanline is narrower than the cache, it may not always be
        necessary to flush the entire cache.  */
     bg_pit_flush_all (pit);
+    pit->valid0 = 0;
+    pit->valid1 = 0;
 
     cache_bsz = pit->cache_bsz;
     cache_bsz_8 = cache_bsz << 3;
@@ -484,6 +493,8 @@ bg_pit_inc_x (BgPixIter *pit)
       bit_offset -= cache_bsz_8;
       bg_pit_cblk_inc (pit, cache_bsz, bit_offset);
     }
+    else
+      pit->bit_addr = bit_offset;
   }
 }
 
@@ -519,6 +530,8 @@ bg_pit_dec_x (BgPixIter *pit)
       bit_offset += cache_bsz_8;
       bg_pit_cblk_dec (pit, cache_bsz, bit_offset);
     }
+    else
+      pit->bit_addr = bit_offset;
   }
 }
 
@@ -540,13 +553,13 @@ bg_pit_inc_y (BgPixIter *pit)
   if (pit->uncached) {
     pit->cblk_addr += pit->pitch_cblks;
   } else {
-    signed char bit_offset;
     /* N.B. When working with very small or narrow images where the
        scanline is narrower than the cache, it may not always be
        necessary to flush the entire cache.  */
     bg_pit_flush_all (pit);
+    pit->valid0 = 0;
+    pit->valid1 = 0;
     pit->cblk_addr += pit->pitch_cblks;
-    bit_offset = pit->bit_addr + pit->pitch_cbits;
     if (pit->pitch_cbits > 0) {
       unsigned char cache_bsz = pit->cache_bsz;
       unsigned char cache_bsz_8 = cache_bsz << 3;
@@ -582,6 +595,8 @@ bg_pit_dec_y (BgPixIter *pit)
        scanline is narrower than the cache, it may not always be
        necessary to flush the entire cache.  */
     bg_pit_flush_all (pit);
+    pit->valid0 = 0;
+    pit->valid1 = 0;
     pit->cblk_addr -= pit->pitch_cblks;
     if (pit->pitch_cbits > 0) {
       unsigned char cache_bsz = pit->cache_bsz;
