@@ -126,6 +126,58 @@ bg_print_hdr_bitswap_lut (void)
   puts("};");
 }
 
+/* Bit swap the given image data.  */
+void
+bg_bit_swap_image(unsigned char *image_data, unsigned int image_size)
+{
+  while (image_size > 0) {
+    image_size--;
+    *image_data = g_bg_bitswap_lut[*image_data];
+    image_data++;
+  }
+}
+
+/* Byte swap each 16-bit word of the given image data.  There must be
+   an even number of bytes in the image.  */
+void
+bg_byte_swap_image16(unsigned char *image_data, unsigned int image_size)
+{
+  while (image_size > 1) {
+    image_size -= 2;
+    bg_byte_swap (image_data, 2);
+    image_data += 2;
+  }
+}
+
+/* Byte swap each 24-bit pixel of the given image data.  If there is
+   padding between scan lines, you should call this subroutine
+   individually for each scanline instead.  */
+void
+bg_byte_swap_scanln24(unsigned char *image_data, unsigned int image_size)
+{
+  if ((image_size & (2 - 1)) != 0)
+    return;
+  while (image_size > 2) {
+    image_size -= 3;
+    bg_byte_swap (image_data, 3);
+    image_data += 3;
+  }
+}
+
+/* Byte swap each 32-bit word of the given image data.  The image size
+   must be a multiple of 4 bytes.  */
+void
+bg_byte_swap_image32(unsigned char *image_data, unsigned int image_size)
+{
+  if ((image_size & (4 - 1)) != 0)
+    return;
+  while (image_size > 0) {
+    image_size -= 4;
+    bg_byte_swap (image_data, 4);
+    image_data += 4;
+  }
+}
+
 /********************************************************************/
 
 /* Compute the scanline pitch based off of the alignment requirement.
@@ -1120,7 +1172,11 @@ bg_pit_quad_line64 (BgPixIter *pit,
 }
 
 /* Specialized triangle filler, suitable for rasterization of 3D
-   graphics.  */
+   graphics.  Unclipped.
+
+   Fill rule: the first scanline (ymin) is filled but the last
+   scanline (ymax) is not.  Likewise, the first x pixel (xmin) is
+   filled but the last one (xmax) is not.  */
 void
 bg_pit_tri_fill64 (BgPixIter *pit,
 		   IPoint2D p1, IPoint2D p2, IPoint2D p3,
@@ -1234,3 +1290,122 @@ bg_pit_tri_fill64 (BgPixIter *pit,
     }
   }
 }
+
+/********************************************************************/
+
+/*
+
+Pixel format and color space conversions.
+
+So, how does this work?  We rely on these principal definitions.
+
+* Default color pixel format, three-channel: red, green, blue
+
+* Optional fourth channel: alpha
+
+* Rare fourth channel: Infrared
+
+* Rare "bird vision" fourth channel: Ultraviolet.
+
+* Two channel format?  Extremely rare, the only somewhat notable
+  two-channel format is red-green Technicolor.
+
+* The de facto one channel format is grayscale.
+
+* 16 bits per channel is the principal linear intensity channel
+  format.
+
+* 8 bits per channel is a gamma-coded compression of the 16-bit linear
+  format.  An 8-bit alpha channel, however, could also as a linear
+  format.  The principal gamma-coding is either sRGB or Gamma = 2.2.
+
+* 5 bits or 6 bits per channel (i.e. 16-bit high color R5G6R5) is
+  simply the same as 8-bit gamma-coded image samples, but with the
+  least significant bits truncated to zero.
+
+* 8 bit _per pixel_ or less are all to be interpreted as palette-based
+  formats.  Each pixel is an index into the palette, and a palette
+  entry defines a color more precisely in one of the three-channel
+  formats, typically 8 bits per channel gamma-coded image samples.
+
+  The most straightforward 8-bits per pixel format is grayscale, where
+  red, green, and blue all share the same intensity.
+
+* 4, 3, and 1 bit per pixel palettes have only a few common and rather
+  trivial palettes that are typically used.
+
+Finally, the remainder of information that defines a pixel format is
+the bit and byte ordering.  With less than 8 bits per pixel, there is
+ia "bit endian" ordering on each pixel.  Leftmost first pixel as least
+significant bits ("little endian" bits), or leftmost first pixel as
+most significant bits ("big endian" bits).  Index and channel bit
+endian, however, is almost always unambiguous: whatever the logical
+bit ordering for integers is.  Finally, once you get to multi-byte
+intensities, byte order becomes significant, but not bit order.
+
+So, bit order:
+
+* "Logical", standard integer bit ordering, only applicable for
+  integer-like values
+* Little Endian
+* Big Endian
+
+Byte order:
+
+* Little Endian
+* Big Endian
+
+In practice, we only define data structure storage for these of the
+machine CPU attributes itself.  For images, specific format loaders
+will simply call the conversion functions with the appropriate
+parameters.
+
+*/
+
+/* Monochrome color palette.  Zero is black, one is white.  */
+RgbPix g_stdpal_1bit[2] = {
+  { 0x00, 0x00, 0x00 },
+  { 0xff, 0xff, 0xff },
+};
+
+/* Macintosh monochrome color palette.  Zero is white, one is
+   black.  */
+RgbPix g_stdpal_mac_1bit[2] = {
+  { 0xff, 0xff, 0xff },
+  { 0x00, 0x00, 0x00 },
+};
+
+/* Rumored 3-bit Macintosh color.  I assume the palette indices are
+   arranged in RGB bit field orders with the most significant bit
+   corresponding to red and the least significant bit corresponding to
+   blue.  */
+RgbPix g_stdpal_mac_3bit[8] = {
+  { 0x00, 0x00, 0x00 },
+  { 0x00, 0x00, 0xff },
+  { 0x00, 0xff, 0x00 },
+  { 0x00, 0xff, 0xff },
+  { 0xff, 0x00, 0x00 },
+  { 0xff, 0x00, 0xff },
+  { 0xff, 0xff, 0x00 },
+  { 0xff, 0xff, 0xff },
+};
+
+/* The famous 4-bit VGA Windows color palette.  */
+RgbPix g_stdpal_vga_4bit[16] = {
+  { 0x00, 0x00, 0x00 },
+  { 0x80, 0x00, 0x00 },
+  { 0x00, 0x80, 0x00 },
+  { 0x80, 0x80, 0x00 },
+  { 0x00, 0x00, 0x80 },
+  { 0x80, 0x00, 0x80 },
+  { 0x00, 0x80, 0x80 },
+  { 0x80, 0x80, 0x80 },
+  { 0xc0, 0xc0, 0xc0 },
+  { 0xff, 0x00, 0x00 },
+  { 0x00, 0xff, 0x00 },
+  { 0xff, 0xff, 0x00 },
+  { 0x00, 0x00, 0xff },
+  { 0xff, 0x00, 0xff },
+  { 0x00, 0xff, 0xff },
+  { 0xff, 0xff, 0xff },
+};

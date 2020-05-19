@@ -107,9 +107,14 @@ typedef struct RTImageBuf_tag RTImageBuf;
   default: (result) = 0; break; \
   }
 
-/* Quotient-remainder mathematical data structures.  The dividend
-   itself is assumed to be known based off of the data type, so this
-   is technically a sort of abstract base class.  */
+/* Quotient-remainder mathematical data structures.  "Proper
+   fractions" in other words.  The dividend itself is assumed to be
+   known based off of the data type, so this is technically a sort of
+   abstract base class.
+
+   TODO: Chains of proper fractions are very useful for units and also
+   for Apple II display framebuffers.  Miles, yards, feet, inches, for
+   example.  */
 struct IVQuotRem_u8_divu8_tag
 {
   unsigned char w; /* Quotient, whole part */
@@ -241,6 +246,14 @@ struct BgLineIterY_tag
   unsigned short rem;
 };
 typedef struct BgLineIterY_tag BgLineIterY;
+
+struct RgbPix_tag
+{
+  unsigned char r;
+  unsigned char g;
+  unsigned char b;
+};
+typedef struct RgbPix_tag RgbPix;
 
 extern unsigned char g_bg_endian;
 extern unsigned char g_bg_bitswap_lut[256];

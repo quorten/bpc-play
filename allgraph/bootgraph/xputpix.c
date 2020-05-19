@@ -499,137 +499,6 @@ plot_line_fast2 (RTImageBuf *rti, unsigned long color,
 }
 
 void
-plot_tri_fast2 (RTImageBuf *rti, unsigned long color, unsigned char filled,
-		Point2D p1, Point2D p2, Point2D p3)
-{
-  /* First sort the points in vertical ascending order.  */
-  if (p2.y < p1.y) {
-    SWAP_PTS(p1, p2);
-  }
-  if (p3.y < p2.y) {
-    SWAP_PTS(p2, p3);
-  }
-  if (p2.y < p1.y) {
-    SWAP_PTS(p1, p2);
-  }
-
-  /* Scan-fill the triangle between lines from first vertex, until we
-     reach the height of the second vertex.  */
-  Point2D delta1 = { p2.x - p1.x, p2.y - p1.y };
-  Point2D adelta1 = { ABS(delta1.x), ABS(delta1.y) };
-  Point2D cur1 = { p1.x, p1.y };
-  Point2D signs1 = { (delta1.x > 0) ? 1 : -1, (delta1.y > 0) ? 1 : -1 };
-  unsigned rem1 = 0;
-  unsigned step1 = adelta1.x;
-
-  Point2D delta2 = { p3.x - p1.x, p3.y - p1.y };
-  Point2D adelta2 = { ABS(delta2.x), ABS(delta2.y) };
-  Point2D cur2 = { p1.x, p1.y };
-  Point2D signs2 = { (delta2.x > 0) ? 1 : -1, (delta2.y > 0) ? 1 : -1 };
-  unsigned rem2 = 0;
-  unsigned step2 = adelta2.x;
-
-  while (cur1.x != p2.x || cur1.y != p2.y) {
-    rem1 += step1;
-    rem2 += step2;
-    if (adelta1.y != 0)
-      cur1.y += signs1.y;
-    if (adelta2.y != 0)
-      cur2.y += signs2.y;
-    if (rem1 < adelta1.y) {
-      bg_put_pixel (rti, cur1, color);
-    }
-    if (rem2 < adelta2.y) {
-      bg_put_pixel (rti, cur2, color);
-    }
-    while (rem1 >= adelta1.y && cur1.x != p2.x) {
-      cur1.x += signs1.x;
-      rem1 -= adelta1.y;
-      bg_put_pixel (rti, cur1, color);
-    }
-    while (rem2 >= adelta2.y && cur2.x != p3.x) {
-      cur2.x += signs2.x;
-      rem2 -= adelta2.y;
-      bg_put_pixel (rti, cur2, color);
-    }
-    if (filled) {
-      /* Fill in the x values in the middle.  */
-      /* TODO: If we knew which way the lines were running, we could
-	 better optimize this to avoid duplicate pixel plots.  */
-      if (adelta1.y != 0 && adelta2.y != 0) {
-	int xbegin = MIN(cur1.x, cur2.x);
-	int xend = MAX(cur1.x, cur2.x);
-	int scany = cur1.y;
-	int curx = xbegin;
-	while (curx < xend) {
-	  Point2D scancur = { curx, scany };
-	  bg_put_pixel (rti, scancur, color);
-	  curx++;
-	}
-      }
-    }
-  }
-
-
-
-
-
-  /* Scan-fill the triangle between lines of the last vertex, until we
-     reach the last vertex.  */
-  delta1.x = p3.x - p2.x;
-  delta1.y = p3.y - p2.y;
-  adelta1.x = ABS(delta1.x);
-  adelta1.y = ABS(delta1.y);
-  cur1.x = p2.x;
-  cur1.y = p2.y;
-  signs1.x = (delta1.x > 0) ? 1 : -1;
-  signs1.y = (delta1.y > 0) ? 1 : -1;
-  rem1 = 0;
-  step1 = adelta1.x;
-
-  while (cur1.x != p3.x || cur1.y != p3.y) {
-    rem1 += step1;
-    rem2 += step2;
-    if (adelta1.y != 0)
-      cur1.y += signs1.y;
-    if (adelta2.y != 0)
-      cur2.y += signs2.y;
-    if (rem1 < adelta1.y) {
-      bg_put_pixel (rti, cur1, color);
-    }
-    if (rem2 < adelta2.y) {
-      bg_put_pixel (rti, cur2, color);
-    }
-    while (rem1 >= adelta1.y && cur1.x != p2.x) {
-      cur1.x += signs1.x;
-      rem1 -= adelta1.y;
-      bg_put_pixel (rti, cur1, color);
-    }
-    while (rem2 >= adelta2.y && cur2.x != p3.x) {
-      cur2.x += signs2.x;
-      rem2 -= adelta2.y;
-      bg_put_pixel (rti, cur2, color);
-    }
-    if (filled) {
-      /* Fill in the x values in the middle.  */
-      /* TODO: If we knew which way the lines were running, we could
-	 better optimize this to avoid duplicate pixel plots.  */
-      if (adelta1.y != 0 && adelta2.y != 0) {
-	int xbegin = MIN(cur1.x, cur2.x);
-	int xend = MAX(cur1.x, cur2.x);
-	int scany = cur1.y;
-	int curx = xbegin;
-	while (curx < xend) {
-	  Point2D scancur = { curx, scany };
-	  bg_put_pixel (rti, scancur, color);
-	  curx++;
-	}
-      }
-    }
-  }
-}
-
-void
 draw_geom (RTImageBuf *rti)
 {
   unsigned long color = 0x00000000;
@@ -701,7 +570,6 @@ draw_geom (RTImageBuf *rti)
     Point2D p2 = { 20, 90 };
     Point2D p3 = { 150, 10 };
 
-    //plot_tri_fast2 (rti, color, 1, p1, p2, p3);
     /*bg_pit_tri_line64 (&pit,
 		       *(IPoint2D*)&p1,
 		       *(IPoint2D*)&p2,
@@ -719,7 +587,6 @@ draw_geom (RTImageBuf *rti)
     Point2D p2 = { 150, 10 };
     Point2D p3 = { 130, 70 };
 
-    //plot_tri_fast2 (rti, color, 1, p1, p2, p3);
     /*bg_pit_tri_line64 (&pit,
 		       *(IPoint2D*)&p1,
 		       *(IPoint2D*)&p2,
