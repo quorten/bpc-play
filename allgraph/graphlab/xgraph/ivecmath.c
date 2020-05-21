@@ -178,7 +178,8 @@ IVint64 iv_shr_i64(IVint64 a, IVuint8 q)
    inaccurate.  "f' is for "faster."  */
 IVint32 iv_fsyshr2_i32(IVint32 a, IVuint8 q)
 {
-  if (a < 0) a++; /* avoid asymmetric two's complement behavior */
+  /* Avoid asymmetric two's complement behavior.  */
+  if (a < 0) a += (1 << q) - 1;
   return a >> q;
 }
 
@@ -187,7 +188,8 @@ IVint32 iv_fsyshr2_i32(IVint32 a, IVuint8 q)
    inaccurate.  "f' is for "faster."  */
 IVint64 iv_fsyshr2_i64(IVint64 a, IVuint8 q)
 {
-  if (a < 0) a++; /* avoid asymmetric two's complement behavior */
+  /* Avoid asymmetric two's complement behavior.  */
+  if (a < 0) a += (1 << q) - 1;
   return a >> q;
 }
 
@@ -196,7 +198,8 @@ IVint64 iv_fsyshr2_i64(IVint64 a, IVuint8 q)
    inaccurate.  "f' is for "faster."  */
 IVint32 iv_symshr2_i32(IVint32 a, IVuint8 q)
 {
-  if (q != 0 && a < 0) a++; /* avoid asymmetric two's complement behavior */
+  /* Avoid asymmetric two's complement behavior.  */
+  if (q != 0 && a < 0) a += (1 << q) - 1;
   return a >> q;
 }
 
@@ -205,7 +208,8 @@ IVint32 iv_symshr2_i32(IVint32 a, IVuint8 q)
    inaccurate.  "f' is for "faster."  */
 IVint64 iv_symshr2_i64(IVint64 a, IVuint8 q)
 {
-  if (q != 0 && a < 0) a++; /* avoid asymmetric two's complement behavior */
+  /* Avoid asymmetric two's complement behavior.  */
+  if (q != 0 && a < 0) a += (1 << q) - 1;
   return a >> q;
 }
 
@@ -297,7 +301,8 @@ IVVec2D_i32 *iv_muldiv4_v2i32_i64(IVVec2D_i32 *a, IVVec2D_i32 *b,
        away all the low bits from both the numerator and the
        denominator because they are insignificant.  */
     shr_div = soft_fls_i64(c) - 32;
-    if (d < 0) d++; /* avoid asymmetric two's complement behavior */
+    /* Avoid asymmetric two's complement behavior.  */
+    if (d < 0) d += (1 << shr_div) - 1;
     c >>= shr_div;
     d >>= shr_div;
   }
@@ -1923,7 +1928,8 @@ IVVec3D_i32 *iv_muldiv4_v3i32_i64(IVVec3D_i32 *a, IVVec3D_i32 *b,
        away all the low bits from both the numerator and the
        denominator because they are insignificant.  */
     shr_div = soft_fls_i64(c) - 32;
-    if (d < 0) d++; /* avoid asymmetric two's complement behavior */
+    /* Avoid asymmetric two's complement behavior.  */
+    if (d < 0) d += (1 << shr_div) - 1;
     c >>= shr_div;
     d >>= shr_div;
   }
