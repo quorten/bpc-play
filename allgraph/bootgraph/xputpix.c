@@ -474,38 +474,9 @@ plot_circle_fast (RTImageBuf *rti, unsigned long color,
 }
 
 void
-plot_line_fast2 (RTImageBuf *rti, unsigned long color,
-		 Point2D p1, Point2D p2)
-{
-  Point2D delta = { p2.x - p1.x, p2.y - p1.y };
-  Point2D adelta = { ABS(delta.x), ABS(delta.y) };
-  Point2D cur = { p1.x, p1.y };
-  Point2D signs = { (delta.x > 0) ? 1 : -1, (delta.y > 0) ? 1 : -1 };
-  unsigned rem = 0;
-  unsigned step = adelta.x;
-  while (cur.x != p2.x || cur.y != p2.y) {
-    rem += step;
-    if (adelta.y != 0)
-      cur.y += signs.y;
-    if (rem < adelta.y) {
-      bg_put_pixel (rti, cur, color);
-    }
-    while (rem >= adelta.y && cur.x != p2.x) {
-      cur.x += signs.x;
-      rem -= adelta.y;
-      bg_put_pixel (rti, cur, color);
-    }
-  }
-}
-
-void
-draw_geom (RTImageBuf *rti)
+draw_geom (RTImageBuf *rti, BgPixIter *pit)
 {
   unsigned long color = 0x00000000;
-
-  BgPixIter pit;
-
-  bg_pit_bind (&pit, rti, 0, 0);
 
   /* { /\* Now plot our line, safe and intuitive way.  *\/ */
   /*   Point2D p1 = { 10, 17 }; */
@@ -537,32 +508,34 @@ draw_geom (RTImageBuf *rti)
     Point2D p1 = { 10, 17 };
     Point2D p2 = { 130, 210 };
 
-    bg_pit_moveto (&pit, *(IPoint2D*)&p1);
-    bg_pit_lineto64 (&pit, *(IPoint2D*)&p2, color);
+    bg_pit_moveto (pit, *(IPoint2D*)&p1);
+    bg_pit_lineto64 (pit, *(IPoint2D*)&p2, color);
   }
 
+  /* TODO FIXME: This segfaults with 50% rounding.  */
+  if (1)
   { /* Plot our line the fast way.  */
     Point2D p1 = { 10, 210 };
     Point2D p2 = { 200, 170 };
 
-    bg_pit_moveto (&pit, *(IPoint2D*)&p1);
-    bg_pit_lineto64 (&pit, *(IPoint2D*)&p2, color);
+    bg_pit_moveto (pit, *(IPoint2D*)&p1);
+    bg_pit_lineto64 (pit, *(IPoint2D*)&p2, color);
   }
 
   { /* Plot our line the fast way.  */
     Point2D p1 = { 10, 150 };
     Point2D p2 = { 200, 150 };
 
-    bg_pit_moveto (&pit, *(IPoint2D*)&p1);
-    bg_pit_lineto64 (&pit, *(IPoint2D*)&p2, color);
+    bg_pit_moveto (pit, *(IPoint2D*)&p1);
+    bg_pit_lineto64 (pit, *(IPoint2D*)&p2, color);
   }
 
   { /* Plot our line the fast way.  */
     Point2D p1 = { 280, 50 };
     Point2D p2 = { 280, 190 };
 
-    bg_pit_moveto (&pit, *(IPoint2D*)&p1);
-    bg_pit_lineto64 (&pit, *(IPoint2D*)&p2, color);
+    bg_pit_moveto (pit, *(IPoint2D*)&p1);
+    bg_pit_lineto64 (pit, *(IPoint2D*)&p2, color);
   }
 
   { /* Plot a triangle.  */
@@ -570,12 +543,12 @@ draw_geom (RTImageBuf *rti)
     Point2D p2 = { 20, 90 };
     Point2D p3 = { 150, 10 };
 
-    /*bg_pit_tri_line64 (&pit,
+    /*bg_pit_tri_line64 (pit,
 		       *(IPoint2D*)&p1,
 		       *(IPoint2D*)&p2,
 		       *(IPoint2D*)&p3,
 		       color);*/
-    bg_pit_tri_fill64 (&pit,
+    bg_pit_tri_fill64 (pit,
 		       *(IPoint2D*)&p1,
 		       *(IPoint2D*)&p2,
 		       *(IPoint2D*)&p3,
@@ -587,19 +560,19 @@ draw_geom (RTImageBuf *rti)
     Point2D p2 = { 150, 10 };
     Point2D p3 = { 130, 70 };
 
-    /*bg_pit_tri_line64 (&pit,
+    /*bg_pit_tri_line64 (pit,
 		       *(IPoint2D*)&p1,
 		       *(IPoint2D*)&p2,
 		       *(IPoint2D*)&p3,
 		       color);*/
-    bg_pit_tri_fill64 (&pit,
+    bg_pit_tri_fill64 (pit,
 		       *(IPoint2D*)&p1,
 		       *(IPoint2D*)&p2,
 		       *(IPoint2D*)&p3,
 		       color);
   }
 
-  bg_pit_flush_all (&pit);
+  bg_pit_flush_all (pit);
 
   { /* Plot a circle.  */
     Point2D p1 = { 150, 120 };
@@ -657,6 +630,7 @@ main (int argc, char *argv[])
   char fbdata[4*320*240];
   XImage *myimage;
   RTImageBuf rti;
+  BgPixIter pit;
 
   int done;
   int is_pressed = 0;
@@ -737,8 +711,10 @@ main (int argc, char *argv[])
   rti.hdr.bpp = 32;
   rti.hdr.image_desc = TOP_LEFT;
 
+  bg_pit_bind (&pit, &rti, 0, 0);
+
   bg_clear_img (&rti);
-  draw_geom (&rti);
+  draw_geom (&rti, &pit);
 
   XMapRaised (mydisplay, mywindow);
 
@@ -839,7 +815,9 @@ main (int argc, char *argv[])
 	  if (last_pt.x < 320 && last_pt.y < 240 &&
 	      myevent.xmotion.x < 320 && myevent.xmotion.y < 240)
 	    {
-	      plot_line_fast2 (&rti, 0x00000000, last_pt, this_pt);
+	      bg_pit_moveto (&pit, *(IPoint2D*)&last_pt);
+	      bg_pit_lineto64 (&pit, *(IPoint2D*)&this_pt, 0x00000000);
+	      bg_pit_flush_all (&pit);
 	    }
 	}
 	last_pt.x = myevent.xmotion.x;
@@ -862,7 +840,7 @@ main (int argc, char *argv[])
 		       fbwidth, fbheight);
 	    break;
 	  case 'd':
-	    draw_geom (&rti);
+	    draw_geom (&rti, &pit);
 	    XPutImage (mydisplay,
 		       mywindow,
 		       mygc,
@@ -887,8 +865,11 @@ main (int argc, char *argv[])
 	      line_start = 1;
 	    } else {
 	      if (line_pt.x < 320 && line_pt.y < 240 &&
-		  last_pt.x < 320 && last_pt.y < 240)
-		plot_line_fast2 (&rti, 0x00000000, line_pt, last_pt);
+		  last_pt.x < 320 && last_pt.y < 240) {
+		bg_pit_moveto (&pit, *(IPoint2D*)&line_pt);
+		bg_pit_lineto64 (&pit, *(IPoint2D*)&last_pt, 0x00000000);
+		bg_pit_flush_all (&pit);
+	      }
 	      XPutImage (mydisplay,
 			 mywindow,
 			 mygc,

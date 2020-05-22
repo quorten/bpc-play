@@ -18,12 +18,38 @@
    computed.  Only vector graphics drawing evokes the full repertoire
    of pixel iterators.  */
 
+/* N.B. Since bit shifting can be expensive or non-existent on some
+   microprocessors, we try to avoid bit-shifting in our inner loop
+   code as much as possible.  */
+
 /* TODO FIXME: Because of our two-block caching discipline, if the
    image is an add number of cache blocks total, then there must be
    one more cache block padding at the end of the image.  That is, it
    must be possible to read and write one cache block beyond the end
    of the image, though the memory _contents_ will never actually be
    modified.  Just that the existing value will be rewritten.  */
+
+/* TODO FIXME NOTE: My line plotting subroutine?  Actually, thanks to
+   its use of iterators, it is fully general and by passing it
+   different iterator function pointers, it can plot any function!
+   Wow, that's great!  I better get my other function plotters into
+   the new code form.  */
+
+/* TODO FIXME: I should probably eliminate the color scanline filler
+   and replace it exclusively with a "stipple" pattern filler with a
+   special case of pattern equaling cache size.  In order to scan-fill
+   an area with a solid color, you must first generate a stipple
+   pattern of that color then pass that to the filler routines.  This
+   stipple pattern should be cached in the color graphics context,
+   generated as soon as you switch the colors.  Of course, in uncached
+   mode, stipple pattern fill degenerates into the same case as a
+   straight color fill.
+
+   Okay, okay, fine, I digress.  There probably is still some use for
+   that primitive for things like Goraud shading.  You might want to
+   run a custom calculation function for each pixel, though this is
+   obviously slow and expensive.  A specialized ramp filler would be
+   more efficient.  Oh, and texture filling.  */
 
 /* DEBUG ONLY */
 #include <stdio.h>
@@ -211,11 +237,13 @@ bg_pit_bind (BgPixIter *pit, RTImageBuf *rti, unsigned char cache_sz_log2,
   pit->bit_addr = 0;
   memset (pit->cache, 0, sizeof(pit->cache));
   pit->cache_sz = 1 << cache_sz_log2;
+  pit->cache_sz_8 = pit->cache_sz;
   if (twoblk)
     pit->cache_bsz_log2 = cache_sz_log2 - 1;
   else
     pit->cache_bsz_log2 = cache_sz_log2;
   pit->cache_bsz = 1 << pit->cache_bsz_log2;
+  pit->cache_bsz_8 = pit->cache_bsz << 3;
   pit->pitch_cblks =
     pit->rti.pitch & ~((unsigned short)pit->cache_bsz - 1);
   pit->pitch_cbits =
@@ -227,7 +255,8 @@ bg_pit_bind (BgPixIter *pit, RTImageBuf *rti, unsigned char cache_sz_log2,
     unsigned int row_pad_bits =
       ((unsigned int)pit->rti.pitch << 3) + pit->rti.pitch_bits -
       bpp * pit->rti.hdr.width;
-    pit->pitch_pad_cblks = (row_pad_bits >> 3) & ~(pit->cache_bsz - 1);
+    pit->pitch_pad_cblks =
+      (row_pad_bits >> 3) & ~((unsigned short)pit->cache_bsz - 1);
     pit->pitch_pad_cbits = row_pad_bits & ((pit->cache_bsz << 3) - 1);
   }
 
@@ -387,7 +416,9 @@ bg_pit_cblk_dec (BgPixIter *pit, unsigned char cblk_dec)
   }
 }
 
-/* Move the BgPixIter to the given arbitrary coordinate.  */
+/* Move the BgPixIter to the given arbitrary coordinate.  Unclipped.
+   This is the most computationally expensive movement subroutine, so
+   only use it when it is absolutely required.  */
 void
 bg_pit_moveto (BgPixIter *pit, IPoint2D pt)
 {
@@ -404,7 +435,7 @@ bg_pit_moveto (BgPixIter *pit, IPoint2D pt)
   } else {
     unsigned int cblk_offset =
       pt.y * pit->pitch_cblks + pt.x * pit->bpp_cblks;
-    unsigned int bit_offset = pt.x * pit->bpp_cbits;
+    unsigned int bit_offset = (unsigned int)pt.x * pit->bpp_cbits;
     if (pit->pitch_cbits > 0) {
       bit_offset += pt.y * pit->pitch_cbits;
     }
@@ -412,12 +443,9 @@ bg_pit_moveto (BgPixIter *pit, IPoint2D pt)
        Assume (bpp == data_bpp + padding_bpp).
        if (pit->bpp_cbits > 0 || pit->pitch_cbits > 0) { then...
     */
-    {
-      unsigned char cache_bsz_8_log2 = 3 + pit->cache_bsz_log2;
-      cblk_offset +=
-	(bit_offset >> 3) & ~((unsigned int)pit->cache_bsz - 1);
-      bit_offset &= ((1 << cache_bsz_8_log2) - 1);
-    }
+    cblk_offset +=
+      (bit_offset >> 3) & ~((unsigned int)pit->cache_bsz - 1);
+    bit_offset &= (pit->cache_bsz_8 - 1);
     /* ...end } */
 
     pit->cblk_addr = cblk_offset;
@@ -425,93 +453,137 @@ bg_pit_moveto (BgPixIter *pit, IPoint2D pt)
   }
 }
 
-/* If we're at the end of a scanline, advance to the beginning of the
-   next scanline.  Unclipped.  */
+/* Move the BgPixIter to the given arbitrary coordinate, if possible.
+   Clipped.  This is the most computationally expensive movement
+   subroutine, so only use it when it is absolutely required.  */
 void
-bg_pit_next_scanln (BgPixIter *pit)
+bg_pit_moveto_cl (BgPixIter *pit, IPoint2D pt)
 {
-  pit->pos.x = 0;
-  pit->pos.y++;
-
-  if (pit->uncached) {
-    pit->cblk_addr += pit->pitch_pad_cblks;
-  } else {
-    unsigned char cache_bsz;
-    unsigned char cache_bsz_8;
-    signed char bit_offset;
-
-    /* N.B. When working with very small or narrow images where the
-       scanline is narrower than the cache, it may not always be
-       necessary to flush the entire cache.  */
-    bg_pit_flush_all (pit);
-    pit->valid0 = 0;
-    pit->valid1 = 0;
-
-    cache_bsz = pit->cache_bsz;
-    cache_bsz_8 = cache_bsz << 3;
-    bit_offset = pit->bit_addr + pit->pitch_pad_cbits;
-    pit->cblk_addr += pit->pitch_pad_cblks;
-    if (bit_offset >= cache_bsz_8) {
-      pit->cblk_addr += cache_bsz;
-      bit_offset -= cache_bsz_8;
-    }
-    pit->bit_addr = bit_offset;
-  }
-}
-
-/* If we're at the end of a scanline, advance to the beginning of the
-   next scanline, if possible.  Clipped.  */
-void
-bg_pit_next_scanln_cl (BgPixIter *pit)
-{
-  if (pit->pos.x != pit->rti.hdr.width - 1 ||
-      pit->pos.y == pit->rti.hdr.height - 1)
+  if (/* pt.x < 0 || pt.y < 0 || */
+      pt.x >= pit->rti.hdr.width || pt.y >= pit->rti.hdr.height)
     return;
-  /* return */ bg_pit_next_scanln (pit);
+  /* return */ bg_pit_moveto (pit, pt);
 }
 
-/* If we're at the beginning of a scanline, advance to the end of the
-   previous scanline.  Unclipped.  */
+/* TODO FIXME: Add subroutines to advance by n pixels horizontally and
+   vertically.  */
+
+/* Positive delta bits, forward by a fraction of a cache block.  */
 void
-bg_pit_prev_scanln (BgPixIter *pit)
+bg_pit_addr_delta_cbits_pu8 (BgPixIter *pit, unsigned char cbits)
 {
-  pit->pos.x = pit->rti.hdr.width - 1;
-  pit->pos.y--;
-
-  if (pit->uncached) {
-    pit->cblk_addr -= pit->pitch_pad_cblks;
-  } else {
-    unsigned char cache_bsz;
-    unsigned char cache_bsz_8;
-    signed char bit_offset;
-
-    /* N.B. When working with very small or narrow images where the
-       scanline is narrower than the cache, it may not always be
-       necessary to flush the entire cache.  */
-    bg_pit_flush_all (pit);
-    pit->valid0 = 0;
-    pit->valid1 = 0;
-
-    cache_bsz = pit->cache_bsz;
-    cache_bsz_8 = cache_bsz << 3;
-    bit_offset = pit->bit_addr - pit->pitch_pad_cbits;
-    pit->cblk_addr -= pit->pitch_pad_cblks;
-    if (bit_offset < 0) {
-      pit->cblk_addr -= cache_bsz;
-      bit_offset += cache_bsz_8;
-    }
-    pit->bit_addr = bit_offset;
+  unsigned char cache_bsz = pit->cache_bsz;
+  unsigned char cache_bsz_8 = pit->cache_bsz_8;
+  signed char bit_offset = pit->bit_addr + cbits;
+  if (bit_offset >= cache_bsz_8) {
+    pit->cblk_addr += cache_bsz;
+    bit_offset -= cache_bsz_8;
   }
+  pit->bit_addr = bit_offset;
 }
 
-/* If we're at the beginning of a scanline, advance to the end of the
-   previous scanline, if possible.  Clipped.  */
+/* Negative delta bits, backward by a fraction of a cache block.  */
 void
-bg_pit_prev_scanln_cl (BgPixIter *pit)
+bg_pit_addr_delta_cbits_nu8 (BgPixIter *pit, unsigned char cbits)
 {
-  if (pit->pos.x != 0 || pit->pos.y == 0)
-    return;
-  /* return */ bg_pit_next_scanln (pit);
+  unsigned char cache_bsz = pit->cache_bsz;
+  unsigned char cache_bsz_8 = pit->cache_bsz_8;
+  signed char bit_offset = pit->bit_addr - cbits;
+  if (bit_offset < 0) {
+    pit->cblk_addr -= cache_bsz;
+    bit_offset += cache_bsz_8;
+  }
+  pit->bit_addr = bit_offset;
+}
+
+/* Signed delta bits, forward/backward by a fraction of a cache
+   block.  */
+void
+bg_pit_addr_delta_cbits_i8 (BgPixIter *pit, signed char cbits)
+{
+  unsigned char cache_bsz = pit->cache_bsz;
+  unsigned char cache_bsz_8 = pit->cache_bsz_8;
+  signed char bit_offset = pit->bit_addr + cbits;
+  if (bit_offset >= cache_bsz_8) {
+    pit->cblk_addr += cache_bsz;
+    bit_offset -= cache_bsz_8;
+  } else if (bit_offset < 0) {
+    pit->cblk_addr -= cache_bsz;
+    bit_offset += cache_bsz_8;
+  }
+  pit->bit_addr = bit_offset;
+}
+
+void
+bg_pit_addr_delta_pu8 (BgPixIter *pit, BGPIAddrDeltaU8 delta)
+{
+  pit->cblk_addr += delta.cblks;
+  if (delta.cbits > 0)
+    bg_pit_addr_delta_cbits_pu8 (pit, delta.cbits);
+}
+
+void
+bg_pit_addr_delta_nu8 (BgPixIter *pit, BGPIAddrDeltaU8 delta)
+{
+  pit->cblk_addr -= delta.cblks;
+  if (delta.cbits > 0)
+    bg_pit_addr_delta_cbits_nu8 (pit, delta.cbits);
+}
+
+void
+bg_pit_addr_delta_i8 (BgPixIter *pit, BGPIAddrDeltaI8 delta)
+{
+  pit->cblk_addr += (int)delta.cblks;
+  if (delta.cbits != 0)
+    bg_pit_addr_delta_cbits_i8 (pit, delta.cbits);
+}
+
+void
+bg_pit_addr_delta_pu16 (BgPixIter *pit, BGPIAddrDeltaU16 delta)
+{
+  pit->cblk_addr += delta.cblks;
+  if (delta.cbits > 0)
+    bg_pit_addr_delta_cbits_pu8 (pit, delta.cbits);
+}
+
+void
+bg_pit_addr_delta_nu16 (BgPixIter *pit, BGPIAddrDeltaU16 delta)
+{
+  pit->cblk_addr -= delta.cblks;
+  if (delta.cbits > 0)
+    bg_pit_addr_delta_cbits_nu8 (pit, delta.cbits);
+}
+
+void
+bg_pit_addr_delta_i16 (BgPixIter *pit, BGPIAddrDeltaI16 delta)
+{
+  pit->cblk_addr += (int)delta.cblks;
+  if (delta.cbits != 0)
+    bg_pit_addr_delta_cbits_i8 (pit, delta.cbits);
+}
+
+void
+bg_pit_addr_delta_pu32 (BgPixIter *pit, BGPIAddrDeltaU32 delta)
+{
+  pit->cblk_addr += delta.cblks;
+  if (delta.cbits > 0)
+    bg_pit_addr_delta_cbits_pu8 (pit, delta.cbits);
+}
+
+void
+bg_pit_addr_delta_nu32 (BgPixIter *pit, BGPIAddrDeltaU32 delta)
+{
+  pit->cblk_addr -= delta.cblks;
+  if (delta.cbits > 0)
+    bg_pit_addr_delta_cbits_nu8 (pit, delta.cbits);
+}
+
+void
+bg_pit_addr_delta_i32 (BgPixIter *pit, BGPIAddrDeltaI32 delta)
+{
+  pit->cblk_addr += (int)delta.cblks;
+  if (delta.cbits != 0)
+    bg_pit_addr_delta_cbits_i8 (pit, delta.cbits);
 }
 
 /* Move right by one pixel (x + 1), unclipped.  */
@@ -525,10 +597,10 @@ bg_pit_inc_x (BgPixIter *pit)
   } else {
     /* Compute the incremented address and check if we need to
        flush.  */
-    unsigned char bpp = pit->rti.hdr.bpp;
+    unsigned char bpp_cblks = pit->bpp_cblks;
     unsigned char cache_bsz = pit->cache_bsz;
-    unsigned char cache_bsz_8 = cache_bsz << 3;
-    signed char bit_offset = pit->bit_addr + bpp;
+    unsigned char cache_bsz_8 = pit->cache_bsz_8;
+    signed char bit_offset = pit->bit_addr + pit->bpp_cbits;
     if (bit_offset >= cache_bsz_8) {
       bit_offset -= cache_bsz_8;
       bg_pit_cblk_inc (pit, cache_bsz);
@@ -557,10 +629,9 @@ bg_pit_dec_x (BgPixIter *pit)
   } else {
     /* Compute the decremented address and check if we need to
        flush.  */
-    unsigned char bpp = pit->rti.hdr.bpp;
     unsigned char cache_bsz = pit->cache_bsz;
-    unsigned char cache_bsz_8 = cache_bsz << 3;
-    signed char bit_offset = pit->bit_addr - bpp;
+    unsigned char cache_bsz_8 = pit->cache_bsz_8;
+    signed char bit_offset = pit->bit_addr - pit->bpp_cbits;
     if (bit_offset < 0) {
       bit_offset += cache_bsz_8;
       bg_pit_cblk_dec (pit, cache_bsz);
@@ -587,23 +658,15 @@ bg_pit_inc_y (BgPixIter *pit)
   if (pit->uncached) {
     pit->cblk_addr += pit->pitch_cblks;
   } else {
+    BGPIAddrDeltaU16 delta = { pit->pitch_cblks, pit->pitch_cbits };
     /* N.B. When working with very small or narrow images where the
        scanline is narrower than the cache, it may not always be
        necessary to flush the entire cache.  */
     bg_pit_flush_all (pit);
     pit->valid0 = 0;
     pit->valid1 = 0;
-    pit->cblk_addr += pit->pitch_cblks;
-    if (pit->pitch_cbits > 0) {
-      unsigned char cache_bsz = pit->cache_bsz;
-      unsigned char cache_bsz_8 = cache_bsz << 3;
-      signed char bit_offset = pit->bit_addr + pit->pitch_cbits;
-      if (bit_offset >= cache_bsz_8) {
-	pit->cblk_addr += cache_bsz;
-	bit_offset -= cache_bsz_8;
-      }
-      pit->bit_addr = bit_offset;
-    }
+
+    bg_pit_addr_delta_pu16 (pit, delta);
   }
 }
 
@@ -625,23 +688,15 @@ bg_pit_dec_y (BgPixIter *pit)
   if (pit->uncached) {
     pit->cblk_addr -= pit->pitch_cblks;
   } else {
+    BGPIAddrDeltaU16 delta = { pit->pitch_cblks, pit->pitch_cbits };
     /* N.B. When working with very small or narrow images where the
        scanline is narrower than the cache, it may not always be
        necessary to flush the entire cache.  */
     bg_pit_flush_all (pit);
     pit->valid0 = 0;
     pit->valid1 = 0;
-    pit->cblk_addr -= pit->pitch_cblks;
-    if (pit->pitch_cbits > 0) {
-      unsigned char cache_bsz = pit->cache_bsz;
-      unsigned char cache_bsz_8 = cache_bsz << 3;
-      signed char bit_offset = pit->bit_addr - pit->pitch_cbits;
-      if (bit_offset < 0) {
-	pit->cblk_addr -= cache_bsz;
-	bit_offset += cache_bsz_8;
-      }
-      pit->bit_addr = bit_offset;
-    }
+
+    bg_pit_addr_delta_nu16 (pit, delta);
   }
 }
 
@@ -654,6 +709,149 @@ bg_pit_dec_y_cl (BgPixIter *pit)
   /* return */ bg_pit_dec_y (pit);
 }
 
+/* If we're at the end of a scanline, advance to the beginning of the
+   next scanline.  Unclipped.  */
+void
+bg_pit_next_scanln (BgPixIter *pit)
+{
+  pit->pos.x = 0;
+  pit->pos.y++;
+
+  if (pit->uncached) {
+    pit->cblk_addr += pit->pitch_pad_cblks;
+  } else {
+    BGPIAddrDeltaU16 delta = { pit->pitch_pad_cblks, pit->pitch_pad_cbits };
+    /* N.B. When working with very small or narrow images where the
+       scanline is narrower than the cache, it may not always be
+       necessary to flush the entire cache.  */
+    bg_pit_flush_all (pit);
+    pit->valid0 = 0;
+    pit->valid1 = 0;
+
+    bg_pit_addr_delta_pu16 (pit, delta);
+  }
+}
+
+/* If we're at the end of a scanline, advance to the beginning of the
+   next scanline, if possible.  Clipped.  */
+void
+bg_pit_next_scanln_cl (BgPixIter *pit)
+{
+  if (pit->pos.x != pit->rti.hdr.width - 1 ||
+      pit->pos.y == pit->rti.hdr.height - 1)
+    return;
+  /* return */ bg_pit_next_scanln (pit);
+}
+
+/* If we're at the beginning of a scanline, advance to the end of the
+   previous scanline.  Unclipped.  */
+void
+bg_pit_prev_scanln (BgPixIter *pit)
+{
+  pit->pos.x = pit->rti.hdr.width - 1;
+  pit->pos.y--;
+
+  if (pit->uncached) {
+    pit->cblk_addr -= pit->pitch_pad_cblks;
+  } else {
+    BGPIAddrDeltaU16 delta = { pit->pitch_pad_cblks, pit->pitch_pad_cbits };
+    /* N.B. When working with very small or narrow images where the
+       scanline is narrower than the cache, it may not always be
+       necessary to flush the entire cache.  */
+    bg_pit_flush_all (pit);
+    pit->valid0 = 0;
+    pit->valid1 = 0;
+
+    bg_pit_addr_delta_nu16 (pit, delta);
+  }
+}
+
+/* Compute address delta quantities to advance to the next scanline
+   but move backwards on the x position by the designated
+   quantity.  */
+void
+bg_pit_compute_dix (BgPixIter *pit, BGPIAddrDeltaIX *dx)
+{
+  short x = dx->x;
+
+  if (pit->uncached) {
+    dx->delta.cblks = pit->pitch_cblks + x * pit->bpp_cblks;
+    /* dx->delta.cbits = 0; */
+  } else {
+    unsigned char cache_bsz = pit->cache_bsz;
+    unsigned char cache_bsz_8 = pit->cache_bsz_8;
+    short cblks = pit->pitch_cblks;
+    int bit_offset =
+      (int)x * pit->bpp_cblks + pit->pitch_cbits;
+    /* TODO FIXME: Handle asymmetric bit shift and mask behavior for
+       negative integers.  */
+    cblks += (bit_offset >> 3) & ~((short)cache_bsz - 1);
+    dx->delta.cblks = cblks;
+    /* TODO FIXME: Check to see if we can compute `bit_offset` more
+       efficiently.  Yes... if we know in advance for sure whether
+       it's positive or negative, we can compute more efficiently.  */
+    if (bit_offset >= 0)
+      bit_offset &= (cache_bsz_8 - 1);
+    else
+      bit_offset |= ~(cache_bsz_8 - 1);
+    dx->delta.cbits = bit_offset;
+  }
+}
+
+/* Advance to the next scanline and signed delta adjust the x
+   position.  Unclipped.  */
+void
+bg_pit_next_scanln_dix (BgPixIter *pit, BGPIAddrDeltaIX dx)
+{
+  pit->pos.x += dx.x;
+  pit->pos.y++;
+
+  if (pit->uncached) {
+    pit->cblk_addr += (int)dx.delta.cblks;
+  } else {
+    /* N.B. When working with very small or narrow images where the
+       scanline is narrower than the cache, it may not always be
+       necessary to flush the entire cache.  */
+    bg_pit_flush_all (pit);
+    pit->valid0 = 0;
+    pit->valid1 = 0;
+
+    bg_pit_addr_delta_i16 (pit, dx.delta);
+  }
+}
+
+/* Advance to the previous scanline and signed delta adjust the x
+   position.  Unclipped.  */
+void
+bg_pit_prev_scanln_dix (BgPixIter *pit, BGPIAddrDeltaIX dx)
+{
+  pit->pos.x += dx.x;
+  pit->pos.y--;
+
+  if (pit->uncached) {
+    pit->cblk_addr += (int)dx.delta.cblks;
+  } else {
+    /* N.B. When working with very small or narrow images where the
+       scanline is narrower than the cache, it may not always be
+       necessary to flush the entire cache.  */
+    bg_pit_flush_all (pit);
+    pit->valid0 = 0;
+    pit->valid1 = 0;
+
+    bg_pit_addr_delta_i16 (pit, dx.delta);
+  }
+}
+
+/* If we're at the beginning of a scanline, advance to the end of the
+   previous scanline, if possible.  Clipped.  */
+void
+bg_pit_prev_scanln_cl (BgPixIter *pit)
+{
+  if (pit->pos.x != 0 || pit->pos.y == 0)
+    return;
+  /* return */ bg_pit_next_scanln (pit);
+}
+
 /* Read the bit slice of the given width in bits at the current pixel
    and after, max 64 bits.  */
 unsigned long long
@@ -661,7 +859,7 @@ bg_pit_read_slice64 (BgPixIter *pit, unsigned char bit_width)
 {
   unsigned long long cache_val;
   unsigned long long bw_mask = ((unsigned long long)1 << bit_width) - 1;
-  unsigned char cache_sz;
+  unsigned char cache_sz_8;
   unsigned char cache_bit_ofs;
 
   /* TODO FIXME: Optimize, don't pre-compute previous quantities
@@ -669,11 +867,11 @@ bg_pit_read_slice64 (BgPixIter *pit, unsigned char bit_width)
   if (pit->uncached) {
     /* In uncached mode, we simply read the memory directly.  */
     unsigned char *addr = &pit->rti.image_data[pit->cblk_addr];
-    READ_INTN(cache_val, addr, bit_width >> 3);
+    READ_INTN(cache_val, addr, bit_width);
     return cache_val & bw_mask;
   }
 
-  cache_sz = pit->cache_sz;
+  cache_sz_8 = pit->cache_sz_8;
 
   /* N.B. Although we could try to selectively determine whether to
      load one or both blocks in two-block mode, it's probably not
@@ -691,9 +889,9 @@ bg_pit_read_slice64 (BgPixIter *pit, unsigned char bit_width)
        work.  */
     /* TODO FIXME: Check how we can better optimize this, if
        possible.  */
-    cache_bit_ofs = (cache_sz << 3) - cache_bit_ofs - bit_width;
+    cache_bit_ofs = cache_sz_8 - cache_bit_ofs - bit_width;
   }
-  READ_INTN(cache_val, pit->cache, cache_sz);
+  READ_INTN(cache_val, pit->cache, cache_sz_8);
   return (cache_val >> cache_bit_ofs) & bw_mask;
 }
 
@@ -738,7 +936,7 @@ bg_pit_write_slice64 (BgPixIter *pit, unsigned long long val,
 		      unsigned char bit_width)
 {
   unsigned long long bw_mask = ((unsigned long long)1 << bit_width) - 1;
-  unsigned char cache_sz;
+  unsigned char cache_sz_8;
   unsigned char cache_bit_ofs;
   val &= bw_mask;
 
@@ -747,16 +945,16 @@ bg_pit_write_slice64 (BgPixIter *pit, unsigned long long val,
     unsigned char *addr = &pit->rti.image_data[pit->cblk_addr];
     /* TODO FIXME: Try to use a macro here for cleanliness and less
        duplicate code.  */
-    switch (bit_width >> 3) {
-    case 1: *(unsigned char*)addr = val; break;
-    case 2: *(unsigned short*)addr = val; break;
-    case 4: *(unsigned int*)addr = val; break;
-    case 8: *(unsigned long long*)addr = val; break;
+    switch (bit_width) {
+    case 8: *(unsigned char*)addr = val; break;
+    case 16: *(unsigned short*)addr = val; break;
+    case 32: *(unsigned int*)addr = val; break;
+    case 64: *(unsigned long long*)addr = val; break;
     }
     return;
   }
 
-  cache_sz = pit->cache_sz;
+  cache_sz_8 = pit->cache_sz_8;
 
   /* N.B. Although we could try to selectively determine whether to
      load one or both blocks in two-block mode, it's probably not
@@ -775,32 +973,32 @@ bg_pit_write_slice64 (BgPixIter *pit, unsigned long long val,
        work.  */
     /* TODO FIXME: Check how we can better optimize this, if
        possible.  */
-    cache_bit_ofs = (cache_sz << 3) - cache_bit_ofs - bit_width;
+    cache_bit_ofs = cache_sz_8 - cache_bit_ofs - bit_width;
   }
 
   /* TODO FIXME: Now this is ugly, but there's not really a better way
      to do this in C except with more macros.  The crux is that we
      must not generate unaligned memory requests.  */
-  switch (cache_sz) {
-  case 1:
+  switch (cache_sz_8) {
+  case 8:
     *(unsigned char*)pit->cache &=
       ~((unsigned char)bw_mask << cache_bit_ofs);
     *(unsigned char*)pit->cache |=
       (unsigned char)val << cache_bit_ofs;
     break;
-  case 2:
+  case 16:
     *(unsigned short*)pit->cache &=
       ~((unsigned short)bw_mask << cache_bit_ofs);
     *(unsigned short*)pit->cache |=
       (unsigned short)val << cache_bit_ofs;
     break;
-  case 4:
+  case 32:
     *(unsigned int*)pit->cache &=
       ~((unsigned int)bw_mask << cache_bit_ofs);
     *(unsigned int*)pit->cache |=
       (unsigned int)val << cache_bit_ofs;
     break;
-  case 8:
+  case 64:
     *(unsigned long long*)pit->cache &=
       ~((unsigned long long)bw_mask << cache_bit_ofs);
     *(unsigned long long*)pit->cache |=
@@ -1048,28 +1246,58 @@ bg_ctx8_clear_img (BgPixIterCol8 *ctx)
 
 /********************************************************************/
 
-/* Initialize a BgLineIterY context.  */
+/* Initialize a BgLineIterY context with 50% rounding.  Unfortunately,
+   although 50% rounding looks visually nice, it does come with a
+   price of slightly more complex inner loop iterator code.  */
 void
-bg_line_iter_y_start (BgLineIterY *lit, Point2D p1, Point2D p2)
+bg_line_iter_y_init (BgLineIterY *lit, Point2D p1, Point2D p2)
 {
   Point2D delta = { p2.x - p1.x, p2.y - p1.y };
+  Point2D adelta;
   /* TODO FIXME: Check for optimization in sign computation.  */
-  Point2D signs =
-    { (delta.x > 0) ? 1 : ((delta.x < 0) ? -1 : 0),
-      (delta.y > 0) ? 1 : ((delta.y < 0) ? -1 : 0)};
+  Point2D signs;
+  short rem;
+  if (delta.x > 0)
+    { signs.x = 1; adelta.x = delta.x; }
+  else if (delta.x < 0)
+    { signs.x = -1; adelta.x = -delta.x; }
+  else
+    { signs.x = 0; adelta.x = delta.x; }
+  if (delta.y > 0)
+    { signs.y = 1; adelta.y = delta.y; }
+  else if (delta.y < 0)
+    { signs.y = -1; adelta.y = -delta.y; }
+  else
+    { signs.y = 0; adelta.y = delta.y; }
   memcpy (&lit->p1, &p1, sizeof(Point2D));
   memcpy (&lit->p2, &p2, sizeof(Point2D));
-  lit->adelta.x = ABS(delta.x); lit->adelta.y = ABS(delta.y);
+  memcpy (&lit->adelta, &adelta, sizeof(Point2D));
   memcpy (&lit->signs, &signs, sizeof(Point2D));
   memcpy (&lit->cur, &p1, sizeof(Point2D));
-  lit->rem = 0;
+  /* Initialize the remainder for 50% rounding.  */
+  rem = adelta.y - adelta.x;
+  /* Avoid asymmetric two's complement behavior.  */
+  if (rem < 0) rem++;
+  rem >>= 1;
+  lit->rem = rem;
 }
 
-/* `line_iter_next ()` steps horizontally until the next scanline is
-   reached, and the current position is then the first pixel on the
-   next scanline.  By definition, this is always a diagonal motion,
-   except for straight vertical lines.  You can reference
-   `lit->signs.y` for an easy determination of this.
+/* `bg_line_iter_y_start ()` is like `bg_line_iter_y_step ()` except
+   that it handles the special cases of the first iteration.  */
+unsigned char
+bg_line_iter_y_start (BgLineIterY *lit)
+{
+  return bg_line_iter_y_step (lit);
+}
+
+/* `bg_line_iter_y_step ()` steps horizontally until the end of the
+   current scanline is exceeded.  At this point, by definition, if you
+   drop straight up/down, the motion to the next scanline is always a
+   diagonal motion, except for straight vertical lines.  You can
+   reference `lit->signs.y` for an easy determination of this.
+
+   At the final point, we stop right on the point rather than
+   exceeding it.
 
    So this way, we know both the first and the last pixel on a
    particular scanline, so we can just plug that into higher level
@@ -1082,7 +1310,7 @@ bg_line_iter_y_step (BgLineIterY *lit)
   Point2D signs;
   Point2D cur;
   short p2_x;
-  unsigned short rem;
+  short rem;
 
   /* Copy variables locally for performance.  */
   memcpy (&cur, &lit->cur, sizeof(Point2D));
@@ -1097,11 +1325,39 @@ bg_line_iter_y_step (BgLineIterY *lit)
   p2_x = lit->p2.x;
   rem = lit->rem;
 
-  rem += adelta.x;
-  cur.y += signs.y;
-  while (rem >= adelta.y && cur.x != p2_x) {
-    cur.x += signs.x;
-    rem -= adelta.y;
+  /* On the first iteration, `rem` could be negative.  If it is, this
+     means we move to the end of this scanline but do not advance to
+     the next scanline.  If (rem >= 0), the looping would naturally
+     calculate one less scanline advancement, so we advance right away
+     instead.  This allows us to consistently calculate the final y
+     position for (ABS(p2.y - p1.y) + 1) scanlines.  */
+  /* TODO FIXME: Find a more efficient way so that we don't need to do
+     this check on every iteration.  */
+  if (rem < 0) {
+    /* Special case logic to handle the first scanline.  */
+    rem += adelta.x;
+    while (rem >= adelta.y && cur.x != p2_x) {
+      cur.x += signs.x;
+      rem -= adelta.y;
+    }
+  } else {
+    /* TODO FIXME: On first iteration, we should special case this so
+       that we still generate a one-pixel scanline for the first point
+       before it is immediately skipped for the regular rasterization
+       loop to begin.  So basically, that means return right away
+       without incrementing doing anything yet.
+
+       Or, you can think of it this way, either you make the first
+       point single-pixel, or the last point is single-pixel.  Right
+       now our outer loop is setup so the last point is single-pixel,
+       but our API declares it the other way around, without having
+       full functions to support it that way.  */
+    rem += adelta.x;
+    cur.y += signs.y;
+    while (rem >= adelta.y && cur.x != p2_x) {
+      cur.x += signs.x;
+      rem -= adelta.y;
+    }
   }
 
   /* End of iteration, copy variables back to the context.  */
@@ -1118,11 +1374,36 @@ bg_pit_lineto64 (BgPixIter *pit, IPoint2D p2, unsigned long long val)
 {
   BgLineIterY lit;
   IPoint2D last_pt = { pit->pos.x, pit->pos.y };
-  bg_line_iter_y_start (&lit, *(Point2D*)&last_pt, *(Point2D*)&p2);
+  short len;
+  /* TODO FIXME: We should revamp our iterator use here so we get an
+     iterator that directly returns the length of each scanline slice,
+     rather than the positions.  */
+  bg_line_iter_y_init (&lit, *(Point2D*)&last_pt, *(Point2D*)&p2);
+
+  /* Now, this may look quite funny, but fortunately we can use this
+     setup that is similar to a "Duff Device" for the sake of maximum
+     code sharing when working with iterator code.  Because of the
+     "non-local goto," it's important that we do not declare any
+     variables at the top of the while loop scope since we will
+     literally skip over the machine code that allocates such
+     storage.  */
+
+  /* First iteration */
+  if (!bg_line_iter_y_start (&lit))
+    return; /* Nothing to be done.  */
+  goto common;
+
+  /* All next iterations */
   while (bg_line_iter_y_step (&lit)) {
+    /* Advance the y position accordingly.  */
+    switch (lit.signs.y) {
+    case 1: bg_pit_inc_y (pit); break;
+    case -1: bg_pit_dec_y (pit); break;
+    }
+  common:
     /* The iterator computed the first point on the next scanline, so
        now we can compute the fill scanline parameters.  */
-    short len = lit.cur.x - last_pt.x;
+    len = lit.cur.x - last_pt.x;
     if (len == 0) {
       bg_pit_write_pix64 (pit, val);
     } else if (len > 0) {
@@ -1133,11 +1414,6 @@ bg_pit_lineto64 (BgPixIter *pit, IPoint2D p2, unsigned long long val)
       len = -len;
       bg_pit_scanline_arfill64 (pit, len, val);
     }
-    /* Advance the y position accordingly.  */
-    switch (lit.signs.y) {
-    case 1: bg_pit_inc_y (pit); break;
-    case -1: bg_pit_dec_y (pit); break;
-    }
     /* Update `last_pt`.  */
     last_pt.x = lit.cur.x;
     last_pt.y = lit.cur.y;
@@ -1145,7 +1421,7 @@ bg_pit_lineto64 (BgPixIter *pit, IPoint2D p2, unsigned long long val)
 }
 
 /* Specialized triangle outline drawer, suitable for rasterization of
-   3D graphics.  */
+   3D graphics.  Unclipped.  */
 void
 bg_pit_tri_line64 (BgPixIter *pit,
 		   IPoint2D p1, IPoint2D p2, IPoint2D p3,
@@ -1158,7 +1434,7 @@ bg_pit_tri_line64 (BgPixIter *pit,
 }
 
 /* Specialized quadrilateral outline drawer, suitable for
-   rasterization of 3D graphics.  */
+   rasterization of 3D graphics.  Unclipped.  */
 void
 bg_pit_quad_line64 (BgPixIter *pit,
 		    IPoint2D p1, IPoint2D p2, IPoint2D p3, IPoint2D p4,
@@ -1177,6 +1453,8 @@ bg_pit_quad_line64 (BgPixIter *pit,
    Fill rule: the first scanline (ymin) is filled but the last
    scanline (ymax) is not.  Likewise, the first x pixel (xmin) is
    filled but the last one (xmax) is not.  */
+/* TODO FIXME: This code must be updated to use the "start" and "step"
+   iterator discipline.  */
 void
 bg_pit_tri_fill64 (BgPixIter *pit,
 		   IPoint2D p1, IPoint2D p2, IPoint2D p3,
@@ -1189,69 +1467,91 @@ bg_pit_tri_fill64 (BgPixIter *pit,
   unsigned char zigzag_left = 0;
 
   /* First sort the points in vertical ascending order.  */
-  if (p2.y < p1.y) {
-    SWAP_PTS(p1, p2);
-  }
-  if (p3.y < p2.y) {
-    SWAP_PTS(p2, p3);
-  }
-  if (p2.y < p1.y) {
-    SWAP_PTS(p1, p2);
-  }
+  if (p2.y < p1.y) SWAP_PTS(p1, p2);
+  if (p3.y < p2.y) SWAP_PTS(p2, p3);
+  if (p2.y < p1.y) SWAP_PTS(p1, p2);
+
+  /* Check if there are actually zero scanlines to render and exit
+     early.  */
+  if (p3.y == p1.y)
+    return;
 
   bg_pit_moveto (pit, p1);
   last_pt1.x = p1.x; last_pt1.y = p1.y;
   last_pt2.x = p1.x; last_pt2.y = p1.y;
-  bg_line_iter_y_start (&lit2, *(Point2D*)&p1, *(Point2D*)&p3);
+  bg_line_iter_y_init (&lit2, *(Point2D*)&p1, *(Point2D*)&p3);
 
-  for (i = 0; i < 2; i++) {
-    if (i == 0) {
+  i = 2;
+  while (i > 0) {
+    unsigned short *begin_x, *end_x;
+
+    i--;
+    if (i == 1) {
       /* Scan-fill the triangle between lines from first vertex, until
 	 we reach the height of the second vertex.  */
-      bg_line_iter_y_start (&lit1, *(Point2D*)&p1, *(Point2D*)&p2);
+      bg_line_iter_y_init (&lit1, *(Point2D*)&p1, *(Point2D*)&p2);
       if ((p2.x == p3.x && p2.y > p3.y) ||
 	  p2.x > p3.x)
 	x_reverse = 1;
       else
 	x_reverse = 0;
     } else {
-      /* Scan-fill the triangle between lines of the last vertex,
+      /* Scan-fill the triangle between lines to the last vertex,
 	 until we reach the last vertex.  */
-      bg_line_iter_y_start (&lit1, *(Point2D*)&p2, *(Point2D*)&p3);
+      bg_line_iter_y_init (&lit1, *(Point2D*)&p2, *(Point2D*)&p3);
       if ((p2.x == last_pt2.x && p2.y > last_pt2.y) ||
 	  p2.x > last_pt2.x)
 	x_reverse = 1;
       else
 	x_reverse = 0;
     }
+
+    /* N.B.: Pointers are used here as a code efficiency compromise
+       between to eliminate extra branches in inner loop, at the
+       expense of additional pointer dereferencing in the loop.  That
+       can create trouble with register caching of the values.  Short
+       of that, the only other way to get more efficiency is to
+       copy-paste the inner loop code 8 times for each
+       possibility.  */
+    if (x_reverse) {
+      begin_x = (lit2.signs.x > 0) ?
+	&last_pt2.x : (unsigned short*)&lit2.cur.x;
+      end_x = (lit1.signs.x > 0) ?
+	&last_pt1.x : (unsigned short*)&lit1.cur.x;
+    } else {
+      begin_x = (lit1.signs.x > 0) ?
+	&last_pt1.x : (unsigned short*)&lit1.cur.x;
+      end_x = (lit2.signs.x > 0) ?
+	&last_pt2.x : (unsigned short*)&lit2.cur.x;
+    }
+
     while (bg_line_iter_y_step (&lit1)) {
-      unsigned short begin_x, end_x;
       short len;
       bg_line_iter_y_step (&lit2);
       /* Verify we do not fill the very last scanline.  */
+      /* TODO FIXME: Investigate ways to make this check more
+	 efficient, so that we do not need to do it in every
+	 iteration.  Probably the best way is to use a loop counter
+	 that terminates before we reach the last scanline.  */
       if (pit->pos.y == p3.y)
 	continue;
       /* The iterators computed the first point on the next scanline, so
 	 now we can compute the fill scanline parameters.  */
-      if (x_reverse) {
-	begin_x = (lit2.signs.x > 0) ? last_pt2.x : lit2.cur.x;
-	end_x = (lit1.signs.x > 0) ? last_pt1.x : lit1.cur.x;
-	len = end_x - begin_x;
-      } else {
-	begin_x = (lit1.signs.x > 0) ? last_pt1.x : lit1.cur.x;
-	end_x = (lit2.signs.x > 0) ? last_pt2.x : lit2.cur.x;
-	len = end_x - begin_x;
-      }
+      len = *end_x - *begin_x;
       if (len < 0)
 	len = 0; /* ???  It can happen in tight corners.  */
       /* TODO FIXME: Should we avoid zigzag scanfill?  If we wanted to
 	 avoid it, we'd have to compute the triangular next scanline
 	 skip factor.  */
+      /* TODO FIXME: Yes, rather than calling the iterator then
+	 figuring out how many times to step, the iterator should call
+	 our stepping functions directly to advance by the relative
+	 amounts.  That would reduce the looping overhead.  */
       if (zigzag_left) {
 	short i;
-	/* TODO FIXME: Shift into position for the scanline
-	   endpoint.  */
-	i = end_x - pit->pos.x;
+	/* TODO FIXME: Shift into position for the scanline endpoint,
+	   is this inefficient?  */
+	i = *end_x - pit->pos.x;
 	while (i < 0) {
 	  i++;
 	  bg_pit_dec_x (pit);
@@ -1263,9 +1563,9 @@ bg_pit_tri_fill64 (BgPixIter *pit,
 	bg_pit_scanline_rfill64 (pit, len, val);
       } else {
 	short i;
-	/* TODO FIXME: Shift into position for the scanline
-	   beginning.  */
-	i = begin_x - pit->pos.x;
+	/* TODO FIXME: Shift into position for the scanline beginning,
+	   is this inefficient?  */
+	i = *begin_x - pit->pos.x;
 	while (i < 0) {
 	  i++;
 	  bg_pit_dec_x (pit);
@@ -1278,7 +1578,7 @@ bg_pit_tri_fill64 (BgPixIter *pit,
       }
       zigzag_left = ~zigzag_left;
       /*{
-	IPoint2D mpt1 = { begin_x, last_pt2.y };
+	IPoint2D mpt1 = { *begin_x, last_pt2.y };
 	bg_pit_moveto (pit, mpt1);
       }
       bg_pit_scanline_fill64 (pit, len, val);*/

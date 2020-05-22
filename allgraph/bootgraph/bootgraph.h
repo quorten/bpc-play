@@ -100,10 +100,10 @@ typedef struct RTImageBuf_tag RTImageBuf;
    and store the result in `result`.  */
 #define READ_INTN(result, ptr, size) \
   switch (size) { \
-  case 1: (result) = *(unsigned char*)(ptr); break; \
-  case 2: (result) = *(unsigned short*)(ptr); break; \
-  case 4: (result) = *(unsigned int*)(ptr); break; \
-  case 8: (result) = *(unsigned long long*)(ptr); break; \
+  case 8: (result) = *(unsigned char*)(ptr); break; \
+  case 16: (result) = *(unsigned short*)(ptr); break; \
+  case 32: (result) = *(unsigned int*)(ptr); break; \
+  case 64: (result) = *(unsigned long long*)(ptr); break; \
   default: (result) = 0; break; \
   }
 
@@ -132,15 +132,15 @@ struct IVQuotRem_u8_divu8_tag IVQuotRem_u8_divu8;
 /* The pixel iterator, the base object of all graphics drawing
    operations.  A block subset of a scanline's pixels can be cached
    when the size of a pixel is smaller than the minimum supported
-   memory block, or simply to accelerate performance.  Routines are
-   provided for moving up and down by one pixel with accelerated
-   address computation.
+   memory block, or simply to accelerate performance.  A pixel must
+   never be larger than a cache block.  Routines are provided for
+   moving up and down by one pixel with accelerated address
+   computation.
 
    The cache can be split into two independently managed "blocks."
    This allows us to work with pixels that span the memory access
    alignment boundary while keeping our memory accesses still
    aligned.  */
-
 struct BgPixIter_tag
 {
   /* N.B.: For performance, we copy the whole RTImageBuf data
@@ -148,19 +148,19 @@ struct BgPixIter_tag
      changes to the source data, you must re-bind the BgPixIter to the
      RTImageBuf.  */
   RTImageBuf rti;
+  unsigned char cache[8]; /* pixel cache */
   IPoint2D pos;
   /* Offset from base address, in bytes, to the address of the cached
      block.  */
   unsigned int cblk_addr;
-  unsigned char cache[8];
   /* Image `pitch` (row size in bytes), but only the byte count that
      includes a whole number of cache blocks `cache_bsz`.  */
   unsigned short pitch_cblks;
-  /* Remainder bits of `pitch` that do not fit within `cache_bsz`.  */
-  unsigned char pitch_cbits;
   /* Padding at the end of scanlines to reach the indicated `pitch`
      size.  */
-  unsigned char pitch_pad_cblks;
+  unsigned short pitch_pad_cblks;
+  /* Remainder bits of `pitch` that do not fit within `cache_bsz`.  */
+  unsigned char pitch_cbits;
   unsigned char pitch_pad_cbits;
   /* Number of bytes of whole cache blocks `cache_bsz` that fit in one
      pixel's memory.  */
@@ -173,9 +173,13 @@ struct BgPixIter_tag
   /* User-adjustable total pixel cache size in bytes, up to the
      maximum of 8.  */
   unsigned char cache_sz;
+  /* `cache_sz * 8` */
+  unsigned char cache_sz_8;
   /* Size of a single cache block in bytes, half the total cache size
      in two-block mode.  */
   unsigned char cache_bsz;
+  /* `cache_bsz * 8` */
+  unsigned char cache_bsz_8;
   /* Base 2 logarithm of `cache_bsz`.  */
   unsigned char cache_bsz_log2;
   /* Uncached mode, automatically determined based off of
@@ -193,6 +197,80 @@ struct BgPixIter_tag
   unsigned char dirty1 : 1;
 };
 typedef struct BgPixIter_tag BgPixIter;
+
+/* Independent pixel iterator address structure, used for saving and
+   restoring a particular address.  */
+struct BgPixIterAddr_tag
+{
+  IPoint2D pos;
+  unsigned int cblk_addr;
+  unsigned char bit_addr;
+};
+typedef struct BgPixIterAddr_tag BgPixIterAddr;
+
+/* Precomputed address advancement deltas.  */
+struct BGPIAddrDeltaU8_tag
+{
+  unsigned char cblks;
+  unsigned char cbits;
+};
+typedef struct BGPIAddrDeltaU8_tag BGPIAddrDeltaU8;
+
+struct BGPIAddrDeltaI8_tag
+{
+  signed char cblks;
+  signed char cbits;
+};
+typedef struct BGPIAddrDeltaI8_tag BGPIAddrDeltaI8;
+
+struct BGPIAddrDeltaU16_tag
+{
+  unsigned short cblks;
+  unsigned char cbits;
+};
+typedef struct BGPIAddrDeltaU16_tag BGPIAddrDeltaU16;
+
+struct BGPIAddrDeltaI16_tag
+{
+  short cblks;
+  signed char cbits;
+};
+typedef struct BGPIAddrDeltaI16_tag BGPIAddrDeltaI16;
+
+struct BGPIAddrDeltaU32_tag
+{
+  unsigned int cblks;
+  unsigned char cbits;
+};
+typedef struct BGPIAddrDeltaU32_tag BGPIAddrDeltaU32;
+
+struct BGPIAddrDeltaI32_tag
+{
+  int cblks;
+  signed char cbits;
+};
+typedef struct BGPIAddrDeltaI32_tag BGPIAddrDeltaI32;
+
+struct BGPIAddrDeltaIX_tag
+{
+  short x;
+  BGPIAddrDeltaI16 delta;
+};
+typedef struct BGPIAddrDeltaIX_tag BGPIAddrDeltaIX;
+
+struct BGPIAddrDeltaIY_tag
+{
+  short y;
+  BGPIAddrDeltaI32 delta;
+};
+typedef struct BGPIAddrDeltaIY_tag BGPIAddrDeltaIY;
+
+struct BGPIAddrDeltaIXY_tag
+{
+  Point2D pos;
+  BGPIAddrDeltaI32 delta;
+};
+typedef struct BGPIAddrDeltaIXY_tag BGPIAddrDeltaIXY;
 
 /* Position and 8-bit color context, very useful for many basic
    drawing operations that need only know of a foreground and
@@ -243,7 +321,7 @@ struct BgLineIterY_tag
   Point2D adelta;
   Point2D signs;
   Point2D cur;
-  unsigned short rem;
+  short rem;
 };
 typedef struct BgLineIterY_tag BgLineIterY;
 
@@ -262,6 +340,10 @@ void bg_byte_swap (unsigned char *d, unsigned char len);
 unsigned char bg_bit_swap (unsigned char d);
 void bg_gen_bitswap_lut (void);
 void bg_print_hdr_bitswap_lut (void);
+void bg_bit_swap_image(unsigned char *image_data, unsigned int image_size);
+void bg_byte_swap_image16(unsigned char *image_data, unsigned int image_size);
+void bg_byte_swap_scanln24(unsigned char *image_data, unsigned int image_size);
+void bg_byte_swap_image32(unsigned char *image_data, unsigned int image_size);
 
 unsigned short bg_align_pitch (unsigned short width, unsigned char align);
 void bg_pit_bind (BgPixIter *pit, RTImageBuf *rti,
@@ -275,10 +357,19 @@ void bg_pit_twoblk_dec (BgPixIter *pit, unsigned char cblk_dec);
 void bg_pit_cblk_inc (BgPixIter *pit, unsigned char cblk_inc);
 void bg_pit_cblk_dec (BgPixIter *pit, unsigned char cblk_dec);
 void bg_pit_moveto (BgPixIter *pit, IPoint2D pt);
-void bg_pit_next_scanln (BgPixIter *pit);
-void bg_pit_next_scanln_cl (BgPixIter *pit);
-void bg_pit_prev_scanln (BgPixIter *pit);
-void bg_pit_prev_scanln_cl (BgPixIter *pit);
+void bg_pit_moveto_cl (BgPixIter *pit, IPoint2D pt);
+void bg_pit_addr_delta_cbits_pu8(BgPixIter *pit, unsigned char cbits);
+void bg_pit_addr_delta_cbits_nu8(BgPixIter *pit, unsigned char cbits);
+void bg_pit_addr_delta_cbits_i8(BgPixIter *pit, signed char cbits);
+void bg_pit_addr_delta_pu8(BgPixIter *pit, BGPIAddrDeltaU8 delta);
+void bg_pit_addr_delta_nu8(BgPixIter *pit, BGPIAddrDeltaU8 delta);
+void bg_pit_addr_delta_i8(BgPixIter *pit, BGPIAddrDeltaI8 delta);
+void bg_pit_addr_delta_pu16(BgPixIter *pit, BGPIAddrDeltaU16 delta);
+void bg_pit_addr_delta_nu16(BgPixIter *pit, BGPIAddrDeltaU16 delta);
+void bg_pit_addr_delta_i16(BgPixIter *pit, BGPIAddrDeltaI16 delta);
+void bg_pit_addr_delta_pu32(BgPixIter *pit, BGPIAddrDeltaU32 delta);
+void bg_pit_addr_delta_nu32(BgPixIter *pit, BGPIAddrDeltaU32 delta);
+void bg_pit_addr_delta_i32(BgPixIter *pit, BGPIAddrDeltaI32 delta);
 void bg_pit_inc_x (BgPixIter *pit);
 void bg_pit_inc_x_cl (BgPixIter *pit);
 void bg_pit_dec_x (BgPixIter *pit);
@@ -287,6 +378,13 @@ void bg_pit_inc_y (BgPixIter *pit);
 void bg_pit_inc_y_cl (BgPixIter *pit);
 void bg_pit_dec_y (BgPixIter *pit);
 void bg_pit_dec_y_cl (BgPixIter *pit);
+void bg_pit_next_scanln (BgPixIter *pit);
+void bg_pit_next_scanln_cl (BgPixIter *pit);
+void bg_pit_prev_scanln (BgPixIter *pit);
+void bg_pit_prev_scanln_cl (BgPixIter *pit);
+void bg_pit_compute_dix (BgPixIter *pit, BGPIAddrDeltaIX *dx);
+void bg_pit_next_scanln_dix (BgPixIter *pit, BGPIAddrDeltaIX dx);
+void bg_pit_prev_scanln_dix (BgPixIter *pit, BGPIAddrDeltaIX dx);
 unsigned long long bg_pit_read_slice64 (BgPixIter *pit,
 					unsigned char bit_width);
 unsigned long long bg_pit_read_pix64 (BgPixIter *pit);
@@ -334,7 +432,8 @@ void bg_pit_scanline_arfill32 (BgPixIter *pit, unsigned short len,
 			       unsigned int val);
 void bg_ctx8_clear_img (BgPixIterCol8 *ctx);
 
-void bg_line_iter_y_start (BgLineIterY *lit, Point2D p1, Point2D p2);
+void bg_line_iter_y_init (BgLineIterY *lit, Point2D p1, Point2D p2);
+unsigned char bg_line_iter_y_start (BgLineIterY *lit);
 unsigned char bg_line_iter_y_step (BgLineIterY *lit);
 void bg_pit_lineto64 (BgPixIter *pit, IPoint2D p2, unsigned long long val);
 void bg_pit_tri_line64 (BgPixIter *pit,

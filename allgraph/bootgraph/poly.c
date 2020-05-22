@@ -19,7 +19,7 @@ typedef struct AbScalMath_tag AbScalMath;
 
 #define NUM_TYPES 1
 
-AbScalMath g_type_vtbl[NUM_TYPES];
+AbScalMath *g_type_vtbl[NUM_TYPES];
 
 /* Abstract object header standard fields.  */
 struct AbObj_tag
@@ -29,7 +29,7 @@ struct AbObj_tag
 typedef struct AbObj_tag AbObj;
 
 /* Helper macro to call a virtual method.  */
-#define V(obj) g_type_vtbl[((AbObj*)obj)->type_id]
+#define VT(vt_type, obj) ((vt_type*)g_type_vtbl[((AbObj*)obj)->type_id])
 
 /* How to use this polymorphism.  Two ways.
 
@@ -90,6 +90,27 @@ typedef struct AbObj_tag AbObj;
    programming in C.
 
 */
+
+/* Now that was okay for a basic introduction, but of course there
+   were holes in my approach.  What if you have an arbitrary range of
+   virtual method VTBL types in your type VTBL?  This will come down
+   to proper use of polymorphism and abstract classes.  Fundamentally,
+   you must define base classes and those base classes have base VTBL
+   types.  Derived classes must include the base class's VTBL data
+   structure at the start of their own data structure, and multiple
+   inheritance is not supported.  Now, the VTBL no longer contains the
+   VTBL data structures directly, but rather a pointer to the VTBL
+   data structures since their size may vary.  Either that, or a
+   MAX_SIZE is defined that no VTBL may exceed.
+
+   Now, if you want the compiler to generate copy-pasted code rather
+   than use run-time polymorphism?  You need to instrument your source
+   code to support this.  And then, with the right macros used inside
+   your code, you proceed by doing BIND() macros to set the macros
+   accordingly, followed by #include of your source to be templated
+   (generics programming).  Again, better yet though is to generate
+   actual C files with the generated code to make debugging easier,
+   but the high level strategy is pretty similar.  */
 
 /* Data structures without a C struct?  Yes, this is how it's done
    with a macro assembler.  */
