@@ -845,6 +845,8 @@ IVint32 iv_adist2_p2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b)
 
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.
+
+   TODO FIXME: Add normalized variant.
 */
 IVint32 iv_along2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b)
 {
@@ -861,6 +863,8 @@ IVint32 iv_along2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b)
 
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.
+
+   TODO FIXME: Add normalized variant.
 */
 IVVec2D_i32 *iv_proj3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c)
 {
@@ -879,6 +883,8 @@ IVVec2D_i32 *iv_proj3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c)
 
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.
+
+   TODO FIXME: Add normalized variant.
 */
 IVVec2D_i32 *iv_elim3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c)
 {
@@ -900,6 +906,8 @@ IVVec2D_i32 *iv_elim3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c)
 
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.
+
+   TODO FIXME: Add normalized variant.
 */
 IVVec2D_i32 *iv_aelim3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c)
 {
@@ -927,6 +935,8 @@ IVVec2D_i32 *iv_aelim3_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVVec2D_i32 *c)
 
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.
+
+   TODO FIXME: Add normalized variant.
 */
 IVPoint2D_i32 *iv_proj3_p2i32_InLine_v2i32(IVPoint2D_i32 *a,
 					   IVPoint2D_i32 *b,
@@ -954,6 +964,8 @@ IVPoint2D_i32 *iv_proj3_p2i32_InLine_v2i32(IVPoint2D_i32 *a,
    magnitude^2(L_rel_P - proj_L);
 
    If there is no solution, IVINT64_MIN is returned.
+
+   TODO FIXME: Add normalized variant.
 */
 IVint64 iv_dist2q2_p2i32_InLine_v2i32(IVPoint2D_i32 *a, IVInLine_v2i32 *b)
 {
@@ -976,6 +988,8 @@ IVint64 iv_dist2q2_p2i32_InLine_v2i32(IVPoint2D_i32 *a, IVInLine_v2i32 *b)
    magnitude(L_rel_P - proj_L);
 
    If there is no solution, IVINT32_MIN is returned.
+
+   TODO FIXME: Add normalized variant.
 */
 IVint32 iv_dist2_p2i32_InLine_v2i32(IVPoint2D_i32 *a, IVInLine_v2i32 *b)
 {
@@ -1058,6 +1072,8 @@ IVint32q16 iv_dist2_p2i32_Eqs_nv2i32q16(IVPoint2D_i32 *a, IVEqs_nv2i32q16 *b)
    dot_product(L_rel_P, A) / magnitude(A);
 
    If there is no solution, IVINT32_MIN is returned.
+
+   TODO FIXME: Add normalized variant.
 */
 IVint32 iv_dist2_p2i32_NRay_v2i32(IVPoint2D_i32 *a, IVNLine_v2i32 *b)
 {
@@ -1072,7 +1088,9 @@ IVint32 iv_dist2_p2i32_NRay_v2i32(IVPoint2D_i32 *a, IVNLine_v2i32 *b)
 }
 
 /* Approximate variant of distance to point in plane, like the
-   subroutine `iv_dist2_p2i32_NRay_v2i32()`.  */
+   subroutine `iv_dist2_p2i32_NRay_v2i32()`.
+
+   TODO FIXME: Add normalized variant.  */
 IVint32 iv_adist2_p2i32_NRay_v2i32(IVPoint2D_i32 *a, IVNLine_v2i32 *b)
 {
   /* Tags: SCALAR-ARITHMETIC */
@@ -1108,10 +1126,12 @@ IVint64 iv_dist2q2_p2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b)
    is squared so we therefore can avoid computing the square root and
    simplify as follows:
 
-   L - A * (dot_product(L, A) - d) / dot_product(A, A)
+   L - A * (dot_product(L, A) - d) / magnitude(A)
 
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.
+
+   TODO FIXME: Add normalized variant.
 */
 IVPoint2D_i32 *iv_proj3_p2i32_Eqs_v2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b,
 					IVEqs_v2i32 *c)
@@ -1141,10 +1161,12 @@ IVPoint2D_i32 *iv_proj3_p2i32_Eqs_v2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b,
    simplify as follows:
 
    L_rel_P = L - P;
-   L - A * dot_product(L_rel_P, A) / dot_product(A, A);
+   L - A * dot_product(L_rel_P, A) / magnitude(A);
 
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.
+
+   TODO FIXME: Add normalized variant.
 */
 IVPoint2D_i32 *iv_proj3_p2i32_NLine_v2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b,
 					  IVNLine_v2i32 *c)
@@ -1456,7 +1478,9 @@ IVint32q16 iv_apostqualfac_dot3_i32q16_v2i32(IVVec2D_i32 *a,
    representational form to point vector representational form.
 
    If there is no solution, the resulting point's coordinates are all
-   set to IVINT32_MIN.  */
+   set to IVINT32_MIN.
+
+   TODO FIXME: Add normalized variant.  */
 IVVec2D_i32 *iv_rf2_v2i32_Eqs_v2i32(IVVec2D_i32 *a, IVEqs_v2i32 *b)
 {
   IVint64 d = iv_magn2q_v2i32(&b->v);
@@ -1470,7 +1494,9 @@ IVVec2D_i32 *iv_rf2_v2i32_Eqs_v2i32(IVVec2D_i32 *a, IVEqs_v2i32 *b)
 /* Convert (reformat) Eqs representational form to NLine.
 
    If there is no solution, the resulting point's coordinates are all
-   set to IVINT32_MIN.  */
+   set to IVINT32_MIN.
+
+   TODO FIXME: Add normalized variant.  */
 IVNLine_v2i32 *iv_rf2_NLine_Eqs_v2i32(IVNLine_v2i32 *a, IVEqs_v2i32 *b)
 {
   /* Convert the origin offset to a point.  */
