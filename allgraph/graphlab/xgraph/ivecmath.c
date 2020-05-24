@@ -3353,3 +3353,207 @@ IVuint64 iv_pyrvol2_u64_u32(IVuint64 a, IVuint32 b)
    have an opening frustum rather than a closing pyramid.
 
 */
+
+/********************************************************************/
+/* 3D rendering transformation routines */
+
+/* TODO FIXME: Important optimizations!  If the world width and height
+   is a power of two in the world-to-viewport conversion, then we can
+   shift right rather than divide.  Likewise for focus in the
+   perspective unproject transformation.  For perspective project,
+   however, we must still divide since the z-coordinate is in the
+   denominator, but power-of-two gives us the opportunity to shift
+   left rather than multiply.  */
+
+/* Convert world coordinates to viewport coordinates using the given
+   bounding boxes.
+
+   World rectangle is (xmin, ymin, width, height) format.  Viewport
+   rectangle is (x_offset, y_offset, width, height) format.  World
+   rectangle width and height must not be equal to zero, or else
+   division by zero will occur.  */
+IVPoint3D_i32 *iv_w2v4_p3i32(IVPoint3D_i32 *a, IVPoint3D_i32 *b,
+			     IVRect_p2i32 *world, IVRect_p2i32 *viewport)
+{
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
+  IVint32 w_width = world->d[1].x;
+  IVint32 w_height = world->d[1].y;
+  IVint32 v_width = viewport->d[1].x;
+  IVint32 v_height = viewport->d[1].y;
+  IVPoint2D_i32 t;
+
+  /* Subtract the (xmin, ymin) coordinate.  */
+  t.x = b->x - world->d[0].x;
+  t.y = b->y - world->d[0].y;
+
+  /* Scale to viewport coordinates and add viewport offset.  */
+  /* TODO FIXME: Define `iv_muldiv3_i32 ()`.  */
+  a->x = (IVint32)((IVint64)t.x * v_width / w_width) + viewport->d[0].x;
+  a->y = (IVint32)((IVint64)t.y * v_height / w_height) + viewport->d[0].x;
+
+  /* Finally, copy the z coordinate as-is so it can be used to
+     generate the z buffer.  */
+  a->z = b->z;
+
+  return a;
+}
+
+/* Convert world coordinates to viewport coordinates using the given
+   bounding boxes and efficient shift right arithmetic.
+
+   World rectangle is (xmin, ymin, width_log2, height_log2) format.
+   Viewport rectangle is (x_offset, y_offset, width, height)
+   format.  */
+IVPoint3D_i32 *iv_w2v_shr4_p3i32(IVPoint3D_i32 *a, IVPoint3D_i32 *b,
+				 IVRect_p2i32 *world,
+				 IVRect_p2i32 *viewport)
+{
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
+  IVint32 w_width_log2 = world->d[1].x;
+  IVint32 w_height_log2 = world->d[1].y;
+  IVint32 v_width = viewport->d[1].x;
+  IVint32 v_height = viewport->d[1].y;
+  IVPoint2D_i32 t;
+
+  /* Subtract the (xmin, ymin) coordinate.  */
+  t.x = b->x - world->d[0].x;
+  t.y = b->y - world->d[0].y;
+
+  /* Scale to viewport coordinates and add viewport offset.  */
+  /* TODO FIXME: Define mulshr for both signed and unsigned
+     scalars.  */
+  a->x = (IVint32)(((IVint64)t.x * v_width) >> w_width_log2) +
+    viewport->d[0].x;
+  a->y = (IVint32)(((IVint64)t.y * v_height) >> w_height_log2) +
+    viewport->d[0].y;
+
+  /* Finally, copy the z coordinate as-is so it can be used to
+     generate the z buffer.  */
+  a->z = b->z;
+
+  return a;
+}
+
+/* Convert world coordinates to viewport coordinates using the given
+   bounding boxes and highly efficient shift right arithmetic.  The
+   world rectangle must be larger than the viewport rectangle, which
+   will typically be the case with fixed-point world coordinates and
+   pixel viewport coordinates.
+
+   World rectangle is (xmin, ymin, width_log2, height_log2) format.
+   Viewport rectangle is (x_offset, y_offset, width_log2, height_log2)
+   format.  */
+IVPoint3D_i32 *iv_w2v_eshr4_p3i32(IVPoint3D_i32 *a, IVPoint3D_i32 *b,
+				  IVRect_p2i32 *world,
+				  IVRect_p2i32 *viewport)
+{
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
+  IVint32 w_width_log2 = world->d[1].x;
+  IVint32 w_height_log2 = world->d[1].y;
+  IVint32 v_width_log2 = viewport->d[1].x;
+  IVint32 v_height_log2 = viewport->d[1].y;
+  IVPoint2D_i32 t;
+
+  /* Subtract the (xmin, ymin) coordinate.  */
+  t.x = b->x - world->d[0].x;
+  t.y = b->y - world->d[0].y;
+
+  /* Scale to viewport coordinates and add viewport offset.  */
+  /* TODO FIXME: Define mulshr for both signed and unsigned
+     scalars.  */
+  a->x = t.x >> (w_width_log2 - v_width_log2) + viewport->d[0].x;
+  a->y = t.y >> (w_height_log2 - v_height_log2) + viewport->d[0].y;
+
+  /* Finally, copy the z coordinate as-is so it can be used to
+     generate the z buffer.  */
+  a->z = b->z;
+
+  return a;
+}
+
+/* TODO: Convert from viewport coordinates to world coordinates.  This
+   is particularly useful for 3D manipulation via a GUI pointer device
+   such as a mouse.  */
+
+/* Perspective project the given coordinate.  The z coordinate is
+   passed through as-is.  `z` must not be equal to zero, or else
+   division by zero will occur.  */
+IVPoint3D_i32 *iv_persproj3_p3i32(IVPoint3D_i32 *a, IVPoint3D_i32 *b,
+				  IVint32 focus)
+{
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
+  /* TODO FIXME: Use scalar muldiv.  */
+  a->x = (IVint32)((IVint64)b->x * focus / b->z);
+  a->y = (IVint32)((IVint64)b->y * focus / b->z);
+  a->z = b->z;
+  return a;
+}
+
+/* Reverse perspective project the given coordinate.  The z
+   coordinate is passed through as-is.  This is particularly useful
+   for 3D manipulation via a GUI pointer device such as a mouse.
+   `focus` must not be equal to zero, or else division by zero will
+   occur.  */
+IVPoint3D_i32 *iv_unpersproj3_p3i32(IVPoint3D_i32 *a, IVPoint3D_i32 *b,
+				    IVint32 focus)
+{
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
+  /* TODO FIXME: Use scalar muldiv.  */
+  a->x = (IVint32)((IVint64)b->x * b->z / focus);
+  a->y = (IVint32)((IVint64)b->y * b->z / focus);
+  a->z = b->z;
+  return a;
+}
+
+/* Perspective project the given coordinate.  The z coordinate is also
+   homogenized so that you can generate a z buffer with non-linear
+   precision.  This is only precise if there are a sufficient number
+   of bits after the decimal specified.  `z` must not be equal to
+   zero, or else division by zero will occur.
+
+   `q` = shift right factor, bits after decimal for fixed-point
+   operands
+*/
+IVPoint3D_i32 *iv_persproj_homo3_p3i32(IVPoint3D_i32 *a, IVPoint3D_i32 *b,
+				       IVint32 focus, IVuint8 q)
+{
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
+  /* TODO FIXME: Use scalar muldiv.  */
+  a->x = (IVint32)((IVint64)b->x * focus / b->z);
+  a->y = (IVint32)((IVint64)b->y * focus / b->z);
+  /* TODO FIXME: Use scalar shldiv.  */
+  a->z = (IVint32)(((IVint64)focus << q) / b->z);
+  return a;
+}
+
+/* Reverse perspective project the given coordinate.  The z coordinate
+   is de-homogenized.  This is only precise if there are a sufficient
+   number of bits after the decimal specified.  This is particularly
+   useful for 3D manipulation via a GUI pointer device such as a
+   mouse.  `focus` and `z` must not be equal to zero, or else division
+   by zero will occur.
+
+   `q` = shift right factor, bits after decimal for fixed-point
+   operands
+*/
+IVPoint3D_i32 *iv_unpersproj_homo3_p3i32(IVPoint3D_i32 *a, IVPoint3D_i32 *b,
+					 IVint32 focus, IVuint8 q)
+{
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
+  /* TODO FIXME: Use scalar shldiv.  */
+  a->z = (IVint32)((IVint64)(focus << q) / b->z);
+  /* TODO FIXME: Use scalar muldiv.  */
+  a->x = (IVint32)((IVint64)b->x * a->z / focus);
+  a->y = (IVint32)((IVint64)b->y * a->z / focus);
+  return a;
+}
+
+/* TODO: Power of two focus -> more efficient perspective
+   projection.  */
+
+/* TODO: Translate, rotate, and scale matrices.  2x2 and 3x3 only.  We
+   only do affine transformations, non-affine transformations require
+   more care with integer arithmetic and are therefore handled
+   separately.  And we generate matrices since the same
+   transformations need to be performed repeatedly on many points and
+   this is most efficient, rather than transformation lists.  */

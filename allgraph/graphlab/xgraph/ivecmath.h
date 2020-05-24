@@ -472,4 +472,21 @@ IVuint64 iv_triarea2_v2i32(IVVec2D_i32 *a, IVVec2D_i32 *b, IVuint8 q);
 IVuint64 iv_triarea2_v3i32(IVVec3D_i32 *a, IVVec3D_i32 *b, IVuint8 q);
 IVuint64 iv_pyrvol2_u64_u32(IVuint64 a, IVuint32 b);
 
+IVPoint3D_i32 *iv_w2v4_p3i32(IVPoint3D_i32 *a, IVPoint3D_i32 *b,
+			     IVRect_p2i32 *world, IVRect_p2i32 *viewport);
+IVPoint3D_i32 *iv_w2v_shr4_p3i32(IVPoint3D_i32 *a, IVPoint3D_i32 *b,
+				 IVRect_p2i32 *world,
+				 IVRect_p2i32 *viewport);
+IVPoint3D_i32 *iv_w2v_eshr4_p3i32(IVPoint3D_i32 *a, IVPoint3D_i32 *b,
+				  IVRect_p2i32 *world,
+				  IVRect_p2i32 *viewport);
+IVPoint3D_i32 *iv_persproj3_p3i32(IVPoint3D_i32 *a, IVPoint3D_i32 *b,
+				  IVint32 focus);
+IVPoint3D_i32 *iv_unpersproj3_p3i32(IVPoint3D_i32 *a, IVPoint3D_i32 *b,
+				    IVint32 focus);
+IVPoint3D_i32 *iv_persproj_homo3_p3i32(IVPoint3D_i32 *a, IVPoint3D_i32 *b,
+				       IVint32 focus, IVuint8 q);
+IVPoint3D_i32 *iv_unpersproj_homo3_p3i32(IVPoint3D_i32 *a, IVPoint3D_i32 *b,
+					 IVint32 focus, IVuint8 q);
+
 #endif /* not IVECMATH_H */

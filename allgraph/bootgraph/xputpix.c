@@ -17,18 +17,6 @@
 
 #include "bootgraph.h"
 
-void
-bg_clear_img (RTImageBuf *rti)
-{
-  /* Clear the framebuffer.  */
-  unsigned char *fbdata = rti->image_data;
-  unsigned long image_size = rti->image_size;
-  unsigned i;
-    for (i = 0; i < image_size; i++) {
-      fbdata[i] = 0xff;
-    }
-}
-
 /* TODO: Define both clipped and unclipped requests.  Why?
    Particularly, when we embed in higher-level primitives, we've
    already performed clipping so it doesn't need to be done twice.  */
@@ -292,6 +280,9 @@ flood_fill (char *fbdata, Point2D start, unsigned int fill_color)
 #define MAX_EDGE 65534
   /* Keep two edge lists, one for the old, the other for the new.  Use
      an index integer to specify which one is old and new.  */
+  /* TODO FIXME: This static memory allocation is way too large.
+     Heck, it's larger than all the memory in a Macintosh 128K!  This
+     has ought to be improved.  */
   Point2D edge[2][MAX_EDGE+1];
   unsigned short edge_len[2] = { 0, 0 };
   short cur_edge = 0;
@@ -713,7 +704,7 @@ main (int argc, char *argv[])
 
   bg_pit_bind (&pit, &rti, 0, 0);
 
-  bg_clear_img (&rti);
+  bg_pit_clear_img64 (&pit, 0xffffffff);
   draw_geom (&rti, &pit);
 
   XMapRaised (mydisplay, mywindow);
@@ -760,7 +751,7 @@ main (int argc, char *argv[])
 		       myimage,
 		       0, 0,
 		       0, 0,
-		       fbwidth, fbheight);
+		       rti.hdr.width, rti.hdr.height);
 	    XDrawImageString (myevent.xexpose.display,
 			      myevent.xexpose.window,
 			      mygc,
@@ -813,7 +804,9 @@ main (int argc, char *argv[])
 		     last_pt.x, last_pt.y,
 		     myevent.xmotion.x, myevent.xmotion.y);
 	  if (last_pt.x < 320 && last_pt.y < 240 &&
-	      myevent.xmotion.x < 320 && myevent.xmotion.y < 240)
+	      myevent.xmotion.x < 320 && myevent.xmotion.y < 240 &&
+	      last_pt.x >= 0 && last_pt.y >= 0 &&
+	      myevent.xmotion.x >= 320 && myevent.xmotion.y >= 0)
 	    {
 	      bg_pit_moveto (&pit, *(IPoint2D*)&last_pt);
 	      bg_pit_lineto64 (&pit, *(IPoint2D*)&this_pt, 0x00000000);
@@ -830,14 +823,14 @@ main (int argc, char *argv[])
 	  switch (text[0]) {
 	  case 'q': done = 1; break;
 	  case 'c':
-	    bg_clear_img (&rti);
+	    bg_pit_clear_img64 (&pit, 0xffffffff);
 	    XPutImage (mydisplay,
 		       mywindow,
 		       mygc,
 		       myimage,
 		       0, 0,
 		       0, 0,
-		       fbwidth, fbheight);
+		       rti.hdr.width, rti.hdr.height);
 	    break;
 	  case 'd':
 	    draw_geom (&rti, &pit);
@@ -847,7 +840,7 @@ main (int argc, char *argv[])
 		       myimage,
 		       0, 0,
 		       0, 0,
-		       fbwidth, fbheight);
+		       rti.hdr.width, rti.hdr.height);
 	    break;
 	  case 'f':
 	    flood_fill (fbdata, last_pt, 0x00000000);
@@ -857,7 +850,7 @@ main (int argc, char *argv[])
 		       myimage,
 		       0, 0,
 		       0, 0,
-		       fbwidth, fbheight);
+		       rti.hdr.width, rti.hdr.height);
 	    break;
 	  case 'l':
 	    if (!line_start) {
@@ -865,7 +858,9 @@ main (int argc, char *argv[])
 	      line_start = 1;
 	    } else {
 	      if (line_pt.x < 320 && line_pt.y < 240 &&
-		  last_pt.x < 320 && last_pt.y < 240) {
+		  last_pt.x < 320 && last_pt.y < 240 &&
+		  line_pt.x >= 0 && line_pt.y >= 0 &&
+		  last_pt.x >= 0 && last_pt.y >= 0) {
 		bg_pit_moveto (&pit, *(IPoint2D*)&line_pt);
 		bg_pit_lineto64 (&pit, *(IPoint2D*)&last_pt, 0x00000000);
 		bg_pit_flush_all (&pit);
@@ -876,7 +871,7 @@ main (int argc, char *argv[])
 			 myimage,
 			 0, 0,
 			 0, 0,
-			 fbwidth, fbheight);
+			 rti.hdr.width, rti.hdr.height);
 	      line_start = 0;
 	    }
 	    break;

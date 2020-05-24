@@ -132,10 +132,11 @@ struct IVQuotRem_u8_divu8_tag IVQuotRem_u8_divu8;
 /* The pixel iterator, the base object of all graphics drawing
    operations.  A block subset of a scanline's pixels can be cached
    when the size of a pixel is smaller than the minimum supported
-   memory block, or simply to accelerate performance.  A pixel must
-   never be larger than a cache block.  Routines are provided for
-   moving up and down by one pixel with accelerated address
-   computation.
+   memory block, or simply to accelerate performance.  A pixel
+   generally should not be larger than a cache block, though proper
+   alignment in two-block mode can permit the use of larger pixels.
+   Routines are provided for moving up and down by one pixel with
+   accelerated address computation.
 
    The cache can be split into two independently managed "blocks."
    This allows us to work with pixels that span the memory access
@@ -321,7 +322,10 @@ struct BgLineIterY_tag
   Point2D adelta;
   Point2D signs;
   Point2D cur;
-  short rem;
+  unsigned short rem;
+  /* Is the remainder initialized to the absolute value of a negative
+     value?  */
+  unsigned char neg_start;
 };
 typedef struct BgLineIterY_tag BgLineIterY;
 
@@ -370,6 +374,8 @@ void bg_pit_addr_delta_i16(BgPixIter *pit, BGPIAddrDeltaI16 delta);
 void bg_pit_addr_delta_pu32(BgPixIter *pit, BGPIAddrDeltaU32 delta);
 void bg_pit_addr_delta_nu32(BgPixIter *pit, BGPIAddrDeltaU32 delta);
 void bg_pit_addr_delta_i32(BgPixIter *pit, BGPIAddrDeltaI32 delta);
+void bg_pit_addr_proper_u32 (BgPixIter *pit, unsigned int cblks,
+			     unsigned int cbits);
 void bg_pit_inc_x (BgPixIter *pit);
 void bg_pit_inc_x_cl (BgPixIter *pit);
 void bg_pit_dec_x (BgPixIter *pit);
@@ -385,6 +391,8 @@ void bg_pit_prev_scanln_cl (BgPixIter *pit);
 void bg_pit_compute_dix (BgPixIter *pit, BGPIAddrDeltaIX *dx);
 void bg_pit_next_scanln_dix (BgPixIter *pit, BGPIAddrDeltaIX dx);
 void bg_pit_prev_scanln_dix (BgPixIter *pit, BGPIAddrDeltaIX dx);
+void bg_pit_add_x (BgPixIter *pit, unsigned short len);
+void bg_pit_sub_x (BgPixIter *pit, unsigned short len);
 unsigned long long bg_pit_read_slice64 (BgPixIter *pit,
 					unsigned char bit_width);
 unsigned long long bg_pit_read_pix64 (BgPixIter *pit);
@@ -430,11 +438,12 @@ void bg_pit_scanline_arfill16 (BgPixIter *pit, unsigned short len,
 			       unsigned short val);
 void bg_pit_scanline_arfill32 (BgPixIter *pit, unsigned short len,
 			       unsigned int val);
+void bg_pit_clear_img64 (BgPixIter *pit, unsigned long long color);
 void bg_ctx8_clear_img (BgPixIterCol8 *ctx);
 
 void bg_line_iter_y_init (BgLineIterY *lit, Point2D p1, Point2D p2);
-unsigned char bg_line_iter_y_start (BgLineIterY *lit);
-unsigned char bg_line_iter_y_step (BgLineIterY *lit);
+unsigned char bg_line_iter_y_first (BgLineIterY *lit);
+unsigned char bg_line_iter_y_next (BgLineIterY *lit);
 void bg_pit_lineto64 (BgPixIter *pit, IPoint2D p2, unsigned long long val);
 void bg_pit_tri_line64 (BgPixIter *pit,
 			IPoint2D p1, IPoint2D p2, IPoint2D p3,
