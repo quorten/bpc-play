@@ -1,4 +1,5 @@
-bin_PROGRAMS = fprec gate-asctobin gate-sim strip-comments mac-build
+bin_PROGRAMS = fprec gate-asctobin gate-sim strip-comments mac-build \
+	cpuproto
 all: $(bin_PROGRAMS)
 
 fprec: fprec.c
@@ -14,6 +15,9 @@ strip-comments: strip-comments.c
 	cc -o $@ $<
 
 mac-build: mac-build.c xmalloc.c
+	cc -o $@ $^
+
+cpuproto: cpuproto.c xmalloc.c
 	cc -o $@ $^
 
 uart.bin: uart.asc
