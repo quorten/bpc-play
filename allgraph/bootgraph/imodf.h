@@ -84,7 +84,7 @@ typedef struct IFMulDiv_i64_tag IFMulDiv_i64;
 struct IFPropFrac_i32_tag
 {
   int n; /* remainder, i.e. numerator */
-  int d; /* denominator */
   int i; /* quotient, i.e. integral part */
+  int d; /* denominator */
 };
 typedef struct IFPropFrac_i32_tag IFPropFrac_i32;

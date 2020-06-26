@@ -112,6 +112,14 @@ typedef struct AbObj_tag AbObj;
    actual C files with the generated code to make debugging easier,
    but the high level strategy is pretty similar.  */
 
+/* Another obvious method for implementing polymorphism, I should have
+   also covered it too.  You can just define specific C functions for
+   your abstract class.  Normally in C++ you wouldn't define the body
+   of such functions.  But here, in your case, you define the body of
+   the functions to be the virtual method invocation code.  And
+   actually, that's where my macros can come into play instead to
+   easily generate the body of those pure virtual functions.  */
+
 /* Data structures without a C struct?  Yes, this is how it's done
    with a macro assembler.  */
 

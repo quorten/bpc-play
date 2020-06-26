@@ -422,6 +422,7 @@ IVuint8 iv_is_nosol_v2i32(IVVec2D_i32 *a)
 /* Test if a vector is equal to zero.  */
 IVuint8 iv_is_zero_v2i32(IVVec2D_i32 *a)
 {
+  /* Tags: VEC-COMPONENTS, SCALAR-ARITHMETIC */
   return (a->x == 0 && a->y == 0);
 }
 
@@ -973,7 +974,7 @@ IVint64 iv_dist2q2_p2i32_InLine_v2i32(IVPoint2D_i32 *a, IVInLine_v2i32 *b)
   iv_sub3_v2i32(&t, a, &b->p0);
   iv_proj3_v2i32(&u, &t, &b->v);
   if (iv_is_nosol_v2i32(&u))
-    return IVINT32_MIN;
+    return IVINT64_MIN;
   return iv_dist2q2_p2i32(&t, &u);
 }
 
@@ -1126,7 +1127,7 @@ IVint64 iv_dist2q2_p2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b)
    is squared so we therefore can avoid computing the square root and
    simplify as follows:
 
-   L - A * (dot_product(L, A) - d) / magnitude(A)
+   L - A * (dot_product(L, A) - d) / magnitude^2(A)
 
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.
@@ -1161,7 +1162,7 @@ IVPoint2D_i32 *iv_proj3_p2i32_Eqs_v2i32(IVPoint2D_i32 *a, IVPoint2D_i32 *b,
    simplify as follows:
 
    L_rel_P = L - P;
-   L - A * dot_product(L_rel_P, A) / magnitude(A);
+   L - A * dot_product(L_rel_P, A) / magnitude^2(A);
 
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.
@@ -2451,7 +2452,7 @@ IVint64 iv_dist2q2_p3i32(IVPoint3D_i32 *a, IVPoint3D_i32 *b)
    is squared so we therefore can avoid computing the square root and
    simplify as follows:
 
-   L - A * (dot_product(L, A) - d) / dot_product(A, A)
+   L - A * (dot_product(L, A) - d) / magnitude^2(A)
 
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.
@@ -2484,7 +2485,7 @@ IVPoint3D_i32 *iv_proj3_p3i32_Eqs_v3i32(IVPoint3D_i32 *a, IVPoint3D_i32 *b,
    simplify as follows:
 
    L_rel_P = L - P;
-   L - A * dot_product(L_rel_P, A) / dot_product(A, A);
+   L - A * dot_product(L_rel_P, A) / magnitude^2(A);
 
    If there is no solution, the resulting point's coordinates are all
    set to IVINT32_MIN.
