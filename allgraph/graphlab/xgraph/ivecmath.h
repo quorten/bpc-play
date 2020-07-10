@@ -283,6 +283,8 @@ IVint32 iv_sqrt_i32(IVint32 a);
 IVuint32 iv_aprx_sqrt_u64(IVuint64 a);
 IVint32 iv_aprx_sqrt_i64(IVint64 a);
 IVuint8 iv_aprx_sqrt_log2_u64(IVuint64 a);
+IVuint32 iv_aprx_msqrt_u64(IVuint64 a);
+IVint32 iv_aprx_msqrt_i64(IVint64 a);
 IVuint32 iv_sqrt_u64(IVuint64 a);
 IVint32 iv_sqrt_i64(IVint64 a);
 

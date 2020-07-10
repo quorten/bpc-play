@@ -737,6 +737,37 @@ IVuint8 iv_aprx_sqrt_log2_u64(IVuint64 a)
   return soft_fls_i64(a) >> 1;
 }
 
+/* Improved ("m"= improved) 64-bit approximate square root (slightly
+   slower), shift the source number right to get a better estimate of
+   the non-power-of-two part of the square root.  This subroutine will
+   both underestimate and overestimate the result.
+  */
+IVuint32 iv_aprx_msqrt_u64(IVuint64 a)
+{
+  IVuint8 num_sig_bits;
+  if (a == 0)
+    return 0;
+  num_sig_bits = soft_fls_i64(a);
+  if ((num_sig_bits & 1) != 0)
+    return (IVuint32)(a >> ((num_sig_bits + 1) >> 1));
+  /* else */
+  /* Try to avoid overestimating by too much by clearing a significant
+     bit.  */
+  /* TODO FIXME: Do not let shift go negative.  */
+  if (num_sig_bits > 0)
+    return (IVuint32)((a >> (num_sig_bits >> 1)) &
+		      ~(1 << (num_sig_bits - 1)));
+  /* else */
+  return (IVuint32)(a >> (num_sig_bits >> 1));
+}
+
+IVint32 iv_aprx_msqrt_i64(IVint64 a)
+{
+  if (a < 0)
+    return IVINT32_MIN;
+  return (IVint32)iv_aprx_msqrt_u64((IVuint64)a);
+}
+
 /* This method is designed to guarantee an underestimate of the square
    root, i.e. the fractional part is truncated as is the case with
    standard integer arithmetic.  */
