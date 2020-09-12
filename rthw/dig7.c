@@ -14,6 +14,7 @@ int do_soft_quit = 1;
 unsigned int *gpio_mem;
 
 /* From BCM2835 data-sheet, p.91 */
+const unsigned GPREGS_BASE     = 0x7e200000;
 /* N.B. To avoid memory alignment issues, we change these to 32-bit
    integer offsets.  */
 const unsigned GPFSEL_OFFSET   = 0x00 >> 2;
