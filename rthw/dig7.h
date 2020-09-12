@@ -59,6 +59,14 @@ rpi_gpio_watch_fe (unsigned char idx);
 void
 rpi_gpio_unwatch_fe (unsigned char idx);
 void
+rpi_gpio_watch_async_re (unsigned char idx);
+void
+rpi_gpio_unwatch_async_re (unsigned char idx);
+void
+rpi_gpio_watch_async_fe (unsigned char idx);
+void
+rpi_gpio_unwatch_async_fe (unsigned char idx);
+void
 gpio_clear_segs (void);
 void
 gpio_init_segs (void);

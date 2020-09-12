@@ -848,6 +848,32 @@ rpi_gpio_unwatch_fe (unsigned char idx)
   gpio_mem[GPFEN_OFFSET] &= ~(1 << idx);
 }
 
+/* Watch for asynchronous rising edge.  */
+void
+rpi_gpio_watch_async_re (unsigned char idx)
+{
+  gpio_mem[GPAREN_OFFSET] |= 1 << idx;
+}
+
+void
+rpi_gpio_unwatch_async_re (unsigned char idx)
+{
+  gpio_mem[GPAREN_OFFSET] &= ~(1 << idx);
+}
+
+/* Watch for asynchronous falling edge.  */
+void
+rpi_gpio_watch_async_fe (unsigned char idx)
+{
+  gpio_mem[GPAFEN_OFFSET] |= 1 << idx;
+}
+
+void
+rpi_gpio_unwatch_async_fe (unsigned char idx)
+{
+  gpio_mem[GPAFEN_OFFSET] &= ~(1 << idx);
+}
+
 void
 gpio_clear_segs (void)
 {
