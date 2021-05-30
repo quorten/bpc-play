@@ -85,8 +85,8 @@ int main(int argc, char *argv[])
 
 	if (argc != 2)
 	{
-	    fprintf(stderr,"usage: client sockfile\n");
-	    exit(1);
+		fprintf(stderr,"usage: client sockfile\n");
+		exit(1);
 	}
 
 	un_sock.sun_family = AF_LOCAL;
@@ -137,12 +137,11 @@ int main(int argc, char *argv[])
 	max_fd = (pty_master > sockfd) ? pty_master : sockfd;
 	max_fd++;
 	FD_ZERO(&pty_fdset);
-	FD_SET(sockfd, &pty_fdset);
-	FD_SET(pty_master, &pty_fdset);
 	while (1)
 	{
-		/* `select()' does not work reliably on Unix-domain sockets?  */
-		/* select(FD_SETSIZE, &pty_fdset, NULL, NULL, NULL); */
+		FD_SET(sockfd, &pty_fdset);
+		FD_SET(pty_master, &pty_fdset);
+		select(FD_SETSIZE, &pty_fdset, NULL, NULL, NULL);
 
 		/* Pipe socket input.  */
 		rv = read(sockfd, buf, BUFSIZE);
